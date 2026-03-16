@@ -1,0 +1,221 @@
+{
+  "_nodus": "Project configuration for NODUS v0.1. This file is the single source of truth for your project.",
+  // ─────────────────────────────────────────
+  // PROJECT IDENTITY
+  // ─────────────────────────────────────────
+  "project": {
+    "name": "my-nodus-project",
+    "version": "1.0.0",
+    "description": "Short description of what this project does",
+    "author": "your-name",
+    "nodus": ">=0.1"
+  },
+  // ─────────────────────────────────────────
+  // SCHEMA RESOLUTION
+  // Core schema is always loaded first.
+  // Extends are loaded in order — later files override earlier ones.
+  // ─────────────────────────────────────────
+  "schema": {
+    "core": "nodus/core/schema.nodus",
+    "extends": [
+      "./schema/schema.nodus",
+      "./schema/brand_voice.nodus",
+      "./schema/validators.nodus",
+      "./schema/channels.nodus"
+    ]
+  },
+  // ─────────────────────────────────────────
+  // AGENT BINDINGS
+  // Define which AI model plays which role.
+  // orchestrator  → generates NODUS workflows
+  // executor      → interprets and runs NODUS workflows
+  // reviewer      → optional: validates output before publish
+  // ─────────────────────────────────────────
+  "agents": {
+    "orchestrator": {
+      "model": "claude-opus-4",
+      "role": "orchestrator",
+      "description": "Generates NODUS workflows from human intent",
+      "context_files": [
+        "README.md",
+        "schema/schema.nodus"
+      ],
+      "max_tokens": 4096
+    },
+    "executor": {
+      "model": "claude-sonnet-4",
+      "role": "executor",
+      "description": "Interprets and executes NODUS workflows step by step",
+      "context_files": [
+        "AGENTS.md",
+        "schema/schema.nodus",
+        "schema/brand_voice.nodus",
+        "context/brand_voice.md"
+      ],
+      "max_tokens": 2048
+    },
+    "reviewer": {
+      "model": "claude-haiku-4",
+      "role": "reviewer",
+      "description": "Fast validation pass before any publish step",
+      "context_files": [
+        "schema/validators.nodus"
+      ],
+      "max_tokens": 1024,
+      "enabled": false
+    }
+  },
+  // ─────────────────────────────────────────
+  // GLOBAL RULES
+  // These !! rules apply to ALL workflows in this project.
+  // They are injected into executor context automatically.
+  // ─────────────────────────────────────────
+  "global_rules": {
+    "never": [
+      "publish WITHOUT validate",
+      "ROUTE(external) IF $data.type = confidential",
+      "skip LOG($out)"
+    ],
+    "always": [
+      "use brand_voice from context/brand_voice.md",
+      "return NODUS:RESULT on completion or failure",
+      "ESCALATE(human) IF $error.level = critical"
+    ],
+    "preferences": [
+      "tone = brand OVER tone = neutral",
+      "brevity OVER completeness IF channel = twitter",
+      "formal OVER casual IF $user.tier = enterprise"
+    ]
+  },
+  // ─────────────────────────────────────────
+  // TRIGGER REGISTRY
+  // Maps incoming events to workflow files.
+  // The executor resolves @ON: triggers against this registry.
+  // ─────────────────────────────────────────
+  "triggers": {
+    "new_mention": "./workflows/social/beautiful_mention.nodus",
+    "morning_schedule": "./workflows/social/morning_digest.nodus",
+    "support_request": "./workflows/support/ticket_triage.nodus",
+    "crisis": "./workflows/social/crisis_response.nodus",
+    "new_order": "./workflows/ecommerce/order_confirm.nodus"
+  },
+  // ─────────────────────────────────────────
+  // CHANNEL REGISTRY
+  // Overrides and extends core schema channels.
+  // env: prefix reads value from environment variable.
+  // ─────────────────────────────────────────
+  "channels": {
+    "twitter": {
+      "max_len": 280,
+      "format": "plain",
+      "tone": "casual",
+      "api_key": "env:TWITTER_API_KEY"
+    },
+    "instagram": {
+      "max_len": 2200,
+      "format": "plain",
+      "tone": "warm",
+      "api_key": "env:INSTAGRAM_API_KEY"
+    },
+    "linkedin": {
+      "max_len": 3000,
+      "format": "plain",
+      "tone": "formal",
+      "api_key": "env:LINKEDIN_API_KEY"
+    },
+    "email": {
+      "max_len": null,
+      "format": "html",
+      "tone": "formal",
+      "smtp": "env:SMTP_URL"
+    },
+    "slack": {
+      "max_len": null,
+      "format": "markdown",
+      "tone": "casual",
+      "webhook": "env:SLACK_WEBHOOK_URL"
+    },
+    "internal_review": {
+      "max_len": null,
+      "format": "markdown",
+      "tone": "neutral",
+      "webhook": "env:REVIEW_WEBHOOK_URL"
+    }
+  },
+  // ─────────────────────────────────────────
+  // CONTEXT FILES
+  // Static files loaded into agent context via @ctx[key].
+  // Example: @ctx: [brand_voice] → loads context.brand_voice path
+  // ─────────────────────────────────────────
+  "context": {
+    "brand_voice": "./context/brand_voice.md",
+    "tone_guidelines": "./context/tone_guidelines.md",
+    "escalation_contacts": "./context/escalation_contacts.json",
+    "approved_phrases": "./context/approved_phrases.json",
+    "blocked_phrases": "./context/blocked_phrases.json"
+  },
+  // ─────────────────────────────────────────
+  // INSTALLED PACKS
+  // Installed via `nodus install <pack-name>`
+  // ─────────────────────────────────────────
+  "packs": [
+    {
+      "name": "nodus-social",
+      "version": "1.0.0",
+      "path": "./packs/nodus-social"
+    }
+  ],
+  // ─────────────────────────────────────────
+  // RUNTIME SETTINGS
+  // ─────────────────────────────────────────
+  "runtime": {
+    "mode": "production",
+    "max_iterations": 10,
+    "timeout_ms": 30000,
+    "dry_run": false,
+    "debug": false
+  },
+  // ─────────────────────────────────────────
+  // LOGGING
+  // ─────────────────────────────────────────
+  "logging": {
+    "enabled": true,
+    "output": "./logs",
+    "format": "json",
+    "level": "info",
+    "retain_days": 30,
+    "include": [
+      "errors",
+      "results",
+      "rule_violations"
+    ]
+  },
+  // ─────────────────────────────────────────
+  // VALIDATION
+  // Run `nodus validate` to check all workflows against these rules.
+  // ─────────────────────────────────────────
+  "validation": {
+    "strict_mode": true,
+    "require_err_handler": true,
+    "require_log": true,
+    "max_steps": 20,
+    "max_nesting": 3
+  },
+  // ─────────────────────────────────────────
+  // ENVIRONMENT
+  // Declare all required env vars. `nodus run` will check these exist.
+  // ─────────────────────────────────────────
+  "env": {
+    "required": [
+      "ANTHROPIC_API_KEY",
+      "SLACK_WEBHOOK_URL"
+    ],
+    "optional": [
+      "TWITTER_API_KEY",
+      "INSTAGRAM_API_KEY",
+      "LINKEDIN_API_KEY",
+      "SMTP_URL",
+      "REVIEW_WEBHOOK_URL"
+    ]
+  }
+}

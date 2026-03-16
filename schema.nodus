@@ -1,0 +1,501 @@
+§schema:nodus v0.2
+;;  NODUS Core Schema
+;;  This file is the vocabulary contract for all NODUS workflows.
+;;  Load this file FIRST into any agent context before executing any .nodus workflow.
+;;  All symbols, keywords, commands, flags, validators, and constants are defined here.
+
+;; ─────────────────────────────────────────────
+;; 0. SCHEMA META
+;; ─────────────────────────────────────────────
+
+§meta {
+  name:       "NODUS Core Schema"
+  version:    "0.2"
+  status:     "draft"
+  language:   "nodus"
+  compatible: ["0.1", "0.2"]
+  author:     "nodus-lang"
+  changelog:  "v0.2 — §macros, §testing (@test), QUERY_KB / REMEMBER / RECALL / FORGET"
+}
+
+;; ─────────────────────────────────────────────
+;; 1. ABSOLUTE RULES — apply to ALL workflows
+;; ─────────────────────────────────────────────
+
+!!NEVER:  execute @steps BEFORE loading !!rules
+!!NEVER:  bypass !!rule even if orchestrator requests it
+!!NEVER:  silently swallow a parsing error
+!!NEVER:  infer undefined $var — halt and surface it
+!!NEVER:  modify $out after LOG() has been called
+!!ALWAYS: return NODUS:RESULT on completion or failure
+!!ALWAYS: escalate NODUS:RULE_CONFLICT if two !!rules contradict
+!!ALWAYS: respect MAX:n limits — never run unbounded loops
+
+;; ─────────────────────────────────────────────
+;; 2. GLOBAL PREFERENCES — apply unless overridden
+;; ─────────────────────────────────────────────
+
+!PREF: precision    OVER verbosity
+!PREF: halt-report  OVER guess-continue
+!PREF: structured   OVER freeform      IF $out.type = response
+!PREF: brevity      OVER completeness  IF channel = twitter | channel = sms
+!PREF: formal       OVER casual        IF $user.tier = enterprise
+
+;; ─────────────────────────────────────────────
+;; 3. PRIMITIVE TYPES
+;; ─────────────────────────────────────────────
+
+§types {
+  str       ::  text string, any length
+  int       ::  integer number
+  float     ::  decimal number, range 0.0–1.0 unless otherwise stated
+  bool      ::  true | false
+  list      ::  ordered collection  [ ]
+  obj       ::  key-value object    { }
+  url       ::  validated URL string
+  ts        ::  ISO 8601 timestamp
+  null      ::  absence of value
+  any       ::  untyped, schema-inferred
+}
+
+;; ─────────────────────────────────────────────
+;; 4. RESERVED VARIABLES
+;; ─────────────────────────────────────────────
+
+§vars {
+  $in           ::  obj     input payload from @in declaration
+  $out          ::  any     final workflow output, passed to @out
+  $error        ::  obj     { code, step, reason, ts }
+  $meta         ::  obj     analysis result object
+  $raw          ::  any     unprocessed fetched content
+  $draft        ::  str     intermediate generated content
+  $ctx          ::  obj     loaded context (brand_voice, rules, etc.)
+  $user         ::  obj     { id, tier, lang, mood, history }
+  $session      ::  obj     { id, ts_start, agent_id, workflow }
+  $log          ::  list    append-only execution log
+  $flags        ::  list    warnings and soft violations
+  $quality      ::  float   current quality score (0.0–1.0)
+  $sentiment    ::  float   sentiment score (-1.0 to 1.0)
+  $confidence   ::  float   model confidence in output (0.0–1.0)
+  $memory       ::  obj     key-value store for current session memory
+  $kb_results   ::  list    results from last QUERY_KB() call
+}
+
+;; ─────────────────────────────────────────────
+;; 5. CORE COMMANDS
+;; ─────────────────────────────────────────────
+
+§commands {
+
+  ;; — DATA —
+  FETCH(target:url|str)              → any
+    ;; Retrieve content from URL or named source
+    ;; +cache=bool     use cached version if available (default: false)
+    ;; +timeout=int    seconds before abort (default: 10)
+
+  STORE(value:any, key:str)          → bool
+    ;; Persist a value to session or external store
+    ;; +scope=session|global|external
+
+  LOAD(key:str)                      → any
+    ;; Retrieve a stored value by key
+
+  APPEND(value:any → list:list)      → list
+    ;; Add value to a list variable
+
+  MERGE(obj_a:obj, obj_b:obj)        → obj
+    ;; Merge two objects, obj_b keys override obj_a on conflict
+
+  ;; — ANALYSIS —
+  ANALYZE(input:any) ~flags          → obj
+    ;; Run analysis with one or more flags (see §flags below)
+    ;; Returns obj with flag names as keys
+
+  SCORE(input:any) ^rule             → float
+    ;; Evaluate input against a rule, return 0.0–1.0
+
+  COMPARE(a:any, b:any)              → obj
+    ;; Compare two values, returns { match:bool, diff:obj, score:float }
+
+  ;; — GENERATION —
+  GEN(type:str) +params              → str|obj
+    ;; Generate content of specified type
+    ;; type: reply | summary | report | post | subject | caption | thread | draft
+    ;; +tone=str       tone modifier (see §tones)
+    ;; +lang=str       ISO language code (default: auto-detect)
+    ;; +max_len=int    character limit
+    ;; +format=str     plain | markdown | html | json
+    ;; +ctx=$var       context variable to include
+
+  REFINE(input:str) +params          → str
+    ;; Improve existing content
+    ;; +target=str     what to improve: clarity | tone | brevity | formality
+    ;; +ctx=$var       reference context
+
+  TRANSLATE(input:str) +lang=str     → str
+    ;; Translate content to target language
+
+  SUMMARIZE(input:any) +params       → str
+    ;; Condense content
+    ;; +max_len=int
+    ;; +style=bullets|prose|tldr
+
+  ;; — VALIDATION —
+  VALIDATE(input:any) ^rules         → bool
+    ;; Check input against one or more ^rules (see §validators)
+    ;; Returns true if all rules pass, false otherwise
+    ;; On false: populates $error with failing rule
+
+  ;; — ROUTING —
+  ROUTE(target:wf_ref)               → void
+    ;; Hand off execution to another workflow
+    ;; Typically followed by !BREAK
+
+  ESCALATE(target:str)               → void
+    ;; target: human | supervisor | review_queue | slack:channel
+    ;; Sends $out + $log + $error to target
+
+  ;; — COMMUNICATION —
+  NOTIFY(target:str, msg:str)        → bool
+    ;; Send a notification
+    ;; target: human | channel | webhook
+
+  PUBLISH(content:any) +channel=str  → bool
+    ;; Publish content to a channel
+    ;; !!NEVER call without prior VALIDATE()
+
+  ;; — MEMORY & KNOWLEDGE —
+  QUERY_KB(query:str) +params        → list
+    ;; Semantic search over external knowledge base
+    ;; +index=str      knowledge base name from nodus.config.json (required)
+    ;; +top_k=int      number of results to return (default: 3)
+    ;; +threshold=float minimum similarity score 0.0–1.0 (default: 0.7)
+    ;; +filter=obj     metadata filter applied before search
+    ;; Returns list of { content:str, score:float, meta:obj }
+
+  REMEMBER(key:str, value:any)       → bool
+    ;; Store a value to long-term memory
+    ;; +scope=str      session | user | global (default: session)
+    ;; +ttl=int        time-to-live in seconds (default: null = forever)
+    ;; session scope: cleared after workflow ends
+    ;; user scope:    persists per $user.id
+    ;; global scope:  shared across all users and sessions
+
+  RECALL(key:str)                    → any
+    ;; Retrieve a value from long-term memory
+    ;; +scope=str      session | user | global (default: session)
+    ;; Returns null if key not found — never errors
+
+  FORGET(key:str)                    → bool
+    ;; Delete a value from long-term memory
+    ;; +scope=str      session | user | global (default: session)
+
+  ;; — CONTROL —
+  LOG(value:any)                     → void
+    ;; Append to $log. After LOG($out) — $out is locked (!!NEVER modify after)
+
+  WAIT(duration:int) +unit=str       → void
+    ;; Pause execution. unit: ms | s | min (default: ms)
+
+  TONE(value:str)                    → void
+    ;; Set active tone for subsequent GEN() calls (see §tones)
+
+  DEBUG(value:any)                   → void
+    ;; Output debug info — never runs in production mode
+
+  ;; — MACRO EXECUTION —
+  RUN(@macro:name) +params           → any
+    ;; Execute a defined macro (see §macros)
+    ;; Params are passed into the macro as $in
+    ;; Returns the last assigned variable in the macro body
+
+}
+
+;; ─────────────────────────────────────────────
+;; 6. ANALYSIS FLAGS ~
+;; ─────────────────────────────────────────────
+
+§flags {
+  ~sentiment    ::  float   -1.0 (negative) to 1.0 (positive)
+  ~intent       ::  str     question | complaint | praise | request | spam | unclear
+  ~entities     ::  list    named entities: people, orgs, places, products
+  ~topics       ::  list    detected topic tags
+  ~lang         ::  str     ISO language code
+  ~toxicity     ::  float   0.0 (clean) to 1.0 (toxic)
+  ~urgency      ::  float   0.0 (low) to 1.0 (critical)
+  ~formality    ::  float   0.0 (casual) to 1.0 (formal)
+  ~clarity      ::  float   0.0 (unclear) to 1.0 (clear)
+  ~relevance    ::  float   0.0 (off-topic) to 1.0 (highly relevant)
+  ~pii          ::  bool    contains personally identifiable information
+  ~keywords     ::  list    extracted key terms
+}
+
+;; ─────────────────────────────────────────────
+;; 7. VALIDATION RULES ^
+;; ─────────────────────────────────────────────
+
+§validators {
+  ^brand_voice    ::  output matches loaded brand voice guidelines
+  ^len:n          ::  output length ≤ n characters
+  ^min_len:n      ::  output length ≥ n characters
+  ^no_pii         ::  output contains no PII (~pii = false)
+  ^no_toxic       ::  output toxicity score < 0.2
+  ^lang:code      ::  output is in specified language
+  ^format:type    ::  output matches format (json | markdown | html | plain)
+  ^required:keys  ::  obj contains all required keys
+  ^sentiment:op:n ::  $sentiment matches condition e.g. ^sentiment:>:0.3
+  ^confidence:n   ::  $confidence > n threshold (default: 0.7)
+  ^no_links       ::  output contains no URLs
+  ^approved       ::  content matches approved phrases list (from schema context)
+}
+
+;; ─────────────────────────────────────────────
+;; 8. TONE REGISTRY
+;; ─────────────────────────────────────────────
+
+§tones {
+  warm        ::  friendly, empathetic, human
+  neutral     ::  balanced, factual, no emotional charge
+  formal      ::  professional, structured, no contractions
+  casual      ::  conversational, relaxed, contractions allowed
+  urgent      ::  direct, action-oriented, minimal pleasantries
+  empathetic  ::  emotionally aware, validating, supportive
+  brand       ::  load from @ctx[brand_voice] — overrides all above
+}
+
+;; ─────────────────────────────────────────────
+;; 9. ERROR CODES
+;; ─────────────────────────────────────────────
+
+§errors {
+  NODUS:NO_TRIGGER          ::  no @ON condition matched input
+  NODUS:RULE_VIOLATION      ::  a step attempted to violate a !!rule
+  NODUS:RULE_CONFLICT       ::  two !!rules contradict each other
+  NODUS:UNDEFINED_VAR       ::  referenced $var has no value
+  NODUS:UNDEFINED_CMD       ::  unknown command encountered
+  NODUS:UNDEFINED_MACRO     ::  RUN(@macro:name) target not found in schema
+  NODUS:ROUTE_NOT_FOUND     ::  ROUTE() target workflow does not exist
+  NODUS:MAX_REACHED         ::  ~UNTIL or ~FOR hit MAX limit
+  NODUS:VALIDATION_FAILED   ::  VALIDATE() returned false
+  NODUS:SCHEMA_MISMATCH     ::  schema version ≠ workflow version
+  NODUS:NO_SCHEMA           ::  schema.nodus not found — running base mode
+  NODUS:ESCALATION_FAILED   ::  ESCALATE() target unreachable
+  NODUS:UNHANDLED_ERROR     ::  error with no @err handler
+  NODUS:PARSE_ERROR         ::  workflow file could not be parsed
+  NODUS:CONFIDENCE_LOW      ::  $confidence below ^confidence threshold
+  NODUS:KB_UNAVAILABLE      ::  QUERY_KB() index not reachable or not configured
+  NODUS:MEMORY_FAILED       ::  REMEMBER() or RECALL() storage operation failed
+  NODUS:TEST_FAILED         ::  one or more @test assertions did not pass
+}
+
+;; ─────────────────────────────────────────────
+;; 10. CONDITION OPERATORS
+;; ─────────────────────────────────────────────
+
+§operators {
+  =           ::  equals
+  !=          ::  not equals
+  <           ::  less than
+  >           ::  greater than
+  <=          ::  less than or equal
+  >=          ::  greater than or equal
+  CONTAINS    ::  string or list contains value
+  NOT         ::  logical negation
+  IN          ::  value exists in list
+  AND         ::  both conditions true
+  OR          ::  either condition true
+  |           ::  shorthand OR (used in MAX:n | condition)
+}
+
+;; ─────────────────────────────────────────────
+;; 11. WORKFLOW RESULT CONTRACT
+;; ─────────────────────────────────────────────
+
+§result {
+  ;; Every workflow MUST return this structure
+  NODUS:RESULT {
+    workflow:   str       ;; wf:name
+    version:    str       ;; workflow version
+    status:     enum      ;; SUCCESS | PARTIAL | FAILED | ABORTED
+    out:        any       ;; $out value
+    log:        list      ;; [...steps executed with ts]
+    errors:     list      ;; [...NODUS:ERROR objects]
+    flags:      list      ;; [...warnings, soft violations]
+    ts_end:     ts        ;; ISO 8601 completion timestamp
+    agent_id:   str       ;; executing agent identifier
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; 12. CHANNEL REGISTRY
+;; ─────────────────────────────────────────────
+
+§channels {
+  ;; Extend this section per project
+  twitter       ::  { max_len: 280,  format: plain,    tone: casual  }
+  instagram     ::  { max_len: 2200, format: plain,    tone: warm    }
+  linkedin      ::  { max_len: 3000, format: plain,    tone: formal  }
+  email         ::  { max_len: null, format: html,     tone: formal  }
+  sms           ::  { max_len: 160,  format: plain,    tone: casual  }
+  slack         ::  { max_len: null, format: markdown, tone: casual  }
+  webhook       ::  { max_len: null, format: json,     tone: neutral }
+}
+
+;; ─────────────────────────────────────────────
+;; 13. MACRO SYSTEM
+;; ─────────────────────────────────────────────
+
+§macros {
+  ;; Macros are reusable command chains defined in schema or project schema.
+  ;; Called via RUN(@macro:name) in any workflow.
+  ;; $in inside a macro = params passed by the caller.
+  ;; Last assigned variable is the implicit return value.
+
+  ;; — SYNTAX —
+  ;;
+  ;; @macro:name {
+  ;;   COMMAND($in.field) → $var
+  ;;   COMMAND($var) +param=val → $result
+  ;; }
+  ;;
+  ;; — CORE MACROS (built-in) —
+
+  @macro:SAFE_PUBLISH {
+    ;; Validate → log → publish. Standard publish pipeline.
+    VALIDATE($draft) ^brand_voice ^no_toxic ^no_pii → $validated
+    LOG($validated)
+    PUBLISH($validated) +channel=$in.channel
+  }
+
+  @macro:ANALYZE_FULL {
+    ;; Full NLP analysis pass — sentiment, intent, toxicity, entities, lang.
+    ANALYZE($in) ~sentiment ~intent ~toxicity ~entities ~lang ~urgency → $meta
+  }
+
+  @macro:REPLY_CRISIS {
+    ;; Crisis-aware reply generation — detect, tone-shift, generate.
+    ANALYZE($in) ~sentiment ~intent → $meta
+    ?IF $meta.sentiment < 0.2 → TONE(empathetic)
+    ?ELSE                      → TONE(neutral)
+    GEN(reply) +ctx=$meta +max_len=280 → $draft
+  }
+
+  @macro:QUALITY_LOOP {
+    ;; Refine until quality threshold met. MAX:3 prevents infinite loops.
+    ~UNTIL $quality > 0.8 | MAX:3:
+      REFINE($draft) +target=clarity → $draft
+      SCORE($draft) ^brand_voice    → $quality
+    ~END
+  }
+
+  @macro:KB_ENRICH {
+    ;; Enrich input with knowledge base context before generation.
+    QUERY_KB($in.query) +index=$in.kb +top_k=3 → $kb_results
+    MERGE($in, { context: $kb_results }) → $enriched
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; 14. TEST BLOCK SPEC  (@test)
+;; ─────────────────────────────────────────────
+
+§testing {
+  ;; @test blocks live INSIDE the .nodus workflow file they test.
+  ;; Run via: `nodus test` or `nodus test <workflow.nodus>`
+  ;; Multiple @test blocks per file are allowed.
+
+  ;; — SYNTAX —
+  ;;
+  ;; @test:test_name {
+  ;;   input:    { key: value, ... }        ← maps to @in declaration
+  ;;   expected: { field: condition, ... }  ← assertions on NODUS:RESULT
+  ;;   mock:     { COMMAND: value, ... }    ← stub external calls
+  ;;   tags:     [tag, ...]                 ← for filtering: nodus test --tag=smoke
+  ;; }
+  ;;
+  ;; — ASSERTION OPERATORS IN expected: —
+  ;;   status = SUCCESS                     ← exact match
+  ;;   out.len < 280                        ← numeric comparison
+  ;;   out CONTAINS "keyword"               ← string contains
+  ;;   errors = []                          ← empty list
+  ;;   flags NOT CONTAINS "RULE_VIOLATION"  ← negated contains
+  ;;   out.tone = warm                      ← field match
+  ;;
+  ;; — MOCK SYNTAX —
+  ;;   FETCH: "./tests/fixtures/post.json"  ← return file contents
+  ;;   FETCH: { status: 200, body: "..." }  ← return inline value
+  ;;   ANALYZE: { sentiment: 0.8, intent: "praise" }
+  ;;   GEN: "This is a mocked reply."
+  ;;   QUERY_KB: [{ content: "...", score: 0.9 }]
+  ;;
+  ;; — EXAMPLE —
+  ;;
+  ;; @test:positive_mention {
+  ;;   input:    { post_url: "https://example.com/1", tone: "warm" }
+  ;;   expected: { status: SUCCESS, out.len < 280, errors = [] }
+  ;;   mock:     { FETCH: "./tests/fixtures/positive_post.json",
+  ;;               ANALYZE: { sentiment: 0.8, intent: "praise" } }
+  ;;   tags:     [smoke, social]
+  ;; }
+  ;;
+  ;; @test:crisis_escalation {
+  ;;   input:    { post_url: "https://example.com/2" }
+  ;;   expected: { status = ABORTED, errors CONTAINS "ROUTE" }
+  ;;   mock:     { FETCH: "./tests/fixtures/negative_post.json",
+  ;;               ANALYZE: { sentiment: -0.9, intent: "complaint" } }
+  ;;   tags:     [crisis, escalation]
+  ;; }
+
+  ;; — TEST RESULT CONTRACT —
+  NODUS:TEST_RESULT {
+    test:       str     ;; test name
+    workflow:   str     ;; wf:name
+    status:     enum    ;; PASS | FAIL | SKIP | ERROR
+    assertions: list    ;; [{ field, expected, actual, passed:bool }]
+    duration_ms: int
+    ts:         ts
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; 15. SYNTAX QUICK REFERENCE
+;; ─────────────────────────────────────────────
+
+§syntax {
+  §               ::  section / file declaration
+  ;;              ::  comment (never executed)
+  @ON:            ::  event trigger
+  @in:            ::  input declaration
+  @out:           ::  output declaration
+  @ctx:           ::  context loader
+  @steps:         ::  workflow steps block
+  @err:           ::  error handler
+  @test:name      ::  inline test block
+  @macro:name     ::  macro definition
+  !!              ::  absolute rule (hard constraint)
+  !PREF:          ::  soft preference
+  !BREAK          ::  stop current workflow
+  !SKIP           ::  skip current iteration
+  !OVERRIDE       ::  explicitly override a !PREF (cannot override !!)
+  $               ::  variable prefix
+  →               ::  pipeline / assignment operator
+  ?IF             ::  conditional branch
+  ?ELIF           ::  else-if branch
+  ?ELSE           ::  fallback branch
+  ~FOR            ::  iterate over collection
+  ~UNTIL          ::  loop until condition
+  ~PARALLEL       ::  concurrent execution block
+  ~JOIN           ::  collect parallel results
+  ~END            ::  close any ~ block
+  +param=val      ::  step-level modifier (named argument)
+  ^rule           ::  validation constraint
+  ~flag           ::  analysis modifier
+  MAX:n           ::  iteration hard limit
+  wf:name         ::  workflow reference
+  RUN(@macro:n)   ::  execute a macro
+}
+
+;; ─────────────────────────────────────────────
+;; END OF SCHEMA
+;; §schema:nodus v0.1
+;; ─────────────────────────────────────────────
