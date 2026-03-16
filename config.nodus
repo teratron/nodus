@@ -1,0 +1,164 @@
+§config:project v1.0
+;; Project Config — Business Logic Layer
+;; Purpose:  Global rules, triggers, and constants for all workflows.
+;;           This file is loaded by the executor agent at project startup.
+;;           It defines WHAT the project does — not WHERE it runs.
+;;           For infrastructure (API keys, models, webhooks) → nodus.config.json
+;; Author:   nodus-lang
+;; Updated:  2024-01-01
+
+;; ─────────────────────────────────────────────
+;; RUNTIME ENVIRONMENT
+;; ─────────────────────────────────────────────
+
+§runtime: {
+  core:    ./core/schema.nodus
+  extends: [
+    ./schema/schema.nodus,
+    ./schema/brand_voice.nodus,
+    ./schema/validators.nodus
+  ]
+  agents: {
+    executor:     claude-sonnet-4
+    orchestrator: claude-opus-4
+  }
+  mode: production
+}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL ABSOLUTE RULES
+;; Applied to ALL workflows in this project.
+;; Injected into executor context before any workflow runs.
+;; These cannot be overridden at workflow level.
+;; ─────────────────────────────────────────────
+
+!!NEVER:  publish WITHOUT validate
+!!NEVER:  ROUTE(external) IF $data.type = confidential
+!!NEVER:  skip LOG($out)
+!!NEVER:  execute @steps BEFORE loading !!rules
+!!ALWAYS: return NODUS:RESULT on completion or failure
+!!ALWAYS: ESCALATE(human) IF $error.level = critical
+!!ALWAYS: use brand_voice from @ctx[brand_voice]
+
+;; ─────────────────────────────────────────────
+;; GLOBAL PREFERENCES
+;; Soft defaults applied across all workflows.
+;; Can be overridden at workflow level with !OVERRIDE.
+;; ─────────────────────────────────────────────
+
+!PREF: tone = brand       OVER tone = neutral
+!PREF: brevity            OVER completeness  IF channel = twitter
+!PREF: formal             OVER casual        IF $user.tier = enterprise
+!PREF: reply_lang = $meta.lang OVER reply_lang = default
+
+;; ─────────────────────────────────────────────
+;; GLOBAL TRIGGER REGISTRY
+;; Maps incoming events to workflow files.
+;; Evaluated in order — first match wins.
+;; ─────────────────────────────────────────────
+
+@ON: new_mention                          → RUN(wf:beautiful_mention)
+@ON: $in.sentiment < -0.5                 → RUN(wf:crisis_response)
+@ON: schedule:09:00                       → RUN(wf:morning_digest)
+@ON: webhook:support_ticket               → RUN(wf:ticket_triage)
+@ON: webhook:payment_done                 → RUN(wf:order_confirm)
+@ON: $user.msg CONTAINS "refund"          → RUN(wf:support)
+@ON: $user.msg CONTAINS "complaint"       → RUN(wf:support)
+
+;; ─────────────────────────────────────────────
+;; GLOBAL CONSTANTS
+;; Shared values referenced across workflows via $CFG.*
+;; Use UPPERCASE to distinguish from runtime variables.
+;; ─────────────────────────────────────────────
+
+§constants {
+  $CFG.BRAND_NAME       = "MyCompany"
+  $CFG.BRAND_HANDLE     = "@mycompany"
+
+  ;; Sentiment thresholds
+  $CFG.CRISIS_THR       = -0.5    ;; below this → crisis workflow
+  $CFG.NEGATIVE_THR     = -0.2    ;; below this → empathetic tone
+  $CFG.POSITIVE_THR     = 0.5     ;; above this → warm tone
+
+  ;; Toxicity thresholds
+  $CFG.TOXIC_BLOCK      = 0.7     ;; above this → escalate to human
+  $CFG.TOXIC_WARN       = 0.4     ;; above this → flag for review
+
+  ;; Quality thresholds
+  $CFG.QUALITY_MIN      = 0.8     ;; minimum quality score for publish
+  $CFG.QUALITY_REFINE   = 3       ;; max refinement iterations
+
+  ;; Channel limits (mirrors §channels in schema, override here per project)
+  $CFG.MAX_LEN_TWITTER  = 280
+  $CFG.MAX_LEN_INSTAGRAM = 2200
+  $CFG.MAX_LEN_LINKEDIN  = 3000
+  $CFG.MAX_LEN_SMS       = 160
+
+  ;; Memory TTLs (seconds)
+  $CFG.TTL_INTERACTION  = 7776000  ;; 90 days
+  $CFG.TTL_SESSION      = 86400    ;; 24 hours
+  $CFG.TTL_CRISIS       = 2592000  ;; 30 days
+
+  ;; User tiers
+  $CFG.TIERS            = [standard, vip, enterprise]
+  $CFG.VIP_TONE         = warm
+  $CFG.ENTERPRISE_TONE  = formal
+}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL CONTEXT DECLARATIONS
+;; Context files available to all workflows via @ctx[key].
+;; Keys must match entries in nodus.config.json → context.
+;; ─────────────────────────────────────────────
+
+§context {
+  brand_voice:         ./context/brand_voice.md
+  tone_guidelines:     ./context/tone_guidelines.md
+  escalation_contacts: ./context/escalation_contacts.json
+  approved_phrases:    ./context/approved_phrases.json
+  blocked_phrases:     ./context/blocked_phrases.json
+}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL ERROR ROUTING
+;; Default handlers for unhandled errors across all workflows.
+;; Workflow-level @err takes precedence over these.
+;; ─────────────────────────────────────────────
+
+§error_routing {
+  NODUS:RULE_VIOLATION    → ESCALATE(human) +channel=slack +priority=high
+  NODUS:RULE_CONFLICT     → ESCALATE(human) +channel=slack +priority=critical
+  NODUS:UNDEFINED_VAR     → LOG($error) NOTIFY(human) +channel=slack
+  NODUS:VALIDATION_FAILED → NOTIFY(human) +channel=slack
+  NODUS:KB_UNAVAILABLE    → LOG($error)  ;; non-blocking, continue
+  NODUS:MAX_REACHED       → LOG($error) NOTIFY(human) +channel=slack
+  NODUS:UNHANDLED_ERROR   → ESCALATE(human) +channel=slack +priority=high
+}
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; ─────────────────────────────────────────────
+
+;; CONFIG: project
+;; PURPOSE: Business logic layer for the entire NODUS project.
+;;
+;; This file answers: WHAT does the project do?
+;;   - Global rules that every workflow must follow
+;;   - Which events trigger which workflows
+;;   - Shared constants (thresholds, limits, TTLs)
+;;   - Available context files for all workflows
+;;   - Default error routing
+;;
+;; nodus.config.json answers: WHERE does the project run?
+;;   - API keys and webhooks
+;;   - Which AI model plays which role
+;;   - Infrastructure bindings
+;;
+;; LOAD ORDER (executor boot sequence):
+;;   1. nodus.config.json  → resolve environment
+;;   2. config.nodus       → load business rules and constants
+;;   3. workflow.nodus     → execute specific workflow
+
+;; ─────────────────────────────────────────────
+;; END §config:project v1.0
+;; ─────────────────────────────────────────────

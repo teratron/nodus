@@ -12,7 +12,6 @@ For the full technical specification and boot sequence, see:
 3. **Structured Results**: Always return `NODUS:RESULT` after execution.
 4. **Boot First**: Load the schema and rules before executing steps.
 
----
 For general documentation, see [docs/README.md](docs/README.md).
 
 ## Language Preferences

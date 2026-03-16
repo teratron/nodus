@@ -38,7 +38,7 @@
 
 @ON: event_name                           → RUN(wf:workflow_name)
 ;; @ON: $in.field = value                 → RUN(wf:workflow_name)
-;; @ON: schedule:HH:MM                   → RUN(wf:workflow_name)
+;; @ON: schedule:HH:MM                    → RUN(wf:workflow_name)
 ;; @ON: webhook:event_key                 → RUN(wf:workflow_name)
 ;; @ON: $user.msg CONTAINS "keyword"      → RUN(wf:workflow_name)
 

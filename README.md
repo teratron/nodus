@@ -32,17 +32,21 @@ NODUS has three layers:
 
 ### File Header
 
-Every NODUS file starts with a section declaration:
+Every NODUS file starts with a section declaration and a runtime block:
 
 ```
 §wf:<workflow_name> v<version>
+
+§runtime: {
+  core:    ../../core/schema.nodus
+  extends: [./schema/schema.nodus]
+  agents:  { executor: claude-sonnet-4, orchestrator: claude-opus-4 }
+  mode:    production
+}
 ```
 
-Example:
-
-```
-§wf:beautiful_mention v1.0
-```
+The `§runtime:` block is always second — resolved before rules, before steps.  
+It tells the agent where to load its vocabulary and who is executing.
 
 ### Triggers `@ON:`
 
@@ -170,6 +174,10 @@ GEN(reply) +ctx=$meta +tone=$tone → $draft
 | `ESCALATE(target)` | Send to human or supervisor agent |
 | `LOG(value)` | Record to audit trail |
 | `TONE(value)` | Set response tone |
+| `QUERY_KB(query)` | Semantic search over knowledge base |
+| `REMEMBER(key, value)` | Store to long-term memory |
+| `RECALL(key)` | Retrieve from long-term memory |
+| `RUN(@macro:name)` | Execute a reusable macro |
 
 ## Dual-Mode Rendering
 
@@ -179,6 +187,7 @@ NODUS supports two representations of the same workflow.
 
 ```
 §wf:beautiful_mention v1.0
+§runtime: { core: ../../core/schema.nodus, mode: production }
 @ON: new_mention → RUN(wf:beautiful_mention)
 @in: {post_url, tone?=neutral, lang?=auto}
 @ctx: [brand_voice, mention_rules]
@@ -223,17 +232,61 @@ ON ERROR: escalate to human
 
 Both representations are valid NODUS. The schema defines how to parse each.
 
-## File Structure
+## Project File Structure
 
 ```
 project/
-├── schema.nodus          ← vocabulary, rules, keyword definitions
+│
+├── config.nodus           ← business logic: global rules, triggers, constants
+├── nodus.config.json      ← infrastructure: API keys, models, webhooks
+├── schema.nodus           ← core vocabulary (or symlink to core/)
+│
 ├── workflows/
 │   ├── beautiful_mention.nodus
-│   ├── crisis.nodus
+│   ├── crisis_response.nodus
 │   ├── morning_digest.nodus
 │   └── support.nodus
-└── config.nodus          ← global triggers and constants
+│
+├── schema/
+│   ├── brand_voice.nodus
+│   └── validators.nodus
+│
+├── context/
+│   ├── brand_voice.md
+│   └── tone_guidelines.md
+│
+└── tests/
+    └── fixtures/
+```
+
+### Two configs — two responsibilities
+
+NODUS intentionally separates business logic from infrastructure:
+
+**`config.nodus`** — answers **WHAT** the project does.  
+Written in NODUS, read by the **agent**.
+
+```
+!!NEVER: publish WITHOUT validate   ← global rules for all workflows
+@ON: new_mention → RUN(wf:...)      ← which events trigger what
+$CFG.CRISIS_THR = -0.5              ← shared constants
+```
+
+**`nodus.config.json`** — answers **WHERE** the project runs.  
+Written in JSON, read by the **CLI and runtime**.
+
+```json
+"agents":   { "executor": { "model": "claude-sonnet-4" } }
+"channels": { "slack": { "webhook": "env:SLACK_WEBHOOK" } }
+"env":      { "required": ["ANTHROPIC_API_KEY"] }
+```
+
+### Agent boot sequence
+
+```
+1. nodus.config.json   → resolve environment, models, API keys
+2. config.nodus        → load global rules, triggers, constants
+3. workflow.nodus      → execute the specific workflow
 ```
 
 ## Symbol Reference
@@ -241,14 +294,18 @@ project/
 | Symbol | Role | Analogy |
 | --- | --- | --- |
 | `§` | Section/file declaration | namespace |
+| `§runtime:` | Environment block | venv activate |
 | `@ON:` | Event trigger | event listener |
 | `@in:` `@out:` | I/O declaration | function signature |
 | `@ctx:` | Context loader | import |
+| `@test:` | Inline test block | unit test |
+| `@macro:` | Reusable command chain | function |
 | `!!` | Absolute rule (hard constraint) | hard limit |
 | `!PREF:` | Priority preference (soft rule) | weight/default |
 | `!BREAK` | Stop execution | break |
 | `!SKIP` | Skip iteration | continue |
 | `$` | Variable | variable |
+| `$CFG.*` | Global project constant | const |
 | `→` | Pipeline / assignment | pipe / = |
 | `?IF` `?ELIF` `?ELSE` | Conditionals | if/else |
 | `~FOR` | Loop over collection | for loop |
@@ -266,6 +323,7 @@ project/
 3. **Absolute clarity** — `!!` rules are always declared first, loaded as base-layer constraints
 4. **Dual-mode** — NODUS mode for machines, HUMAN mode for review and debugging
 5. **Schema portability** — one schema file makes any workflow portable across agents and projects
+6. **Two-layer config** — business logic (`config.nodus`) stays separate from infrastructure (`nodus.config.json`)
 
 ## Status
 
@@ -275,11 +333,12 @@ This is an evolving specification. Contributions, feedback, and discussion welco
 
 ## Roadmap
 
-- [ ] v0.1 — Core syntax spec (this document)
-- [ ] v0.2 — Schema format definition
-- [ ] v0.3 — Reference interpreter (Python/JS)
-- [ ] v0.4 — VS Code syntax highlighting
-- [ ] v0.5 — Validation tooling
+- [x] v0.1 — Core syntax spec
+- [x] v0.2 — Schema format + macro system + memory commands
+- [x] v0.3 — Lint rules (28 rules across error/warn/info)
+- [ ] v0.4 — Reference interpreter (Python/JS)
+- [ ] v0.5 — VS Code syntax highlighting
+- [ ] v0.6 — Validation tooling (`nodus validate`)
 - [ ] v1.0 — Stable spec + real-world workflow library
 
 ## Origin
