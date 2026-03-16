@@ -1,0 +1,298 @@
+§wf:beautiful_mention v1.0
+;; Workflow: Beautiful Mention Handler
+;; Purpose:  Detect, analyze and respond to social media mentions
+;;           with brand-aligned tone. Escalates crisis automatically.
+;; Pack:     nodus-social
+;; Author:   nodus-social pack
+;; Updated:  2024-01-01
+
+;; ─────────────────────────────────────────────
+;; RUNTIME ENVIRONMENT
+;; ─────────────────────────────────────────────
+
+§runtime: {
+  core:    ../../core/schema.nodus
+  extends: [
+    ./schema/schema.nodus,
+    ./schema/brand_voice.nodus,
+    ./schema/validators.nodus
+  ]
+  agents: {
+    executor:     claude-sonnet-4
+    orchestrator: claude-opus-4
+  }
+  mode: production
+}
+
+;; TRIGGERS
+;; ─────────────────────────────────────────────
+
+@ON: new_mention                          → RUN(wf:beautiful_mention)
+@ON: $in.source = instagram               → RUN(wf:beautiful_mention)
+@ON: $in.source = twitter                 → RUN(wf:beautiful_mention)
+@ON: $in.source = linkedin                → RUN(wf:beautiful_mention)
+
+;; ─────────────────────────────────────────────
+;; RULES — workflow-level (extend global rules)
+;; ─────────────────────────────────────────────
+
+!!NEVER:  publish reply WITHOUT prior VALIDATE()
+!!NEVER:  respond to spam ($meta.intent = spam)
+!!ALWAYS: ESCALATE(human) IF $meta.toxicity > 0.7
+!!ALWAYS: LOG($out) before PUBLISH()
+
+!PREF: reply_lang = $meta.lang   OVER reply_lang = default
+!PREF: brevity OVER completeness IF $in.source = twitter
+!PREF: formal  OVER casual       IF $in.source = linkedin
+
+;; ─────────────────────────────────────────────
+;; DECLARATIONS
+;; ─────────────────────────────────────────────
+
+@in: {
+  post_url:   url           ;; URL of the mention post (required)
+  source:     str           ;; platform: twitter | instagram | linkedin
+  tone?:      str = brand   ;; override tone (optional, default: brand)
+  lang?:      str = auto    ;; override language (optional, default: auto)
+  user_tier?: str = standard ;; vip | enterprise | standard
+}
+
+@ctx: [brand_voice, mention_rules, approved_phrases, blocked_phrases]
+
+@out: $published
+@err: ESCALATE(human) +channel=slack +msg="beautiful_mention failed"
+
+;; ─────────────────────────────────────────────
+;; STEPS
+;; ─────────────────────────────────────────────
+
+@steps:
+
+  ;; — 1. FETCH —
+  1. FETCH($in.post_url) +cache=false +timeout=10 → $raw
+     ?IF $raw = null → !BREAK
+
+  ;; — 2. FULL ANALYSIS (via macro) —
+  2. RUN(@macro:ANALYZE_FULL) +in=$raw → $meta
+
+  ;; — 3. SPAM GATE —
+  3. ?IF $meta.intent = spam !BREAK
+     ?IF $meta.toxicity > 0.7 → ESCALATE(human) +channel=slack !BREAK
+
+  ;; — 4. CRISIS ROUTING —
+  4. ?IF $meta.sentiment < -0.5 AND $meta.urgency > 0.6:
+       NOTIFY(human) +channel=slack +msg="Crisis mention detected"
+       ROUTE(wf:crisis_response) !BREAK
+
+  ;; — 5. ENRICH WITH HISTORY (long-term memory) —
+  5. RECALL($in.post_url) +scope=user → $history
+     ?IF $history != null:
+       MERGE($meta, { prev_interactions: $history }) → $meta
+
+  ;; — 6. KB ENRICHMENT — load relevant brand context
+  6. QUERY_KB($raw) +index=brand_kb +top_k=3 +threshold=0.7 → $kb_results
+     ?IF $kb_results != null:
+       MERGE($meta, { brand_context: $kb_results }) → $meta
+
+  ;; — 7. TONE RESOLUTION —
+  7. ?IF $in.user_tier = vip        → TONE(warm)    !OVERRIDE
+     ?ELIF $in.source = linkedin    → TONE(formal)
+     ?ELIF $meta.sentiment > 0.5   → TONE(warm)
+     ?ELIF $meta.sentiment < -0.2  → TONE(empathetic)
+     ?ELSE                          → TONE($in.tone)
+
+  ;; — 8. GENERATE REPLY —
+  8. GEN(mention_reply)
+       +ctx=$meta
+       +tone=$active_tone
+       +lang=$meta.lang
+       +max_len=channel[$in.source].max_len
+       +format=plain
+     → $draft
+
+  ;; — 9. QUALITY LOOP (via macro) — refine until quality ≥ 0.8
+  9. RUN(@macro:QUALITY_LOOP) +in=$draft → $draft
+
+  ;; — 10. VALIDATE —
+  10. VALIDATE($draft)
+        ^brand_voice
+        ^no_toxic
+        ^no_pii
+        ^len:channel[$in.source].max_len
+        ^approved
+      → $validated
+
+      ?IF $validated = false:
+        NOTIFY(human) +channel=slack +msg="Validation failed — manual review needed"
+        !BREAK
+
+  ;; — 11. SAFE PUBLISH (via macro) —
+  11. RUN(@macro:SAFE_PUBLISH) +in=$validated +channel=$in.source → $published
+
+  ;; — 12. MEMORY — store interaction for future context
+  12. REMEMBER($in.post_url) +value={
+        ts:        $session.ts_start,
+        sentiment: $meta.sentiment,
+        intent:    $meta.intent,
+        reply:     $published
+      } +scope=user +ttl=7776000    ;; 90 days
+
+  ;; — 13. LOG RESULT —
+  13. LOG($published)
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE (same workflow, readable)
+;; ─────────────────────────────────────────────
+
+;; WORKFLOW: beautiful_mention
+;; TRIGGER: when a new mention arrives on any connected social channel
+;;
+;; INPUT: post URL, platform, optional tone/language/user tier overrides
+;; CONTEXT: brand voice, mention rules, approved phrases, blocked phrases
+;;
+;; RULES:
+;;   - NEVER publish without validation
+;;   - NEVER respond to spam
+;;   - ALWAYS escalate to human if content is highly toxic
+;;   - ALWAYS log before publishing
+;;   - Prefer reply language to match the post language
+;;   - Prefer brevity on Twitter, formal tone on LinkedIn
+;;
+;; STEPS:
+;;   1.  Fetch the post content from URL
+;;   2.  Run full NLP analysis (sentiment, intent, toxicity, entities, lang, urgency)
+;;   3.  If spam → stop. If highly toxic → escalate to human and stop.
+;;   4.  If very negative AND urgent → notify human, route to crisis workflow and stop.
+;;   5.  Load previous interaction history for this post URL (from user memory)
+;;   6.  Search brand knowledge base for relevant context
+;;   7.  Resolve tone based on user tier, platform, and sentiment
+;;   8.  Generate reply using all available context
+;;   9.  Refine reply until quality score ≥ 0.8 (max 3 attempts)
+;;   10. Validate: brand voice, no toxicity, no PII, length limit, approved phrases
+;;       If validation fails → notify human for manual review and stop.
+;;   11. Publish to the originating social channel
+;;   12. Store this interaction in user memory (90 days)
+;;   13. Log the final result
+;;
+;; OUTPUT: published reply
+;; ON ERROR: escalate to human via Slack
+
+;; ─────────────────────────────────────────────
+;; TESTS
+;; ─────────────────────────────────────────────
+
+@test:positive_mention {
+  input: {
+    post_url: "https://twitter.com/user/status/1",
+    source:   "twitter",
+    tone:     "warm"
+  }
+  expected: {
+    status  = SUCCESS,
+    out.len < 280,
+    errors  = []
+  }
+  mock: {
+    FETCH:    "./tests/fixtures/positive_tweet.json",
+    ANALYZE:  { sentiment: 0.85, intent: "praise", toxicity: 0.01,
+                lang: "en", urgency: 0.1, entities: [] },
+    QUERY_KB: [{ content: "Brand is known for quality.", score: 0.9 }],
+    GEN:      "Thank you so much! We're thrilled you love it! 🙌"
+  }
+  tags: [smoke, twitter, positive]
+}
+
+@test:negative_mention_empathetic {
+  input: {
+    post_url: "https://twitter.com/user/status/2",
+    source:   "twitter"
+  }
+  expected: {
+    status  = SUCCESS,
+    out.len < 280,
+    errors  = []
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/negative_tweet.json",
+    ANALYZE: { sentiment: -0.3, intent: "complaint", toxicity: 0.1,
+               lang: "en", urgency: 0.3, entities: [] },
+    GEN:     "We hear you and we're sorry about your experience. Let us make it right — please DM us."
+  }
+  tags: [twitter, negative, empathetic]
+}
+
+@test:crisis_routing {
+  input: {
+    post_url: "https://twitter.com/user/status/3",
+    source:   "twitter"
+  }
+  expected: {
+    status = ABORTED,
+    flags  CONTAINS "ROUTE:crisis_response"
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/crisis_tweet.json",
+    ANALYZE: { sentiment: -0.9, intent: "complaint", toxicity: 0.2,
+               lang: "en", urgency: 0.85, entities: [] }
+  }
+  tags: [crisis, routing]
+}
+
+@test:spam_gate {
+  input: {
+    post_url: "https://instagram.com/p/abc123",
+    source:   "instagram"
+  }
+  expected: {
+    status = ABORTED,
+    errors = []
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/spam_post.json",
+    ANALYZE: { sentiment: 0.1, intent: "spam", toxicity: 0.05,
+               lang: "en", urgency: 0.0, entities: [] }
+  }
+  tags: [spam, gate]
+}
+
+@test:toxic_escalation {
+  input: {
+    post_url: "https://twitter.com/user/status/4",
+    source:   "twitter"
+  }
+  expected: {
+    status = ABORTED,
+    flags  CONTAINS "ESCALATE:human"
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/toxic_tweet.json",
+    ANALYZE: { sentiment: -0.8, intent: "complaint", toxicity: 0.85,
+               lang: "en", urgency: 0.7, entities: [] }
+  }
+  tags: [toxic, escalation, safety]
+}
+
+@test:vip_user_warm_tone {
+  input: {
+    post_url:  "https://linkedin.com/posts/user_1",
+    source:    "linkedin",
+    user_tier: "vip"
+  }
+  expected: {
+    status     = SUCCESS,
+    out.len    < 3000,
+    out.tone   = warm,
+    errors     = []
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/linkedin_vip.json",
+    ANALYZE: { sentiment: 0.6, intent: "praise", toxicity: 0.0,
+               lang: "en", urgency: 0.0, entities: [] },
+    GEN:     "We truly value your kind words and are so grateful for your continued support."
+  }
+  tags: [vip, linkedin, tone]
+}
+
+;; ─────────────────────────────────────────────
+;; END §wf:beautiful_mention v1.0
+;; ─────────────────────────────────────────────

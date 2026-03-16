@@ -10,12 +10,13 @@
 
 §meta {
   name:       "NODUS Core Schema"
-  version:    "0.2"
+  version:    "0.3"
   status:     "draft"
   language:   "nodus"
-  compatible: ["0.1", "0.2"]
+  compatible: ["0.1", "0.2", "0.3"]
   author:     "nodus-lang"
-  changelog:  "v0.2 — §macros, §testing (@test), QUERY_KB / REMEMBER / RECALL / FORGET"
+  changelog:  "v0.2 — §macros, §testing (@test), QUERY_KB / REMEMBER / RECALL / FORGET
+               v0.3 — §lint rules (E001–E012 errors, W001–W010 warnings, I001–I006 info)"
 }
 
 ;; ─────────────────────────────────────────────
@@ -496,6 +497,193 @@
 }
 
 ;; ─────────────────────────────────────────────
+;; 16. LINT RULES
+;; Spec for the NODUS linter (nodus validate).
+;; Three levels: error | warn | info
+;;   error  → file will NOT execute. Must fix.
+;;   warn   → file executes, but behaviour may be unsafe. Should fix.
+;;   info   → style suggestion. Nice to fix.
+;; ─────────────────────────────────────────────
+
+§lint {
+
+  ;; ── ERRORS — block execution ──────────────
+
+  E001 :: error
+    rule:    §runtime block must be present
+    check:   file contains §runtime: { ... }
+    message: "Missing §runtime block. Agent cannot resolve schema without it."
+    fix:     "Add §runtime: { core: ..., extends: [], agents: {}, mode: production }"
+
+  E002 :: error
+    rule:    §runtime must be second block (after §wf header)
+    check:   §runtime appears before any !! rule, @in, @steps
+    message: "§runtime must appear immediately after §wf declaration."
+    fix:     "Move §runtime block to line 2 of file."
+
+  E003 :: error
+    rule:    !! rules must precede @steps
+    check:   all !! lines appear before first @steps: declaration
+    message: "!!rule declared after @steps. Agent may execute steps before loading constraints."
+    fix:     "Move all !! rules above @steps block."
+
+  E004 :: error
+    rule:    all referenced $variables must be declared before use
+    check:   every $var used in a step is either in @in, assigned via →, or a §vars reserved var
+    message: "$var_name used but never assigned. Will cause NODUS:UNDEFINED_VAR at runtime."
+    fix:     "Assign $var_name in a prior step or add to @in declaration."
+
+  E005 :: error
+    rule:    PUBLISH must be preceded by VALIDATE in @steps
+    check:   any PUBLISH() call has a VALIDATE() call earlier in the same step sequence
+    message: "PUBLISH() called without prior VALIDATE(). Violates !!NEVER: publish WITHOUT validate."
+    fix:     "Add VALIDATE($draft) ^brand_voice before PUBLISH() step."
+
+  E006 :: error
+    rule:    ROUTE target must exist in trigger registry or project workflows
+    check:   every ROUTE(wf:name) references a known workflow
+    message: "ROUTE target 'wf:name' not found. Will cause NODUS:ROUTE_NOT_FOUND at runtime."
+    fix:     "Create the target workflow or correct the workflow name."
+
+  E007 :: error
+    rule:    ~FOR and ~UNTIL blocks must close with ~END
+    check:   every ~FOR / ~UNTIL has a matching ~END
+    message: "Unclosed ~FOR or ~UNTIL block. Parser cannot determine block boundary."
+    fix:     "Add ~END after the last step inside the loop."
+
+  E008 :: error
+    rule:    ~PARALLEL block must close with ~JOIN
+    check:   every ~PARALLEL has a matching ~JOIN
+    message: "Unclosed ~PARALLEL block. Results cannot be collected without ~JOIN."
+    fix:     "Add ~JOIN → $var after the last branch in ~PARALLEL."
+
+  E009 :: error
+    rule:    @in required fields must not have default values
+    check:   fields without ? are not assigned default values
+    message: "Required field 'field_name' has a default value — use ? to mark it optional."
+    fix:     "Change 'field_name: type = default' to 'field_name?: type = default'."
+
+  E010 :: error
+    rule:    MAX:n must be present on all ~UNTIL loops
+    check:   every ~UNTIL block contains MAX:n
+    message: "~UNTIL loop missing MAX:n. Risk of unbounded loop at runtime."
+    fix:     "Add MAX:n e.g. ~UNTIL $quality > 0.8 | MAX:3:"
+
+  E011 :: error
+    rule:    §runtime.core path must resolve to a valid schema.nodus file
+    check:   file at core: path exists and is parseable
+    message: "Core schema not found at '$path'. Agent cannot load vocabulary."
+    fix:     "Correct the core: path in §runtime block."
+
+  E012 :: error
+    rule:    workflow name in §wf must match filename
+    check:   §wf:name matches the .nodus filename (without extension)
+    message: "Workflow name 'name' does not match filename 'filename.nodus'."
+    fix:     "Rename file to 'name.nodus' or update §wf declaration."
+
+  ;; ── WARNINGS — execute but unsafe ─────────
+
+  W001 :: warn
+    rule:    @err handler should be declared
+    check:   file contains @err: declaration
+    message: "No @err handler. Errors will trigger NODUS:UNHANDLED_ERROR."
+    fix:     "Add @err: ESCALATE(human) or a custom error workflow."
+
+  W002 :: warn
+    rule:    at least one @test block should be present
+    check:   file contains at least one @test: block
+    message: "No @test blocks found. Workflow cannot be verified with 'nodus test'."
+    fix:     "Add minimum: @test:happy_path and one edge case."
+
+  W003 :: warn
+    rule:    HUMAN MODE section should be present
+    check:   file contains ;; HUMAN MODE comment section
+    message: "No HUMAN MODE section. Workflow is opaque to human reviewers."
+    fix:     "Add ;; HUMAN MODE section after @steps with plain-language description."
+
+  W004 :: warn
+    rule:    steps count should not exceed 20
+    check:   @steps block contains ≤ 20 numbered steps
+    message: "Workflow has $n steps (recommended max: 20). Consider splitting into sub-workflows."
+    fix:     "Extract groups of steps into separate workflows and use ROUTE()."
+
+  W005 :: warn
+    rule:    conditional nesting should not exceed 3 levels
+    check:   no ?IF block contains more than 3 nested ?IF levels
+    message: "Conditional nesting depth $n exceeds 3. Hard to reason about at runtime."
+    fix:     "Extract deep branches into sub-workflows."
+
+  W006 :: warn
+    rule:    @test blocks should cover all ROUTE() branches
+    check:   each ROUTE(wf:name) target has at least one @test that exercises it
+    message: "ROUTE(wf:name) has no corresponding @test coverage."
+    fix:     "Add @test with mock that triggers ROUTE(wf:name) branch."
+
+  W007 :: warn
+    rule:    $out must be explicitly assigned before @out
+    check:   the variable referenced in @out: is assigned in @steps
+    message: "$out_var declared in @out but never assigned in @steps."
+    fix:     "Ensure a step assigns → $out_var before workflow completes."
+
+  W008 :: warn
+    rule:    LOG() should be the last step
+    check:   LOG() call appears as the last or second-to-last step
+    message: "LOG() is not the last step. Steps after LOG() may modify $out illegally."
+    fix:     "Move LOG($out) to the final step."
+
+  W009 :: warn
+    rule:    context files in @ctx should exist in nodus.config.json
+    check:   every key in @ctx: [ ] is registered in config.context
+    message: "Context key 'key_name' not found in nodus.config.json context registry."
+    fix:     "Register key_name in nodus.config.json under 'context'."
+
+  W010 :: warn
+    rule:    §runtime.extends paths must resolve
+    check:   all files listed in extends: [ ] exist on disk
+    message: "Schema extension not found: '$path'. Agent will skip it silently."
+    fix:     "Create the file or remove it from extends list."
+
+  ;; ── INFO — style suggestions ───────────────
+
+  I001 :: info
+    rule:    each @steps entry should have an inline comment
+    check:   every numbered step has a ;; comment on the line above or inline
+    message: "Step $n has no comment. Consider adding ;; — DESCRIPTION —"
+    fix:     "Add ;; comment describing what this step does."
+
+  I002 :: info
+    rule:    workflow version should be incremented on changes
+    check:   version in §wf header matches CHANGELOG or git history
+    message: "Workflow modified but version not incremented."
+    fix:     "Update §wf:name vX.Y — increment minor for changes, major for breaking."
+
+  I003 :: info
+    rule:    @test tags should include at least "smoke"
+    check:   at least one @test block has tags: [smoke, ...]
+    message: "No smoke test defined. 'nodus test --tag=smoke' will return empty."
+    fix:     "Add tags: [smoke] to your basic happy-path test."
+
+  I004 :: info
+    rule:    !PREF rules should reference valid tone values from §tones
+    check:   tone values in !PREF match keys in §tones registry
+    message: "Unknown tone '$tone' in !PREF rule. Not in §tones registry."
+    fix:     "Use one of: warm | neutral | formal | casual | urgent | empathetic | brand"
+
+  I005 :: info
+    rule:    macro calls should prefer built-in macros when available
+    check:   common patterns (publish, analyze, quality loop) use @macro equivalents
+    message: "Steps $n–$m replicate @macro:$name. Consider using RUN(@macro:$name)."
+    fix:     "Replace steps with RUN(@macro:$name) for consistency."
+
+  I006 :: info
+    rule:    §wf header comment fields should all be filled
+    check:   Workflow / Purpose / Pack / Author / Updated are all non-empty
+    message: "Header field '$field' is empty or contains placeholder text."
+    fix:     "Fill in all §wf header comment fields."
+
+}
+
+;; ─────────────────────────────────────────────
 ;; END OF SCHEMA
-;; §schema:nodus v0.1
+;; §schema:nodus v0.3
 ;; ─────────────────────────────────────────────
