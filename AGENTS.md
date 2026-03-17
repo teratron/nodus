@@ -40,7 +40,7 @@ uv sync
 Run these before committing:
 
 ```bash
-# Lint and auto-fix
+# Lint and auto-fix (including warnings)
 ruff check --fix .
 
 # Type checking
@@ -50,4 +50,4 @@ pyright
 pytest
 ```
 
-All three must pass with zero errors before any commit.
+All three must pass with zero errors and zero warnings before any commit.
