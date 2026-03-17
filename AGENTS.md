@@ -36,6 +36,9 @@ uv sync
 
 # Activation (Windows)
 .venv\Scripts\activate
+
+# Activation (Linux)
+source .venv/bin/activate
 ```
 
 ```bash
