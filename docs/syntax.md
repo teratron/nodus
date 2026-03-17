@@ -197,7 +197,106 @@ $CFG.MAX_REPLY_LEN = 280
 ?IF $meta.sentiment < $CFG.CRISIS_THR → ROUTE(wf:crisis) !BREAK
 ```
 
-## 5. Modifiers & Attributes
+## 5. File References & Imports
+
+NODUS has two levels of file references: **static** (resolved before execution) and **dynamic** (resolved at runtime).
+
+### Static Imports
+
+Declared in the `§runtime:` block. Resolved once when the agent boots.
+
+```nodus
+§runtime: {
+  core:    .nodus/core/schema.nodus          ;; required — base vocabulary
+  extends: [
+    .nodus/schema/brand_voice.nodus          ;; project schema extensions
+    .nodus/extensions/nodus-social@1.0/schema.nodus  ;; installed pack schema
+  ]
+  agents:  { executor: claude-sonnet-4 }
+  mode:    production
+}
+```
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `core:` | path | Path to `schema.nodus`. Must resolve or execution halts (E011). |
+| `extends:` | path[] | Additional schema files loaded in order. Missing files raise W011. |
+| `agents:` | obj | Model bindings for executor and orchestrator roles. |
+| `mode:` | enum | `production` \| `development` \| `debug` \| `dry_run` |
+
+### Context File Loading `@ctx:`
+
+Loads static context documents into `$ctx` before steps execute. Files are resolved from `.nodus/context/`.
+
+```nodus
+@ctx: [brand_voice, tone_guidelines, mention_rules]
+```
+
+At runtime `$ctx.brand_voice`, `$ctx.tone_guidelines`, etc. are available as variables.
+
+A named context entry can also reference a path explicitly in `config.json`:
+
+```json
+"context": {
+  "brand_voice": ".nodus/context/brand_voice.md",
+  "mention_rules": ".nodus/context/mention_rules.md"
+}
+```
+
+### Dynamic Workflow References `wf:name`
+
+Workflows reference each other at runtime using the `wf:<identifier>` ref type.
+The identifier must match a `§wf:` declaration (and therefore a filename) without the `.nodus` extension.
+
+```nodus
+;; In @ON triggers
+@ON: new_mention → RUN(wf:beautiful_mention)
+@ON: sentiment < 0.2 → RUN(wf:crisis_response)
+
+;; In @steps — hand off and stop
+ROUTE(wf:support_triage) !BREAK
+
+;; In @steps — call and continue
+EXECUTE(wf:enrich_user) → $enriched
+```
+
+| Command | Returns | Description |
+| :--- | :--- | :--- |
+| `ROUTE(wf:name)` | void | Hand off execution. Typically followed by `!BREAK`. |
+| `EXECUTE(wf:name)` | NODUS:RESULT | Call a workflow and receive its full result object. |
+| `SIMULATE(wf:name)` | NODUS:RESULT | Dry-run a workflow without side effects. |
+
+Workflow names are resolved via `"workflows": { "root": "./workflows" }` in `config.json`.
+
+### Dynamic Macro References `@macro:name`
+
+Macros are reusable command chains. They can be defined inline in a workflow or in a schema file.
+
+```nodus
+;; Define
+@macro:COMPOSE_REPLY
+  1. TONE($pref.tone)
+  2. GEN(reply) +ctx=$meta +max_len=280 → $draft
+  3. VALIDATE($draft) ^brand_voice ^len:280 → $validated
+@end
+
+;; Call
+RUN(@macro:COMPOSE_REPLY) +pref=$user.pref → $validated
+```
+
+Macros defined in `extends:` schema files are available to all workflows in the project.
+
+### Resolution Order Summary
+
+```
+§runtime.core         →  loaded first, base vocabulary
+§runtime.extends[]    →  loaded in order, extend vocabulary
+config.nodus          →  global !! rules and constants
+@ctx: [...]           →  loaded before @steps, scoped to workflow
+wf:name / @macro:name →  resolved at runtime during step execution
+```
+
+## 6. Modifiers & Attributes
 
 ### `+param=val` — Step Modifiers
 
@@ -223,3 +322,34 @@ Specific dimensions to extract during `ANALYZE()`.
 ```nodus
 ANALYZE($raw) ~sentiment ~urgency ~entities
 ```
+
+## 7. Symbol Quick Reference
+
+| Symbol | Role | Analogy |
+| :--- | :--- | :--- |
+| `§` | Section / block declaration | namespace |
+| `§runtime:` | Environment block (schema, agents, mode) | venv activate |
+| `@ON:` | Event trigger | event listener |
+| `@in:` `@out:` | I/O contract | function signature |
+| `@ctx:` | Context file loader | import |
+| `@err:` | Error handler | catch |
+| `@test:` | Inline test block | unit test |
+| `@macro:` | Reusable command chain definition | function def |
+| `!!` | Absolute rule — inviolable | hard constraint |
+| `!PREF:` | Soft preference — default behavior | weight / default |
+| `!BREAK` | Stop current workflow | break |
+| `!SKIP` | Skip current loop iteration | continue |
+| `$` | Variable | variable |
+| `$CFG.*` | Global project constant (from config.nodus) | const |
+| `→` | Pipeline / assignment | pipe / = |
+| `?IF` `?ELIF` `?ELSE` | Conditionals | if / else |
+| `~FOR` | Loop over collection | for loop |
+| `~UNTIL` | Loop until condition (requires `MAX:n`) | while loop |
+| `~PARALLEL` `~JOIN` | Concurrent branches | async / await |
+| `~END` | Close a block | `}` |
+| `+param=val` | Named argument modifier | kwarg |
+| `^rule` | Validation constraint | assert |
+| `~flag` | Analysis extractor | flag |
+| `wf:name` | Workflow reference (`ROUTE` / `EXECUTE` / `@ON`) | module ref |
+| `@macro:name` | Macro call reference (`RUN`) | function call |
+| `;` `;;` | Comment | `//` |
