@@ -28,7 +28,7 @@
 ;; TRIGGERS
 ;; ─────────────────────────────────────────────
 
-@ON: {{trigger}}                              → RUN(wf:{{name}})
+@ON: {{trigger}}                             → RUN(wf:{{name}})
 ;; @ON: $in.field = value                    → RUN(wf:{{name}})
 ;; @ON: schedule:HH:MM                       → RUN(wf:{{name}})
 ;; @ON: webhook:event_key                    → RUN(wf:{{name}})
@@ -72,7 +72,7 @@
 
   ;; — GATE: filter unwanted input —
   3. ?IF $meta.intent = spam    → !BREAK
-     ?IF $meta.toxicity > 0.7  → ESCALATE(human) !BREAK
+     ?IF $meta.toxicity > 0.7   → ESCALATE(human) !BREAK
 
   ;; — CONDITIONAL ROUTING —
   4. ?IF [condition_a]:

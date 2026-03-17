@@ -1,9 +1,9 @@
 §schema:{{name}} v1.0
 ;; Schema Extension: {{name}}
-;; Purpose:   {{purpose}}
-;; Pack:      {{pack}}
-;; Author:    {{author}}
-;; Updated:   {{date}}
+;; Purpose:          {{purpose}}
+;; Pack:             {{pack}}
+;; Author:           {{author}}
+;; Updated:          {{date}}
 
 ;; Defines custom keywords, rules, and validators for the local project.
 

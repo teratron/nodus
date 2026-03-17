@@ -221,7 +221,7 @@
 §commands_system {
 
   ;; — FILE OPERATIONS —
-  WRITE(content:any, path:str)             → bool
+  WRITE(content:any, path:str)              → bool
     ;; Write content to a file path
     ;; !!NEVER overwrite without confirmation
 

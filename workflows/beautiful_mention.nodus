@@ -50,10 +50,10 @@
 ;; ─────────────────────────────────────────────
 
 @in: {
-  post_url:   url           ;; URL of the mention post (required)
-  source:     str           ;; platform: twitter | instagram | linkedin
-  tone?:      str = brand   ;; override tone (optional, default: brand)
-  lang?:      str = auto    ;; override language (optional, default: auto)
+  post_url:   url            ;; URL of the mention post (required)
+  source:     str            ;; platform: twitter | instagram | linkedin
+  tone?:      str = brand    ;; override tone (optional, default: brand)
+  lang?:      str = auto     ;; override language (optional, default: auto)
   user_tier?: str = standard ;; vip | enterprise | standard
 }
 
@@ -97,8 +97,8 @@
   ;; — 7. TONE RESOLUTION —
   7. ?IF $in.user_tier = vip        → TONE(warm)    !OVERRIDE
      ?ELIF $in.source = linkedin    → TONE(formal)
-     ?ELIF $meta.sentiment > 0.5   → TONE(warm)
-     ?ELIF $meta.sentiment < -0.2  → TONE(empathetic)
+     ?ELIF $meta.sentiment > 0.5    → TONE(warm)
+     ?ELIF $meta.sentiment < -0.2   → TONE(empathetic)
      ?ELSE                          → TONE($in.tone)
 
   ;; — 8. GENERATE REPLY —

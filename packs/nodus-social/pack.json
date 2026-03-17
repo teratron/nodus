@@ -4,7 +4,14 @@
   "description": "Official social media pack",
   "author": "nodus-lang",
   "nodus": ">=0.1",
-  "keywords": ["social", "twitter", "instagram", "linkedin", "mentions", "brand"],
+  "keywords": [
+    "social",
+    "twitter",
+    "instagram",
+    "linkedin",
+    "mentions",
+    "brand"
+  ],
   "workflows": [
     "workflows/beautiful_mention.nodus"
   ]
