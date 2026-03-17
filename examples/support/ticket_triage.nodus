@@ -1,0 +1,7 @@
+§wf:ticket_triage v1.0
+;; Reference workflow for customer support tickets.
+
+@ON: new_ticket
+@steps:
+1. ANALYZE($in.text) ~intent → $intent
+2. ROUTE($intent)

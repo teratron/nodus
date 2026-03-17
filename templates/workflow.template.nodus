@@ -1,0 +1,10 @@
+§wf:{{name}} v1.0
+;; Purpose: {{purpose}}
+;; Author: {{author}}
+
+§runtime: {
+  core: .nodus/core/schema.nodus
+}
+
+@steps:
+1. LOG("Workflow {{name}} started")

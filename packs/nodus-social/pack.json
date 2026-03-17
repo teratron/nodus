@@ -1,0 +1,7 @@
+{
+  "name": "nodus-social",
+  "version": "1.0.0",
+  "description": "Official social media pack",
+  "author": "nodus-lang",
+  "nodus": ">=0.1"
+}

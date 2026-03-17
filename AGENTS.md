@@ -1,19 +1,5 @@
 # Agent Rules
 
-This repository uses the **NODUS Interpretation Protocol** to define how AI agents interact with the system.
-
-For the full technical specification and boot sequence, see:
-👉 **[docs/protocol.md](docs/protocol.md)**
-
-## Core Principles for Agents
-
-1. **The Schema is the Authority**: Never improvise beyond the defined keywords in `schema.nodus`.
-2. **Strict Adherence**: `!!` (Absolute Rules) are inviolable hard constraints.
-3. **Structured Results**: Always return `NODUS:RESULT` after execution.
-4. **Boot First**: Load the schema and rules before executing steps.
-
-For general documentation, see [docs/README.md](docs/README.md).
-
 ## Language Preferences
 
 ### Brief overview

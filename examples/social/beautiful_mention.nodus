@@ -1,0 +1,7 @@
+§wf:beautiful_mention v1.0
+;; Example workflow for social media mentions.
+
+@ON: new_mention
+@steps:
+1. ANALYZE($in.text) ~sentiment → $s
+2. ?IF $s > 0.8 → GEN(thank_you) → $out

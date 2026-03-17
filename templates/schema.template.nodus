@@ -1,0 +1,5 @@
+§wf:schema_extension v1.0
+;; Defines custom keywords and rules for the local project.
+
+§macros:
+  MY_MACRO → GEN(text) +tone=friendly

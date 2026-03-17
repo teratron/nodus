@@ -1,0 +1,5 @@
+§wf:schema_types v1.0
+;; NODUS | Extended Type Definitions
+;; Defines additional data types and structures for the NODUS language.
+
+!!ALWAYS: follow schema.nodus primitives

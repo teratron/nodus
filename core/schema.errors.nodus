@@ -1,0 +1,7 @@
+§wf:schema_errors v1.0
+;; NODUS | Error Code Registry
+;; Defines a unified registry for error codes and human-readable messages.
+
+$ERR.C001 = "Syntax error"
+$ERR.C002 = "Schema violation"
+$ERR.C003 = "Rule conflict"

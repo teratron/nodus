@@ -11,8 +11,16 @@ This document covers repository structure, naming conventions, and contribution 
 nodus/                             ← github.com/nodus-lang/nodus
 │
 ├── core/                          ← language primitives (maintainers only)
-│   ├── schema.nodus               ← core vocabulary, commands, types
-│   └── AGENTS.md                  ← agent interpretation protocol
+│   ├── schema.nodus               ← core vocabulary (shipped with every install)
+│   ├── schema.types.nodus         ← extended type definitions
+│   ├── schema.errors.nodus        ← error code registry
+│   ├── AGENTS.md                  ← agent interpretation protocol
+│   └── cli.nodus                  ← CLI meta-workflow
+│
+├── runtime/                       ← technical core (Python + JS)
+│   ├── interpreter/               ← parser, validator, executor
+│   ├── cli/                       ← command implementation
+│   └── tests/                     ← core system tests
 │
 ├── templates/                     ← scaffolding templates
 │   ├── workflow.template.nodus
@@ -37,9 +45,9 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   ├── schema.md
 │   └── cli.md
 │
-├── cli.nodus                      ← CLI meta-workflow
-├── README.md
-└── CONTRIBUTING.md
+├── vscode-extension/              ← IDE support
+├── README.md                      ← language spec + quick start
+└── CONTRIBUTING.md                ← this file
 ```
 
 ---
@@ -54,7 +62,8 @@ my-project/                        ← any existing project
 ├── .nodus/                        ← all NODUS infrastructure
 │   ├── core/                      ← language core (nodus init, don't edit)
 │   │   ├── schema.nodus
-│   │   └── AGENTS.md
+│   │   ├── AGENTS.md
+│   │   └── cli.nodus
 │   ├── extensions/                ← installed packs (nodus install, don't edit)
 │   │   └── nodus-social@1.0/
 │   ├── schema/                    ← user schema extensions
@@ -68,14 +77,38 @@ my-project/                        ← any existing project
 │   └── .cache/                    ← generated at runtime (gitignore)
 │       └── nodus.lock
 │
-└── workflows/                     ← user workflows (name and location is flexible)
-    ├── social/
-    └── support/
+├── workflows/                     ← user workflows (name and location is flexible)
+│   ├── _shared/                   ← reusable sub-workflows
+│   ├── social/
+│   └── support/
+│
+├── logs/                          ← execution logs (NODUS:RESULT objects)
+└── tests/                         ← workflow test cases (.test.json)
 ```
 
 The `workflows/` folder is a **convention, not a requirement**.  
 It can be named and placed anywhere — `agents/`, `prompts/`, `ai/`, inside `src/`.  
 NODUS locates workflows via `.nodus/config.json`, not by folder name.
+
+### `config.json` example (User Project)
+
+```json
+{
+  "version": "0.1",
+  "project": "my-project",
+  "schema": {
+    "core": ".nodus/core/schema.nodus",
+    "extends": ["./.nodus/schema/brand_voice.nodus"]
+  },
+  "agents": {
+    "executor": {
+      "model": "claude-sonnet-4",
+      "context_files": [".nodus/core/AGENTS.md"]
+    }
+  },
+  "logging": { "enabled": true, "output": "./logs" }
+}
+```
 
 ---
 
@@ -103,11 +136,11 @@ File: `BeautifulMention.nodus` ❌
 ### Version format
 
 ```
-v<major>.<minor>.<patch>
+v<major>.<minor>
 ```
 
-- Increment **minor** for non-breaking changes (`v1.0.0` → `v1.1.0`)
-- Increment **major** for breaking changes to `@in` or `@out` contracts (`v1.x.x` → `v2.0.0`)
+- Increment **minor** for non-breaking changes (`v1.0` → `v1.1`)
+- Increment **major** for breaking changes to `@in` or `@out` contracts (`v1.x` → `v2.0`)
 
 ### Constants in `config.nodus`
 
@@ -224,6 +257,121 @@ packs/nodus-<domain>/
 - All code, comments, variable names, and documentation: **English**
 - Commit messages and PR titles: **English**
 - Chat discussions and project planning: **Russian**
+
+---
+
+## Installation Architecture
+
+NODUS is designed to be installed by any type of user — developer, prompt engineer, or non-technical business user. The CLI is the single entry point regardless of how it was installed.
+
+### Runtime architecture
+
+```
+┌─────────────────────────────────────────┐
+│           nodus CLI (unified interface) │
+│         nodus init / run / validate     │
+└────────────┬───────────────┬────────────┘
+             │               │
+    ┌────────▼──────┐ ┌──────▼────────┐
+    │  Python core  │ │    JS shim    │
+    │  nodus-lang   │ │  nodus-lang   │
+    │  (PyPI)       │ │  (npm)        │
+    └───────────────┘ └───────────────┘
+```
+
+Python is the primary runtime. The npm package is a thin wrapper that calls the Python core under the hood. In packaged releases (brew, winget, standalone), the Python runtime is compiled into a single binary via PyInstaller — no dependency on the user's system Python.
+
+### Installation by audience
+
+**Developer (Python / AI-ML):**
+
+```bash
+pip install nodus-lang
+nodus init
+```
+
+**Developer (Node.js / frontend):**
+
+```bash
+npm install -g nodus-lang
+nodus init
+```
+
+**Prompt engineer / power user:**
+
+```bash
+# macOS
+brew install nodus-lang
+
+# Linux
+curl -fsSL https://nodus-lang.dev/install.sh | sh
+
+# Windows
+winget install nodus-lang
+```
+
+**Business user / non-technical:**
+VS Code extension with an `Initialize NODUS project` button. No terminal required.
+
+### What `nodus init` does
+
+```
+nodus init
+    │
+    ├── 1. detect runtime
+    │       python3 available → use Python core
+    │       node available    → use JS shim → Python core
+    │       neither           → use bundled standalone binary
+    │
+    ├── 2. create .nodus/
+    │       core/             ← downloaded from github releases
+    │       extensions/       ← empty, populated by nodus install
+    │       schema/           ← empty, user fills in
+    │       context/          ← empty, user fills in
+    │       .cache/           ← empty, generated at runtime
+    │
+    ├── 3. scaffold config files
+    │       config.json       ← interactive wizard or defaults
+    │       config.nodus      ← base !! rules
+    │
+    ├── 4. update .gitignore
+    │       + .nodus/core/
+    │       + .nodus/extensions/
+    │       + .nodus/.cache/
+    │
+    └── 5. report
+            ✓ NODUS v0.1 initialized
+            ✓ Core schema: .nodus/core/schema.nodus
+            Next: nodus new workflow <name>
+```
+
+### Release roadmap
+
+| Version | Deliverable | Audience |
+| --- | --- | --- |
+| `v0.1` | pip + npm package | developers |
+| `v0.3` | VS Code extension | prompt engineers |
+| `v0.5` | standalone binary + brew/winget | everyone |
+| `v1.0` | nodus-lang.dev + visual installer | business users |
+
+---
+
+## Project Layers
+
+| Layer | Purpose | Primary Actor |
+| --- | --- | --- |
+| **core** | Language spec, root schema, agent protocol | Maintainers |
+| **runtime** | Interpreter, validator, CLI implementation | Developers |
+| **user project** | Workflows, brand schema, configs | Prompt Engineers |
+| **ecosystem** | Extension, packs, visual tools | Community |
+
+---
+
+## User Personas
+
+- **Prompt Engineer**: Constructs workflows, extends schemas, reviews HUMAN mode.
+- **AI Developer**: Integrates NODUS into pipelines, manages agent bindings.
+- **Business User**: Installs packs, configures brand voice via visual tools.
 
 ---
 
