@@ -234,36 +234,43 @@ Both representations are valid NODUS. The schema defines how to parse each.
 
 ## Project File Structure
 
+NODUS is designed to be a **non-intrusive tool** — it fits into any existing project without cluttering the root. All NODUS infrastructure lives in a single hidden folder.
+
 ```
-project/
+my-project/               ← any existing project (app, SDD, agent system)
 │
-├── config.nodus           ← business logic: global rules, triggers, constants
-├── nodus.config.json      ← infrastructure: API keys, models, webhooks
-├── schema.nodus           ← core vocabulary (or symlink to core/)
+├── .nodus/               ← all NODUS infrastructure in one place
+│   ├── core/             ← language core, downloaded on nodus init (don't edit)
+│   │   ├── schema.nodus
+│   │   └── AGENTS.md
+│   ├── extensions/       ← installed packs via nodus install (don't edit)
+│   │   └── nodus-social@1.0/
+│   ├── schema/           ← your schema extensions
+│   │   ├── brand_voice.nodus
+│   │   └── validators.nodus
+│   ├── context/          ← static context files loaded via @ctx
+│   │   ├── brand_voice.md
+│   │   └── tone_guidelines.md
+│   ├── config.nodus      ← business logic: global rules, triggers, constants
+│   ├── config.json       ← infrastructure: API keys, models, webhooks
+│   └── .cache/           ← validation cache + lock file (gitignore)
+│       └── nodus.lock
 │
-├── workflows/
-│   ├── beautiful_mention.nodus
-│   ├── crisis_response.nodus
-│   ├── morning_digest.nodus
-│   └── support.nodus
-│
-├── schema/
-│   ├── brand_voice.nodus
-│   └── validators.nodus
-│
-├── context/
-│   ├── brand_voice.md
-│   └── tone_guidelines.md
-│
-└── tests/
-    └── fixtures/
+└── workflows/            ← your workflows — name and location is up to you
+    ├── social/
+    │   ├── beautiful_mention.nodus
+    │   └── crisis_response.nodus
+    └── support/
+        └── ticket_triage.nodus
 ```
+
+The `workflows/` folder is just a convention. In practice it can be anywhere and named anything — `agents/`, `prompts/`, `ai/`, nested inside `src/`. NODUS finds workflows via `config.json`, not by folder name.
 
 ### Two configs — two responsibilities
 
 NODUS intentionally separates business logic from infrastructure:
 
-**`config.nodus`** — answers **WHAT** the project does.  
+**`.nodus/config.nodus`** — answers **WHAT** the project does.  
 Written in NODUS, read by the **agent**.
 
 ```
@@ -272,21 +279,40 @@ Written in NODUS, read by the **agent**.
 $CFG.CRISIS_THR = -0.5              ← shared constants
 ```
 
-**`nodus.config.json`** — answers **WHERE** the project runs.  
+**`.nodus/config.json`** — answers **WHERE** the project runs.  
 Written in JSON, read by the **CLI and runtime**.
 
 ```json
 "agents":   { "executor": { "model": "claude-sonnet-4" } }
 "channels": { "slack": { "webhook": "env:SLACK_WEBHOOK" } }
-"env":      { "required": ["ANTHROPIC_API_KEY"] }
+"workflows": { "root": "./workflows" }
 ```
 
 ### Agent boot sequence
 
 ```
-1. nodus.config.json   → resolve environment, models, API keys
-2. config.nodus        → load global rules, triggers, constants
-3. workflow.nodus      → execute the specific workflow
+1. .nodus/config.json    → resolve environment, models, API keys
+2. .nodus/config.nodus   → load global rules, triggers, constants
+3. workflow.nodus        → execute the specific workflow
+```
+
+### What to commit
+
+```gitignore
+# .gitignore
+.nodus/core/          # downloaded on nodus init
+.nodus/extensions/    # installed on nodus install
+.nodus/.cache/        # generated at runtime
+```
+
+Everything else in `.nodus/` is yours — commit it:
+
+```
+.nodus/schema/        ✅ your schema extensions
+.nodus/context/       ✅ your context files
+.nodus/config.nodus   ✅ your rules and triggers
+.nodus/config.json    ✅ without secrets (use env: vars)
+workflows/            ✅ your workflows
 ```
 
 ## Symbol Reference
