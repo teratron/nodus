@@ -11,7 +11,7 @@
 ;; ─────────────────────────────────────────────
 
 §runtime: {
-  core:    ../../core/schema.nodus
+  core:    .nodus/core/schema.nodus
   extends: [
     ./schema/schema.nodus,
     ./schema/brand_voice.nodus,

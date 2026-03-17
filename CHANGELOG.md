@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.7] - 2026-03-17
+
+### Fixed
+
+- `find_config()` simplified to canonical `.nodus/config.json` — removed stale `config.json` and `nodus.config.json` fallback paths.
+- `workflows/beautiful_mention.nodus`: `§runtime.core` path corrected from `../../core/schema.nodus` to `.nodus/core/schema.nodus`.
+- `config.nodus` (root): `§runtime.core` and all inline comments updated from `./core/schema.nodus` / `nodus.config.json` to `.nodus/core/schema.nodus` / `.nodus/config.json`.
+- `settings.py` `NEW_WORKFLOW_TEMPLATE`: `core/schema.nodus` → `.nodus/core/schema.nodus` (consistent with template).
+- `.nodus/config.json`: `nodus/core/schema.nodus` → `.nodus/core/schema.nodus`.
+- `cmd_init`: unused `_ = args` removed (renamed parameter to `_args`).
+
+### Added
+
+- `cmd_new` now supports `domain/name` syntax: `nodus new social/reply` creates `workflows/social/reply.nodus` with parent directories scaffolded automatically.
+- `nodus init` now scaffolds `config.nodus` (business logic layer) from a built-in template. Existing file is never overwritten.
+- `settings.py`: added `NEW_CONFIG_NODUS_TEMPLATE` for the scaffolded `config.nodus`.
+- `packs/nodus-social/pack.json`: added `workflows` and `keywords` fields required by CONTRIBUTING spec.
+- `README.md`: added "Connecting a Real LLM Provider" section with a working `ClaudeProvider` example and `ANTHROPIC_API_KEY` setup instructions.
+
 ## [0.3.6] - 2026-03-17
 
 ### Changed

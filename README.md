@@ -112,6 +112,50 @@ nodus test
 - [CLI Reference](docs/cli.md) — all commands, flags, and exit codes
 - [Contributing](CONTRIBUTING.md) — project structure, naming conventions, contribution guide
 
+## Connecting a Real LLM Provider
+
+By default the Python runtime uses `StubProvider`, which returns mock responses
+without making any API calls. This is enough for validation and structural testing.
+
+To run workflows against a real model, pass an `AnthropicProvider` (or any custom
+`ModelProvider` subclass) to `Executor`:
+
+```python
+import anthropic
+from runtime.interpreter import Executor
+from runtime.interpreter.executor import AnthropicProvider, ModelProvider
+from typing import Any
+
+
+class ClaudeProvider(AnthropicProvider):
+    def __init__(self, model: str = "claude-sonnet-4-5") -> None:
+        self._client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+        self._model = model
+
+    def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
+        msg = self._client.messages.create(
+            model=self._model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return msg.content[0].text
+
+    def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
+        # implement as needed or delegate to generate()
+        return {}
+
+
+executor = Executor(provider=ClaudeProvider())
+result = executor.execute(ast, input_data={})
+```
+
+Set `ANTHROPIC_API_KEY` in your environment before running:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+nodus run workflows/my_workflow.nodus
+```
+
 ## Status
 
 🟢 **v0.3.6** — Python runtime and CLI implemented. Evolving specification.

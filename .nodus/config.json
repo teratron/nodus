@@ -8,7 +8,7 @@
     "nodus": ">=0.1"
   },
   "schema": {
-    "core": "nodus/core/schema.nodus",
+    "core": ".nodus/core/schema.nodus",
     "extends": [
       "./schema/schema.nodus",
       "./schema/brand_voice.nodus",

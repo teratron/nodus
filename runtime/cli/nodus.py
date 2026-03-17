@@ -288,23 +288,38 @@ def cmd_test(args: list[str]) -> int:
 
 
 def cmd_new(args: list[str]) -> int:
-    """Scaffold a new .nodus workflow file."""
+    """Scaffold a new .nodus workflow file.
+
+    Supports optional domain prefix: nodus new social/reply
+    creates workflows/social/reply.nodus.
+    """
     if not args:
-        print(_red("Usage: nodus new <workflow_name>"), file=sys.stderr)
+        print(_red("Usage: nodus new <name> or nodus new <domain/name>"), file=sys.stderr)
         return 1
 
-    name = args[0]
-    filename = f"{name}.nodus" if not name.endswith(".nodus") else name
-    stem = Path(filename).stem
+    raw = args[0]
+    # Strip .nodus extension if supplied
+    if raw.endswith(".nodus"):
+        raw = raw[:-6]
 
-    if Path(filename).exists():
-        print(_red(f"Error: {filename} already exists"), file=sys.stderr)
+    parts = Path(raw).parts
+    stem = parts[-1]
+
+    if len(parts) > 1:
+        # domain/name → workflows/<domain>/<name>.nodus
+        target = Path("workflows").joinpath(*parts).with_suffix(".nodus")
+    else:
+        # bare name → <name>.nodus in current directory
+        target = Path(f"{stem}.nodus")
+
+    if target.exists():
+        print(_red(f"Error: {target} already exists"), file=sys.stderr)
         return 1
 
+    target.parent.mkdir(parents=True, exist_ok=True)
     template = settings.NEW_WORKFLOW_TEMPLATE.format(stem=stem)
-
-    Path(filename).write_text(template, encoding="utf-8")
-    print(_green(f"Created {filename}"))
+    target.write_text(template, encoding="utf-8")
+    print(_green(f"Created {target}"))
     return 0
 
 
@@ -353,30 +368,33 @@ def cmd_help(_args: list[str]) -> int:
 
 
 def find_config() -> Path | None:
-    """Look for config.json in .nodus/ or project root."""
-    paths = [Path(".nodus/config.json"), Path("config.json"), Path("nodus.config.json")]
-    for p in paths:
-        if p.exists():
-            return p
-    return None
+    """Look for config.json in .nodus/."""
+    p = Path(".nodus/config.json")
+    return p if p.exists() else None
 
 
-def cmd_init(args: list[str]) -> int:
+def cmd_init(_args: list[str]) -> int:
     """Initialize a new NODUS project."""
-    _ = args
     print(_cyan("Initializing NODUS project..."))
+    project_name = Path.cwd().name
     dot_nodus = Path(".nodus")
     dot_nodus.mkdir(exist_ok=True)
 
     for sub in ["core", "extensions", "schema", "context", ".cache"]:
         (dot_nodus / sub).mkdir(exist_ok=True)
 
-    config = dot_nodus / "config.json"
-    if not config.exists():
+    config_json = dot_nodus / "config.json"
+    if not config_json.exists():
         default_config = settings.DEFAULT_CONFIG_DATA.copy()
-        default_config["project"] = Path.cwd().name
-        config.write_text(json.dumps(default_config, indent=2), encoding="utf-8")
+        default_config["project"] = project_name
+        config_json.write_text(json.dumps(default_config, indent=2), encoding="utf-8")
         print(_green("Created .nodus/config.json"))
+
+    config_nodus = Path("config.nodus")
+    if not config_nodus.exists():
+        content = settings.NEW_CONFIG_NODUS_TEMPLATE.format(project=project_name)
+        config_nodus.write_text(content, encoding="utf-8")
+        print(_green("Created config.nodus"))
 
     print(_green("✓ NODUS initialized"))
     return 0

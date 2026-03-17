@@ -1,6 +1,6 @@
 [project]
 name = "nodus"
-version = "0.3.6"
+version = "0.3.7"
 description = "NODUS — Node Orchestration DSL for Unified Systems"
 authors = [{ name = "Oleg Alexandrov", email = "alexandrovoleg.ru@gmail.com" }]
 license = { text = "MIT License" }
@@ -64,6 +64,12 @@ known-first-party = ["nodus"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+[tool.pyrefly]
+project-includes = [
+    "runtime",
+    "tests",
+]
 
 [tool.pytest.ini_options]
 python_classes = ["Test", "Describe"]

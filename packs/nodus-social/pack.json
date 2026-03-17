@@ -3,5 +3,9 @@
   "version": "1.0.0",
   "description": "Official social media pack",
   "author": "nodus-lang",
-  "nodus": ">=0.1"
+  "nodus": ">=0.1",
+  "keywords": ["social", "twitter", "instagram", "linkedin", "mentions", "brand"],
+  "workflows": [
+    "workflows/beautiful_mention.nodus"
+  ]
 }

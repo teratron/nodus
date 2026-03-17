@@ -29,7 +29,7 @@ DEFAULT_CONFIG_DATA = {
 NEW_WORKFLOW_TEMPLATE = """\u00a7wf:{stem} v0.1
 
 \u00a7runtime: {{
-  core:    core/schema.nodus
+  core:    .nodus/core/schema.nodus
   mode:    NODUS
 }}
 
@@ -40,6 +40,38 @@ NEW_WORKFLOW_TEMPLATE = """\u00a7wf:{stem} v0.1
   1. ;; TODO: define workflow steps
 
 @err: ESCALATE("human")
+"""
+
+NEW_CONFIG_NODUS_TEMPLATE = """\u00a7config:{project} v1.0
+;; Project Config — Business Logic Layer
+;; Purpose:  Global rules, triggers, and constants for all workflows.
+;;           This file is loaded by the executor agent at project startup.
+;;           It defines WHAT the project does — not WHERE it runs.
+;;           For infrastructure (API keys, models, webhooks) → .nodus/config.json
+
+\u00a7runtime: {{
+  core:    .nodus/core/schema.nodus
+  mode:    production
+}}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL ABSOLUTE RULES
+;; ─────────────────────────────────────────────
+
+!!NEVER:  publish WITHOUT validate
+!!NEVER:  skip LOG($out)
+!!ALWAYS: return NODUS:RESULT on completion or failure
+!!ALWAYS: ESCALATE(human) IF $error.level = critical
+
+;; ─────────────────────────────────────────────
+;; GLOBAL PREFERENCES
+;; ─────────────────────────────────────────────
+
+!PREF: tone = brand OVER tone = neutral
+
+;; ─────────────────────────────────────────────
+;; END \u00a7config:{project} v1.0
+;; ─────────────────────────────────────────────
 """
 
 # ─────────────────────────────────────────────

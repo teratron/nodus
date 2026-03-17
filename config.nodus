@@ -3,7 +3,7 @@
 ;; Purpose:  Global rules, triggers, and constants for all workflows.
 ;;           This file is loaded by the executor agent at project startup.
 ;;           It defines WHAT the project does — not WHERE it runs.
-;;           For infrastructure (API keys, models, webhooks) → nodus.config.json
+;;           For infrastructure (API keys, models, webhooks) → .nodus/config.json
 ;; Author:   nodus-lang
 ;; Updated:  2024-01-01
 
@@ -12,7 +12,7 @@
 ;; ─────────────────────────────────────────────
 
 §runtime: {
-  core:    ./core/schema.nodus
+  core:    .nodus/core/schema.nodus
   extends: [
     ./schema/schema.nodus,
     ./schema/brand_voice.nodus,
@@ -149,13 +149,13 @@
 ;;   - Available context files for all workflows
 ;;   - Default error routing
 ;;
-;; nodus.config.json answers: WHERE does the project run?
+;; .nodus/config.json answers: WHERE does the project run?
 ;;   - API keys and webhooks
 ;;   - Which AI model plays which role
 ;;   - Infrastructure bindings
 ;;
 ;; LOAD ORDER (executor boot sequence):
-;;   1. nodus.config.json  → resolve environment
+;;   1. .nodus/config.json  → resolve environment
 ;;   2. config.nodus       → load business rules and constants
 ;;   3. workflow.nodus     → execute specific workflow
 
