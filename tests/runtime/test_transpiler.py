@@ -70,10 +70,14 @@ def test_human_schedule_trigger():
 
 
 def test_human_includes_input():
-    wf = make_wf(input_decl=InputDecl(fields=[
-        InputField(name="msg", type_name="str"),
-        InputField(name="url", type_name="url"),
-    ]))
+    wf = make_wf(
+        input_decl=InputDecl(
+            fields=[
+                InputField(name="msg", type_name="str"),
+                InputField(name="url", type_name="url"),
+            ]
+        )
+    )
     out = Transpiler().to_human(wf)
     assert "INPUT:" in out
     assert "msg" in out
@@ -81,9 +85,15 @@ def test_human_includes_input():
 
 
 def test_human_optional_field_shows_default():
-    wf = make_wf(input_decl=InputDecl(fields=[
-        InputField(name="tone", type_name="str", optional=True, default="neutral"),
-    ]))
+    wf = make_wf(
+        input_decl=InputDecl(
+            fields=[
+                InputField(
+                    name="tone", type_name="str", optional=True, default="neutral"
+                ),
+            ]
+        )
+    )
     out = Transpiler().to_human(wf)
     assert "neutral" in out
 
@@ -92,7 +102,9 @@ def test_human_optional_field_shows_default():
 
 
 def test_human_includes_rules():
-    wf = make_wf(rules=[AbsoluteRule(rule_type="NEVER", content="publish without validate")])
+    wf = make_wf(
+        rules=[AbsoluteRule(rule_type="NEVER", content="publish without validate")]
+    )
     out = Transpiler().to_human(wf)
     assert "RULES:" in out
     assert "NEVER" in out
@@ -179,7 +191,9 @@ def test_humanize_command_gen():
 
 
 def test_humanize_command_validate_with_validators():
-    cmd = CommandCall(name="VALIDATE", args=["$draft"], validators=["^brand_voice", "^no_pii"])
+    cmd = CommandCall(
+        name="VALIDATE", args=["$draft"], validators=["^brand_voice", "^no_pii"]
+    )
     wf = make_wf(steps=[Step(number=1, body=cmd)])
     out = Transpiler().to_human(wf)
     assert "brand_voice" in out
@@ -211,7 +225,9 @@ def test_nodus_includes_runtime():
 
 
 def test_nodus_includes_rules():
-    wf = make_wf(rules=[AbsoluteRule(rule_type="NEVER", content="publish without validate")])
+    wf = make_wf(
+        rules=[AbsoluteRule(rule_type="NEVER", content="publish without validate")]
+    )
     out = Transpiler().to_nodus(wf)
     assert "!!NEVER:" in out
 
@@ -240,25 +256,35 @@ def test_nodus_pipeline_arrow():
 
 
 def test_nodus_includes_tests():
-    test_block = TestBlock(name="smoke", raw_lines=["input: { msg: \"hello\" }"])
+    test_block = TestBlock(name="smoke", raw_lines=['input: { msg: "hello" }'])
     wf = make_wf(steps=[], tests=[test_block])
     out = Transpiler().to_nodus(wf)
     assert "@test:smoke" in out
 
 
 def test_nodus_includes_input_decl():
-    wf = make_wf(input_decl=InputDecl(fields=[
-        InputField(name="msg", type_name="str"),
-    ]))
+    wf = make_wf(
+        input_decl=InputDecl(
+            fields=[
+                InputField(name="msg", type_name="str"),
+            ]
+        )
+    )
     out = Transpiler().to_nodus(wf)
     assert "@in:" in out
     assert "msg" in out
 
 
 def test_nodus_optional_field_has_question_mark():
-    wf = make_wf(input_decl=InputDecl(fields=[
-        InputField(name="tone", type_name="str", optional=True, default="neutral"),
-    ]))
+    wf = make_wf(
+        input_decl=InputDecl(
+            fields=[
+                InputField(
+                    name="tone", type_name="str", optional=True, default="neutral"
+                ),
+            ]
+        )
+    )
     out = Transpiler().to_nodus(wf)
     assert "tone?" in out
 

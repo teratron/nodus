@@ -3,6 +3,11 @@
 ;; See workflows/beautiful_mention.nodus for the full production-ready version.
 ;; This file demonstrates the basic NODUS workflow structure in ~10 lines.
 
+§runtime: {
+  core:    .nodus/core/schema.nodus
+  mode:    production
+}
+
 @ON: new_mention
 @steps:
 1. ANALYZE($in.text) ~sentiment → $s

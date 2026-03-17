@@ -41,7 +41,8 @@ Run these before committing:
 
 ```bash
 # Lint and auto-fix (including warnings)
-ruff check --fix .
+ruff check --fix
+ruff format
 
 # Type checking
 pyright

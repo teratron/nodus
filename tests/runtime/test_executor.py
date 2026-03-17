@@ -77,7 +77,9 @@ def test_ctx_out_lock_adds_error():
     ctx = ExecutionContext()
     ctx.out_locked = True
     ctx.set_var("$out", "value")
-    assert any("out" in str(e).lower() or "RULE_VIOLATION" in str(e) for e in ctx.errors)
+    assert any(
+        "out" in str(e).lower() or "RULE_VIOLATION" in str(e) for e in ctx.errors
+    )
 
 
 def test_ctx_log_step():
@@ -112,7 +114,9 @@ def test_execute_log_command():
 
 
 def test_execute_assigns_pipeline_target():
-    cmd = CommandCall(name="ANALYZE", args=["$raw"], flags=["sentiment"], pipeline_target="$meta")
+    cmd = CommandCall(
+        name="ANALYZE", args=["$raw"], flags=["sentiment"], pipeline_target="$meta"
+    )
     wf = make_wf(steps=[Step(number=1, body=cmd)])
     result = Executor().execute(wf, input_data={"raw": "hello"})
     assert result.status == "ok"
@@ -123,9 +127,11 @@ def test_execute_input_data_loaded():
     executor = Executor()
     # capture ctx by using a custom handler
     captured = {}
+
     def handler(ctx, cmd):
         captured["in"] = ctx.get_var("$in")
         return "ok"
+
     executor.register_handler("LOG", handler)
     cmd = CommandCall(name="LOG", args=["$in"])
     wf.steps = [Step(number=1, body=cmd)]
@@ -139,10 +145,12 @@ def test_execute_input_data_loaded():
 def test_break_stops_execution():
     cond = Conditional(condition="true", break_flag=True)
     after = CommandCall(name="LOG", args=["after"])
-    wf = make_wf(steps=[
-        Step(number=1, body=cond),
-        Step(number=2, body=after),
-    ])
+    wf = make_wf(
+        steps=[
+            Step(number=1, body=cond),
+            Step(number=2, body=after),
+        ]
+    )
     result = Executor().execute(wf)
     assert result.status == "aborted"
     # step 2 should not have run
@@ -165,10 +173,13 @@ def test_never_rule_ok_when_validated_first():
     rule = AbsoluteRule(rule_type="NEVER", content="publish WITHOUT validate")
     validate_cmd = CommandCall(name="VALIDATE", args=["$draft"], pipeline_target="$v")
     publish = CommandCall(name="PUBLISH", args=["$v"])
-    wf = make_wf(steps=[
-        Step(number=1, body=validate_cmd),
-        Step(number=2, body=publish),
-    ], rules=[rule])
+    wf = make_wf(
+        steps=[
+            Step(number=1, body=validate_cmd),
+            Step(number=2, body=publish),
+        ],
+        rules=[rule],
+    )
     result = Executor().execute(wf)
     assert result.status == "ok"
 
@@ -179,9 +190,11 @@ def test_never_rule_ok_when_validated_first():
 def test_register_custom_handler():
     executor = Executor()
     called = {}
+
     def my_handler(ctx, cmd):
         called["yes"] = True
         return "custom_result"
+
     executor.register_handler("FETCH", my_handler)
     cmd = CommandCall(name="FETCH", args=["http://example.com"], pipeline_target="$raw")
     wf = make_wf(steps=[Step(number=1, body=cmd)])
@@ -247,8 +260,10 @@ def test_condition_empty_is_true():
 def test_for_loop_iterates():
     collected = []
     executor = Executor()
+
     def log_handler(ctx, cmd):
         collected.append(ctx.get_var("$item"))
+
     executor.register_handler("LOG", log_handler)
 
     body_cmd = CommandCall(name="LOG", args=["$item"])
@@ -273,9 +288,11 @@ def test_until_loop_max_reached_adds_flag():
 def test_until_loop_exits_when_condition_met():
     executor = Executor()
     counter = {"n": 0}
+
     def increment(ctx, cmd):
         counter["n"] += 1
         ctx.set_var("$x", "done" if counter["n"] >= 2 else "waiting")
+
     executor.register_handler("LOG", increment)
 
     body_cmd = CommandCall(name="LOG", args=["iter"])
@@ -292,8 +309,10 @@ def test_until_loop_exits_when_condition_met():
 def test_parallel_block_runs_all_branches():
     called = []
     executor = Executor()
+
     def handler(ctx, cmd):
         called.append(cmd.args[0] if cmd.args else "?")
+
     executor.register_handler("LOG", handler)
 
     b1 = CommandCall(name="LOG", args=["branch1"])
@@ -312,8 +331,10 @@ def test_session_var_initialized():
     wf = make_wf()
     ctx_captured = {}
     executor = Executor()
+
     def handler(ctx, cmd):
         ctx_captured["session"] = ctx.get_var("$session")
+
     executor.register_handler("LOG", handler)
     cmd = CommandCall(name="LOG", args=["$session"])
     wf.steps = [Step(number=1, body=cmd)]

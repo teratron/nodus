@@ -16,53 +16,54 @@ from typing import List, Optional
 # TOKEN TYPES
 # ─────────────────────────────────────────────
 
+
 class TokenType(Enum):
     # Structure
-    SECTION = auto()          # § followed by identifier
-    COMMENT = auto()          # ;; ...
+    SECTION = auto()  # § followed by identifier
+    COMMENT = auto()  # ;; ...
     NEWLINE = auto()
     EOF = auto()
 
     # @ keywords
-    AT_ON = auto()            # @ON:
-    AT_IN = auto()            # @in:
-    AT_OUT = auto()           # @out:
-    AT_CTX = auto()           # @ctx:
-    AT_ERR = auto()           # @err:
-    AT_STEPS = auto()         # @steps:
-    AT_TEST = auto()          # @test:name
-    AT_MACRO = auto()         # @macro:name
+    AT_ON = auto()  # @ON:
+    AT_IN = auto()  # @in:
+    AT_OUT = auto()  # @out:
+    AT_CTX = auto()  # @ctx:
+    AT_ERR = auto()  # @err:
+    AT_STEPS = auto()  # @steps:
+    AT_TEST = auto()  # @test:name
+    AT_MACRO = auto()  # @macro:name
 
     # ! keywords
-    DOUBLE_BANG = auto()      # !!
-    BANG_PREF = auto()        # !PREF:
-    BANG_BREAK = auto()       # !BREAK
-    BANG_SKIP = auto()        # !SKIP
-    BANG_OVERRIDE = auto()    # !OVERRIDE
+    DOUBLE_BANG = auto()  # !!
+    BANG_PREF = auto()  # !PREF:
+    BANG_BREAK = auto()  # !BREAK
+    BANG_SKIP = auto()  # !SKIP
+    BANG_OVERRIDE = auto()  # !OVERRIDE
 
     # ? keywords
-    Q_IF = auto()             # ?IF
-    Q_ELIF = auto()           # ?ELIF
-    Q_ELSE = auto()           # ?ELSE
+    Q_IF = auto()  # ?IF
+    Q_ELIF = auto()  # ?ELIF
+    Q_ELSE = auto()  # ?ELSE
 
     # ~ keywords
-    TILDE_FOR = auto()        # ~FOR
-    TILDE_UNTIL = auto()      # ~UNTIL
-    TILDE_PARALLEL = auto()   # ~PARALLEL
-    TILDE_JOIN = auto()       # ~JOIN
-    TILDE_END = auto()        # ~END
-    FLAG = auto()             # ~identifier (analysis flag)
+    TILDE_FOR = auto()  # ~FOR
+    TILDE_UNTIL = auto()  # ~UNTIL
+    TILDE_PARALLEL = auto()  # ~PARALLEL
+    TILDE_JOIN = auto()  # ~JOIN
+    TILDE_END = auto()  # ~END
+    FLAG = auto()  # ~identifier (analysis flag)
 
     # Operators
-    ARROW = auto()            # →
-    PIPE = auto()             # |
-    EQUALS = auto()           # =
-    NOT_EQUALS = auto()       # !=
-    LT = auto()               # <
-    GT = auto()               # >
-    LTE = auto()              # <=
-    GTE = auto()              # >=
-    DOUBLE_COLON = auto()     # ::
+    ARROW = auto()  # →
+    PIPE = auto()  # |
+    EQUALS = auto()  # =
+    NOT_EQUALS = auto()  # !=
+    LT = auto()  # <
+    GT = auto()  # >
+    LTE = auto()  # <=
+    GTE = auto()  # >=
+    DOUBLE_COLON = auto()  # ::
 
     # Keywords
     NEVER = auto()
@@ -76,7 +77,7 @@ class TokenType(Enum):
     WITHOUT = auto()
     BEFORE = auto()
     IF = auto()
-    MAX = auto()              # MAX:n (value = the number)
+    MAX = auto()  # MAX:n (value = the number)
     RUN = auto()
 
     # Literals
@@ -87,13 +88,13 @@ class TokenType(Enum):
     NULL = auto()
 
     # Identifiers & references
-    VARIABLE = auto()         # $name(.field)*
-    MODIFIER = auto()         # +identifier
-    VALIDATOR = auto()        # ^identifier(:param)*
-    IDENTIFIER = auto()       # generic word
-    COMMAND_NAME = auto()     # ALL_CAPS identifier
-    WF_REF = auto()           # wf:name
-    STEP_NUMBER = auto()      # N. at start of indented context
+    VARIABLE = auto()  # $name(.field)*
+    MODIFIER = auto()  # +identifier
+    VALIDATOR = auto()  # ^identifier(:param)*
+    IDENTIFIER = auto()  # generic word
+    COMMAND_NAME = auto()  # ALL_CAPS identifier
+    WF_REF = auto()  # wf:name
+    STEP_NUMBER = auto()  # N. at start of indented context
 
     # Delimiters
     LPAREN = auto()
@@ -105,12 +106,13 @@ class TokenType(Enum):
     COLON = auto()
     COMMA = auto()
     DOT = auto()
-    QUESTION = auto()         # ? (optional marker in @in)
+    QUESTION = auto()  # ? (optional marker in @in)
 
 
 # ─────────────────────────────────────────────
 # TOKEN
 # ─────────────────────────────────────────────
+
 
 @dataclass
 class Token:
@@ -126,6 +128,7 @@ class Token:
 # ─────────────────────────────────────────────
 # ERRORS
 # ─────────────────────────────────────────────
+
 
 class LexerError(Exception):
     def __init__(self, message: str, line: int, column: int):
@@ -163,22 +166,48 @@ _TILDE_KEYWORDS = {
 
 # Commands defined in schema.nodus §commands + §commands_system
 _KNOWN_COMMANDS = {
-    "FETCH", "STORE", "LOAD", "APPEND", "MERGE",
-    "ANALYZE", "SCORE", "COMPARE",
-    "GEN", "REFINE", "TRANSLATE", "SUMMARIZE",
-    "VALIDATE", "ROUTE", "ESCALATE",
-    "NOTIFY", "PUBLISH",
-    "QUERY_KB", "REMEMBER", "RECALL", "FORGET",
-    "LOG", "WAIT", "TONE", "DEBUG",
-    "WRITE", "MKDIR", "FILE_EXISTS",
-    "FILL", "PARSE", "EXECUTE", "SIMULATE",
-    "EXTRACT", "FILTER", "EXECUTE_TEST",
+    "FETCH",
+    "STORE",
+    "LOAD",
+    "APPEND",
+    "MERGE",
+    "ANALYZE",
+    "SCORE",
+    "COMPARE",
+    "GEN",
+    "REFINE",
+    "TRANSLATE",
+    "SUMMARIZE",
+    "VALIDATE",
+    "ROUTE",
+    "ESCALATE",
+    "NOTIFY",
+    "PUBLISH",
+    "QUERY_KB",
+    "REMEMBER",
+    "RECALL",
+    "FORGET",
+    "LOG",
+    "WAIT",
+    "TONE",
+    "DEBUG",
+    "WRITE",
+    "MKDIR",
+    "FILE_EXISTS",
+    "FILL",
+    "PARSE",
+    "EXECUTE",
+    "SIMULATE",
+    "EXTRACT",
+    "FILTER",
+    "EXECUTE_TEST",
 }
 
 
 # ─────────────────────────────────────────────
 # LEXER
 # ─────────────────────────────────────────────
+
 
 class Lexer:
     """Tokenizes a .nodus source string."""
@@ -287,7 +316,7 @@ class Lexer:
                 continue
 
             # Delimiters
-            _DELIM = {
+            _delim = {
                 "(": TokenType.LPAREN,
                 ")": TokenType.RPAREN,
                 "{": TokenType.LBRACE,
@@ -296,8 +325,8 @@ class Lexer:
                 "]": TokenType.RBRACKET,
                 ",": TokenType.COMMA,
             }
-            if ch in _DELIM:
-                self._emit(_DELIM[ch], ch)
+            if ch in _delim:
+                self._emit(_delim[ch], ch)
                 self._advance()
                 continue
 
@@ -427,10 +456,7 @@ class Lexer:
             self.column += 1
 
         # Check for step number:  "1." followed by space/tab/newline
-        if (
-            self.pos < len(self.source)
-            and self.source[self.pos] == "."
-        ):
+        if self.pos < len(self.source) and self.source[self.pos] == ".":
             after_dot = self.pos + 1
             if after_dot >= len(self.source) or self.source[after_dot] in " \t\n\r":
                 num = self.source[start : self.pos]
@@ -476,7 +502,7 @@ class Lexer:
             self.pos += 1
             self.column += 1
 
-        _AT_MAP = {
+        _at_map = {
             "ON:": TokenType.AT_ON,
             "in:": TokenType.AT_IN,
             "out:": TokenType.AT_OUT,
@@ -487,8 +513,8 @@ class Lexer:
 
         key = word + (":" if has_colon else "")
 
-        if key in _AT_MAP:
-            self.tokens.append(Token(_AT_MAP[key], "@" + key, self.line, col))
+        if key in _at_map:
+            self.tokens.append(Token(_at_map[key], "@" + key, self.line, col))
         elif word == "test" and has_colon:
             name = self._read_word()
             self.tokens.append(Token(TokenType.AT_TEST, name, self.line, col))
@@ -496,9 +522,7 @@ class Lexer:
             name = self._read_word()
             self.tokens.append(Token(TokenType.AT_MACRO, name, self.line, col))
         else:
-            self.tokens.append(
-                Token(TokenType.IDENTIFIER, "@" + key, self.line, col)
-            )
+            self.tokens.append(Token(TokenType.IDENTIFIER, "@" + key, self.line, col))
 
     def _read_bang(self) -> None:
         col = self.column
@@ -523,15 +547,15 @@ class Lexer:
             self.pos += 1
             self.column += 1
 
-        _BANG_MAP = {
+        _bang_map = {
             "PREF:": TokenType.BANG_PREF,
             "BREAK": TokenType.BANG_BREAK,
             "SKIP": TokenType.BANG_SKIP,
             "OVERRIDE": TokenType.BANG_OVERRIDE,
         }
         key = word + (":" if has_colon else "")
-        if key in _BANG_MAP:
-            self.tokens.append(Token(_BANG_MAP[key], "!" + key, self.line, col))
+        if key in _bang_map:
+            self.tokens.append(Token(_bang_map[key], "!" + key, self.line, col))
         else:
             self.tokens.append(Token(TokenType.IDENTIFIER, "!" + key, self.line, col))
 
@@ -540,10 +564,14 @@ class Lexer:
         self._advance()  # skip ?
 
         word = self._read_word()
-        _Q_MAP = {"IF": TokenType.Q_IF, "ELIF": TokenType.Q_ELIF, "ELSE": TokenType.Q_ELSE}
+        _q_map = {
+            "IF": TokenType.Q_IF,
+            "ELIF": TokenType.Q_ELIF,
+            "ELSE": TokenType.Q_ELSE,
+        }
 
-        if word in _Q_MAP:
-            self.tokens.append(Token(_Q_MAP[word], "?" + word, self.line, col))
+        if word in _q_map:
+            self.tokens.append(Token(_q_map[word], "?" + word, self.line, col))
         else:
             # standalone ? (optional marker)
             self.tokens.append(Token(TokenType.QUESTION, "?", self.line, col))
@@ -557,9 +585,7 @@ class Lexer:
         word = self._read_word()
 
         if word in _TILDE_KEYWORDS:
-            self.tokens.append(
-                Token(_TILDE_KEYWORDS[word], "~" + word, self.line, col)
-            )
+            self.tokens.append(Token(_TILDE_KEYWORDS[word], "~" + word, self.line, col))
         else:
             self.tokens.append(Token(TokenType.FLAG, word, self.line, col))
 
@@ -630,9 +656,7 @@ class Lexer:
                 num_chars.append(self._ch())
                 self.pos += 1
                 self.column += 1
-            self.tokens.append(
-                Token(TokenType.MAX, "".join(num_chars), self.line, col)
-            )
+            self.tokens.append(Token(TokenType.MAX, "".join(num_chars), self.line, col))
             return
 
         # Keywords

@@ -15,9 +15,11 @@ from enum import Enum
 # POSITION
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class Position:
     """Source location for error reporting."""
+
     line: int
     column: int = 0
     filename: str = ""
@@ -31,9 +33,11 @@ class Position:
 # BASE NODE
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class Node:
     """Base class for all AST nodes."""
+
     pos: Optional[Position] = field(default=None, repr=False)
 
 
@@ -41,9 +45,11 @@ class Node:
 # FILE-LEVEL NODES
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class WorkflowFile(Node):
     """Top-level node for a .nodus workflow file."""
+
     header: Optional[FileHeader] = None
     runtime: Optional[RuntimeBlock] = None
     triggers: List[Trigger] = field(default_factory=list)
@@ -63,6 +69,7 @@ class WorkflowFile(Node):
 @dataclass
 class SchemaFile(Node):
     """Top-level node for a schema .nodus file."""
+
     header: Optional[FileHeader] = None
     meta: Optional[Dict[str, Any]] = None
     rules: List[AbsoluteRule] = field(default_factory=list)
@@ -73,6 +80,7 @@ class SchemaFile(Node):
 @dataclass
 class ConfigFile(Node):
     """Top-level node for a config .nodus file."""
+
     header: Optional[FileHeader] = None
     runtime: Optional[RuntimeBlock] = None
     rules: List[AbsoluteRule] = field(default_factory=list)
@@ -88,6 +96,7 @@ class ConfigFile(Node):
 # HEADERS
 # ─────────────────────────────────────────────
 
+
 class FileType(Enum):
     WORKFLOW = "wf"
     SCHEMA = "schema"
@@ -97,6 +106,7 @@ class FileType(Enum):
 @dataclass
 class FileHeader(Node):
     """§wf:name v1.0 / §schema:nodus v0.3 / §config:project v1.0"""
+
     file_type: FileType = FileType.WORKFLOW
     name: str = ""
     version: str = ""
@@ -106,9 +116,11 @@ class FileHeader(Node):
 # RUNTIME BLOCK
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class RuntimeBlock(Node):
     """§runtime: { core: ..., extends: [...], agents: {...}, mode: ... }"""
+
     core: str = ""
     extends: List[str] = field(default_factory=list)
     agents: Dict[str, str] = field(default_factory=dict)
@@ -120,9 +132,11 @@ class RuntimeBlock(Node):
 # DECLARATIONS
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class Trigger(Node):
     """@ON: condition → action"""
+
     condition: str = ""
     action: str = ""
     condition_expr: Optional[Node] = None
@@ -132,6 +146,7 @@ class Trigger(Node):
 @dataclass
 class AbsoluteRule(Node):
     """!!NEVER: content / !!ALWAYS: content"""
+
     rule_type: str = ""  # "NEVER" or "ALWAYS"
     content: str = ""
 
@@ -139,6 +154,7 @@ class AbsoluteRule(Node):
 @dataclass
 class Preference(Node):
     """!PREF: a OVER b IF condition"""
+
     preferred: str = ""
     over: str = ""
     condition: Optional[str] = None
@@ -147,6 +163,7 @@ class Preference(Node):
 @dataclass
 class InputField(Node):
     """Single field in an @in: declaration."""
+
     name: str = ""
     type_name: str = "any"
     optional: bool = False
@@ -157,24 +174,28 @@ class InputField(Node):
 @dataclass
 class InputDecl(Node):
     """@in: { field: type, ... }"""
+
     fields: List[InputField] = field(default_factory=list)
 
 
 @dataclass
 class OutputDecl(Node):
     """@out: $variable"""
+
     variable: str = ""
 
 
 @dataclass
 class ContextDecl(Node):
     """@ctx: [key1, key2, ...]"""
+
     contexts: List[str] = field(default_factory=list)
 
 
 @dataclass
 class ErrorDecl(Node):
     """@err: ESCALATE(human) +msg=..."""
+
     handler: Optional[CommandCall] = None
     raw: str = ""
 
@@ -183,9 +204,11 @@ class ErrorDecl(Node):
 # STEPS
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class Step(Node):
     """A numbered step in @steps: block."""
+
     number: int = 0
     body: Optional[Node] = None
     comment: str = ""
@@ -196,9 +219,11 @@ class Step(Node):
 # COMMANDS
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class CommandCall(Node):
     """COMMAND(args) +mod=val ^validator ~flag → $target"""
+
     name: str = ""
     args: List[str] = field(default_factory=list)
     modifiers: Dict[str, str] = field(default_factory=dict)
@@ -211,9 +236,11 @@ class CommandCall(Node):
 # CONTROL FLOW
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class Conditional(Node):
     """?IF / ?ELIF / ?ELSE chain."""
+
     condition: str = ""
     action: Optional[Node] = None
     body: List[Node] = field(default_factory=list)
@@ -227,6 +254,7 @@ class Conditional(Node):
 @dataclass
 class ForLoop(Node):
     """~FOR $var IN $collection: ... ~END"""
+
     variable: str = ""
     collection: str = ""
     body: List[Node] = field(default_factory=list)
@@ -235,6 +263,7 @@ class ForLoop(Node):
 @dataclass
 class UntilLoop(Node):
     """~UNTIL condition | MAX:n: ... ~END"""
+
     condition: str = ""
     max_iterations: Optional[int] = None
     body: List[Node] = field(default_factory=list)
@@ -243,6 +272,7 @@ class UntilLoop(Node):
 @dataclass
 class ParallelBlock(Node):
     """~PARALLEL: ... ~JOIN → $var"""
+
     branches: List[Node] = field(default_factory=list)
     join_target: Optional[str] = None
 
@@ -251,9 +281,11 @@ class ParallelBlock(Node):
 # EXPRESSIONS
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class Variable(Node):
     """$name or $name.field.subfield"""
+
     name: str = ""
 
     @property
@@ -264,6 +296,7 @@ class Variable(Node):
 @dataclass
 class Literal(Node):
     """A literal value: string, number, bool, null."""
+
     value: Any = None
     type_name: str = ""  # "str", "int", "float", "bool", "null"
 
@@ -293,12 +326,14 @@ class Identifier(Node):
 @dataclass
 class WfRef(Node):
     """wf:workflow_name"""
+
     name: str = ""
 
 
 @dataclass
 class MacroRef(Node):
     """@macro:MACRO_NAME"""
+
     name: str = ""
 
 
@@ -306,9 +341,11 @@ class MacroRef(Node):
 # BLOCKS
 # ─────────────────────────────────────────────
 
+
 @dataclass
 class NamedBlock(Node):
     """§blockname { ... } — generic named block in schema/config files."""
+
     name: str = ""
     entries: Dict[str, Any] = field(default_factory=dict)
     raw_lines: List[str] = field(default_factory=list)
@@ -317,6 +354,7 @@ class NamedBlock(Node):
 @dataclass
 class TestBlock(Node):
     """@test:name { input: {}, expected: {}, mock: {}, tags: [] }"""
+
     name: str = ""
     input_data: Dict[str, Any] = field(default_factory=dict)
     expected: Dict[str, Any] = field(default_factory=dict)
@@ -328,6 +366,7 @@ class TestBlock(Node):
 @dataclass
 class MacroBlock(Node):
     """@macro:name { ... }"""
+
     name: str = ""
     body: List[Node] = field(default_factory=list)
     raw_lines: List[str] = field(default_factory=list)
@@ -336,12 +375,14 @@ class MacroBlock(Node):
 @dataclass
 class Comment(Node):
     """A ;; comment line."""
+
     text: str = ""
 
 
 # ─────────────────────────────────────────────
 # DIAGNOSTIC
 # ─────────────────────────────────────────────
+
 
 class Severity(Enum):
     ERROR = "error"
@@ -352,8 +393,9 @@ class Severity(Enum):
 @dataclass
 class Diagnostic:
     """A lint/parse diagnostic message."""
+
     severity: Severity
-    code: str           # E001, W003, etc.
+    code: str  # E001, W003, etc.
     message: str
     line: int = 0
     column: int = 0

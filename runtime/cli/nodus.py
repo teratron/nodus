@@ -16,7 +16,11 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+from ..interpreter import Executor, Parser, Transpiler, Validator
+from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
+from ..interpreter.ast_nodes import SchemaFile as _SchemaFile
 
 # ---------------------------------------------------------------------------
 # Version
@@ -75,7 +79,6 @@ def _read_file(path: str) -> str:
     return p.read_text(encoding="utf-8")
 
 
-
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -86,8 +89,6 @@ def cmd_validate(args: List[str]) -> int:
     if not args:
         print(_red("Usage: nodus validate <file.nodus>"), file=sys.stderr)
         return 1
-
-    from ..interpreter import Parser, Validator
 
     source = _read_file(args[0])
     parser = Parser()
@@ -136,8 +137,6 @@ def cmd_run(args: List[str]) -> int:
         print(_red("Usage: nodus run <file.nodus> [--input '{...}']"), file=sys.stderr)
         return 1
 
-    from ..interpreter import Executor, Parser, Validator
-
     file_path = args[0]
     source = _read_file(file_path)
 
@@ -155,7 +154,6 @@ def cmd_run(args: List[str]) -> int:
             return 1
 
     # Parse
-    from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
     parser = Parser()
     ast = parser.parse(source, filename=file_path)
     if not isinstance(ast, _WorkflowFile):
@@ -211,8 +209,6 @@ def cmd_transpile(args: List[str]) -> int:
         )
         return 1
 
-    from ..interpreter import Parser, Transpiler
-
     file_path = args[0]
     source = _read_file(file_path)
 
@@ -230,10 +226,14 @@ def cmd_transpile(args: List[str]) -> int:
         return 1
 
     from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
+
     parser = Parser()
     ast = parser.parse(source, filename=file_path)
     if not isinstance(ast, _WorkflowFile):
-        print(_red("Error: transpile only supports workflow files (§wf:)"), file=sys.stderr)
+        print(
+            _red("Error: transpile only supports workflow files (§wf:)"),
+            file=sys.stderr,
+        )
         return 1
 
     transpiler = Transpiler()
@@ -252,12 +252,11 @@ def cmd_test(args: List[str]) -> int:
         print(_red("Usage: nodus test <file.nodus>"), file=sys.stderr)
         return 1
 
-    from ..interpreter import Executor, Parser
-
     file_path = args[0]
     source = _read_file(file_path)
 
     from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
+
     parser = Parser()
     ast = parser.parse(source, filename=file_path)
     if not isinstance(ast, _WorkflowFile):
@@ -338,9 +337,6 @@ def cmd_schema_inspect(args: List[str]) -> int:
     """Show a summary of the loaded schema."""
     schema_path = args[0] if args else "core/schema.nodus"
 
-    from ..interpreter import Parser
-
-    from ..interpreter.ast_nodes import SchemaFile as _SchemaFile
     source = _read_file(schema_path)
     parser = Parser()
     ast = parser.parse(source, filename=schema_path)
@@ -364,14 +360,17 @@ def cmd_schema_inspect(args: List[str]) -> int:
 
 
 def cmd_version(_args: List[str]) -> int:
+    """Print the version of NODUS."""
     print(f"nodus {__version__}")
     return 0
 
 
 def cmd_help(_args: List[str]) -> int:
+    """Show help message."""
     print(_bold("NODUS CLI") + f"  v{__version__}\n")
     print("Usage: nodus <command> [options]\n")
     print("Commands:")
+    print(f"  {_cyan('init')}                          Initialize a new NODUS project")
     print(f"  {_cyan('validate')}  <file>               Lint / validate a .nodus file")
     print(f"  {_cyan('run')}       <file> [--input JSON] Execute a workflow")
     print(
@@ -389,7 +388,48 @@ def cmd_help(_args: List[str]) -> int:
 # Dispatch
 # ---------------------------------------------------------------------------
 
+
+def find_config() -> Optional[Path]:
+    """Look for config.json in .nodus/ or project root."""
+    paths = [Path(".nodus/config.json"), Path("config.json"), Path("nodus.config.json")]
+    for p in paths:
+        if p.exists():
+            return p
+    return None
+
+
+def cmd_init(args: List[str]) -> int:
+    """Initialize a new NODUS project."""
+    _ = args
+    print(_cyan("Initializing NODUS project..."))
+    dot_nodus = Path(".nodus")
+    dot_nodus.mkdir(exist_ok=True)
+
+    for sub in ["core", "extensions", "schema", "context", ".cache"]:
+        (dot_nodus / sub).mkdir(exist_ok=True)
+    config = dot_nodus / "config.json"
+    if not config.exists():
+        default_config = {
+            "version": "0.1",
+            "project": Path.cwd().name,
+            "schema": {"core": ".nodus/core/schema.nodus", "extends": []},
+            "agents": {
+                "executor": {
+                    "model": "claude-sonnet-4",
+                    "context_files": [".nodus/core/AGENTS.md"],
+                }
+            },
+            "logging": {"enabled": True, "output": "./logs"},
+        }
+        config.write_text(json.dumps(default_config, indent=2), encoding="utf-8")
+        print(_green("Created .nodus/config.json"))
+
+    print(_green("✓ NODUS initialized"))
+    return 0
+
+
 _COMMANDS = {
+    "init": cmd_init,
     "validate": cmd_validate,
     "run": cmd_run,
     "transpile": cmd_transpile,
@@ -401,6 +441,7 @@ _COMMANDS = {
 
 
 def main() -> None:
+    """Main entry point for the NODUS CLI."""
     if len(sys.argv) < 2:
         cmd_help([])
         sys.exit(0)

@@ -40,13 +40,13 @@ def severities(diags):
 
 
 def test_e001_missing_runtime():
-    src = "§wf:foo v1.0\n@steps:\n  1. LOG(\"x\")\n"
+    src = '§wf:foo v1.0\n@steps:\n  1. LOG("x")\n'
     diags = validate(src)
     assert "E001" in codes(diags)
 
 
 def test_e001_no_error_when_runtime_present():
-    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG(\"x\")\n"
+    src = '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG("x")\n'
     diags = validate(src)
     assert "E001" not in codes(diags)
 
@@ -58,9 +58,11 @@ def test_e009_required_field_has_default():
     wf = WorkflowFile()
     wf.header = FileHeader(file_type=FileType.WORKFLOW, name="foo", version="v1.0")
     wf.runtime = RuntimeBlock(core="schema.nodus")
-    wf.input_decl = InputDecl(fields=[
-        InputField(name="msg", type_name="str", optional=False, default="hello")
-    ])
+    wf.input_decl = InputDecl(
+        fields=[
+            InputField(name="msg", type_name="str", optional=False, default="hello")
+        ]
+    )
     diags = Validator().validate(wf)
     assert "E009" in codes(diags)
 
@@ -69,9 +71,11 @@ def test_e009_optional_field_with_default_ok():
     wf = WorkflowFile()
     wf.header = FileHeader(file_type=FileType.WORKFLOW, name="foo", version="v1.0")
     wf.runtime = RuntimeBlock(core="schema.nodus")
-    wf.input_decl = InputDecl(fields=[
-        InputField(name="tone", type_name="str", optional=True, default="neutral")
-    ])
+    wf.input_decl = InputDecl(
+        fields=[
+            InputField(name="tone", type_name="str", optional=True, default="neutral")
+        ]
+    )
     diags = Validator().validate(wf)
     assert "E009" not in codes(diags)
 

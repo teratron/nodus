@@ -91,6 +91,7 @@ class Validator:
     # ── ERRORS ────────────────────────────
 
     def _e001_runtime_present(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+        _ = fn  # Unused in this rule
         if wf.runtime is None:
             return [
                 self._d(
@@ -231,12 +232,14 @@ class Validator:
 
     def _e007_loops_closed(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
         # The parser handles ~END matching. If a ForLoop or UntilLoop node
+        _, _ = wf, fn
         # exists in the AST, it was properly closed during parsing.
         # This rule catches raw text that might have been missed.
         return []
 
     def _e008_parallel_closed(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
         # Same as E007 — parser handles ~JOIN matching.
+        _, _ = wf, fn
         return []
 
     def _e009_required_no_default(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
@@ -438,6 +441,7 @@ class Validator:
 
     def _w009_ctx_in_config(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
         # would require loading nodus.config.json — simplified check
+        _, _ = wf, fn
         return []
 
     def _w010_extends_resolve(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:

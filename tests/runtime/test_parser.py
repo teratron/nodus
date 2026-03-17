@@ -76,9 +76,13 @@ def test_runtime_block_parsed():
 
 
 def test_runtime_core_field():
-    src = "§wf:foo v1.0\n§runtime: {\n  core: core/schema.nodus\n  mode: production\n}\n"
+    src = (
+        "§wf:foo v1.0\n§runtime: {\n  core: core/schema.nodus\n  mode: production\n}\n"
+    )
     ast = parse(src)
-    assert "core" in ast.runtime.raw_fields or ast.runtime.core or ast.runtime.raw_fields
+    assert (
+        "core" in ast.runtime.raw_fields or ast.runtime.core or ast.runtime.raw_fields
+    )
 
 
 # ── Rules ───────────────────────────────────────────────────────
@@ -139,13 +143,13 @@ def test_error_decl_parsed():
 
 
 def test_steps_parsed():
-    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG(\"hello\")\n"
+    src = '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG("hello")\n'
     ast = parse(src)
     assert len(ast.steps) >= 1
 
 
 def test_step_number():
-    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG(\"a\")\n  2. LOG(\"b\")\n"
+    src = '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG("a")\n  2. LOG("b")\n'
     ast = parse(src)
     assert ast.steps[0].number == 1
     assert ast.steps[1].number == 2
@@ -168,7 +172,9 @@ def test_command_call_pipeline_target():
 
 
 def test_command_call_modifier():
-    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. FETCH($in.url) +cache=false → $raw\n"
+    src = (
+        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. FETCH($in.url) +cache=false → $raw\n"
+    )
     ast = parse(src)
     body = ast.steps[0].body
     assert isinstance(body, CommandCall)
@@ -176,7 +182,9 @@ def test_command_call_modifier():
 
 
 def test_command_call_validator():
-    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. VALIDATE($draft) ^brand_voice → $v\n"
+    src = (
+        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. VALIDATE($draft) ^brand_voice → $v\n"
+    )
     ast = parse(src)
     body = ast.steps[0].body
     assert isinstance(body, CommandCall)
@@ -202,7 +210,7 @@ def test_conditional_inline():
 
 
 def test_conditional_if_condition():
-    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. ?IF $score > 0.8 → LOG(\"ok\")\n"
+    src = '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. ?IF $score > 0.8 → LOG("ok")\n'
     ast = parse(src)
     cond = ast.steps[0].body
     assert isinstance(cond, Conditional)
@@ -214,8 +222,8 @@ def test_conditional_if_condition():
 
 def test_test_block_parsed():
     src = (
-        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG(\"x\")\n"
-        "@test:smoke {\n  input: { msg: \"hello\" }\n  expected: { status = SUCCESS }\n}\n"
+        '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG("x")\n'
+        '@test:smoke {\n  input: { msg: "hello" }\n  expected: { status = SUCCESS }\n}\n'
     )
     ast = parse(src)
     assert len(ast.tests) == 1
@@ -224,7 +232,7 @@ def test_test_block_parsed():
 
 def test_multiple_test_blocks():
     src = (
-        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG(\"x\")\n"
+        '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG("x")\n'
         "@test:happy {\n  input: {}\n}\n"
         "@test:sad {\n  input: {}\n}\n"
     )
@@ -237,7 +245,7 @@ def test_multiple_test_blocks():
 
 def test_human_mode_detected():
     src = (
-        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG(\"x\")\n"
+        '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. LOG("x")\n'
         ";; HUMAN MODE\n;; This is a plain description.\n"
     )
     ast = parse(src)

@@ -15,7 +15,7 @@
 ;; ─────────────────────────────────────────────
 
 §runtime: {
-  core:    ../../core/schema.nodus
+  core:    .nodus/core/schema.nodus
   extends: []
   agents: {
     executor:     claude-sonnet-4

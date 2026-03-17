@@ -240,10 +240,7 @@ class Parser:
                 version = v
                 self._advance()
                 # consume dotted patch segment: v1.0, v0.3.1, etc.
-                while (
-                    not self._at_end()
-                    and self._current().type == TokenType.DOT
-                ):
+                while not self._at_end() and self._current().type == TokenType.DOT:
                     dot_pos = self.pos
                     self._advance()
                     if not self._at_end() and self._current().type == TokenType.NUMBER:

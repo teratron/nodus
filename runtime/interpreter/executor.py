@@ -16,6 +16,7 @@ The executor follows the boot sequence defined in AGENTS.md:
 from __future__ import annotations
 
 import time
+import abc
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
@@ -37,6 +38,45 @@ from .ast_nodes import (
 CommandHandler = Callable[["ExecutionContext", CommandCall], Any]
 
 
+class ModelProvider(abc.ABC):
+    """Abstract base class for LLM providers."""
+
+    @abc.abstractmethod
+    def generate(self, prompt: str, modifiers: Dict[str, Any]) -> str:
+        """Generate text."""
+        ...
+
+    @abc.abstractmethod
+    def analyze(self, text: str, flags: List[str]) -> Dict[str, Any]:
+        """Analyze text."""
+        ...
+
+
+class StubProvider(ModelProvider):
+    """Default provider that returns stubs."""
+
+    def generate(self, prompt: str, modifiers: Dict[str, Any]) -> str:
+        tone = modifiers.get("+tone", "brand")
+        return f"[Generated {prompt} in {tone} tone (STUB)]"
+
+    def analyze(self, text: str, flags: List[str]) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
+        for flag in flags:
+            result[flag] = "mock_value" if flag == "intent" else 0.5
+        return result
+
+
+class AnthropicProvider(ModelProvider):
+    """Example provider for Anthropic Claude (Stubbed for now)."""
+
+    def generate(self, prompt: str, modifiers: Dict[str, Any]) -> str:
+        # TODO: Implement real call to anthropic-sdk
+        return f"[Generated via ANTHROPIC: {prompt}]"
+
+    def analyze(self, text: str, flags: List[str]) -> Dict[str, Any]:
+        return {"intent": "analyzed_by_anthropic", "sentiment": 0.9}
+
+
 class ExecutionContext:
     """Runtime state for a single workflow execution."""
 
@@ -54,10 +94,12 @@ class ExecutionContext:
         """Set a variable. Respects $out lock after LOG."""
         clean = name.lstrip("$")
         if clean == "out" and self.out_locked:
-            self.errors.append({
-                "code": "NODUS:RULE_VIOLATION",
-                "reason": "Cannot modify $out after LOG() has been called.",
-            })
+            self.errors.append(
+                {
+                    "code": "NODUS:RULE_VIOLATION",
+                    "reason": "Cannot modify $out after LOG() has been called.",
+                }
+            )
             return
         self.variables[clean] = value
 
@@ -74,21 +116,26 @@ class ExecutionContext:
         return val
 
     def log_step(self, step_num: int, command: str, result: Any) -> None:
-        self.log.append({
-            "step": step_num,
-            "command": command,
-            "result": result,
-            "ts": datetime.now(timezone.utc).isoformat(),
-        })
+        """Log a workflow step execution."""
+        self.log.append(
+            {
+                "step": step_num,
+                "command": command,
+                "result": result,
+                "ts": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
     def check_rules(self, command: str, args: List[str]) -> Optional[str]:
         """Check if a command violates any !! rules. Returns violation message or None."""
+        _ = args  # Unused for now
         cmd_lower = command.lower()
 
         for rule in self.rules:
             content_lower = rule.content.lower()
             if rule.rule_type == "NEVER":
                 # "publish WITHOUT validate"
+                _ = args  # Unused in this check
                 if "publish" in content_lower and cmd_lower == "publish":
                     if "without" in content_lower and "validate" in content_lower:
                         # check if validate was called
@@ -109,7 +156,7 @@ class NodusResult:
     def __init__(self) -> None:
         self.workflow: str = ""
         self.version: str = ""
-        self.status: str = "ok"   # ok | partial | failed | aborted
+        self.status: str = "ok"  # ok | partial | failed | aborted
         self.out: Any = None
         self.log: List[Dict[str, Any]] = []
         self.errors: List[Dict[str, Any]] = []
@@ -118,6 +165,7 @@ class NodusResult:
         self.agent_id: str = "nodus-executor"
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert result to a dictionary."""
         return {
             "workflow": self.workflow,
             "version": self.version,
@@ -134,8 +182,13 @@ class NodusResult:
 class Executor:
     """Executes a parsed NODUS workflow AST."""
 
-    def __init__(self) -> None:
+    def __init__(self, provider: Optional[ModelProvider] = None) -> None:
         self.handlers: Dict[str, CommandHandler] = self._default_handlers()
+        self.provider: ModelProvider = provider or StubProvider()
+
+    def set_provider(self, provider: ModelProvider) -> None:
+        """Set the active LLM provider."""
+        self.provider = provider
 
     def register_handler(self, command: str, handler: CommandHandler) -> None:
         """Register a custom command handler."""
@@ -155,7 +208,9 @@ class Executor:
 
         if not isinstance(ast, WorkflowFile):
             result.status = "failed"
-            result.errors.append({"code": "NODUS:PARSE_ERROR", "reason": "Expected WorkflowFile"})
+            result.errors.append(
+                {"code": "NODUS:PARSE_ERROR", "reason": "Expected WorkflowFile"}
+            )
             result.ts_end = datetime.now(timezone.utc).isoformat()
             return result
 
@@ -189,12 +244,15 @@ class Executor:
         ctx.variables.setdefault("out", None)
         ctx.variables.setdefault("error", {})
         ctx.variables.setdefault("meta", {})
-        ctx.variables.setdefault("session", {
-            "id": f"session_{int(time.time())}",
-            "ts_start": datetime.now(timezone.utc).isoformat(),
-            "agent_id": result.agent_id,
-            "workflow": result.workflow,
-        })
+        ctx.variables.setdefault(
+            "session",
+            {
+                "id": f"session_{int(time.time())}",
+                "ts_start": datetime.now(timezone.utc).isoformat(),
+                "agent_id": result.agent_id,
+                "workflow": result.workflow,
+            },
+        )
         ctx.variables.setdefault("log", [])
         ctx.variables.setdefault("flags", [])
 
@@ -242,7 +300,9 @@ class Executor:
 
         return signal
 
-    def _execute_node(self, ctx: ExecutionContext, node: Node, step_num: int = 0) -> Optional[str]:
+    def _execute_node(
+        self, ctx: ExecutionContext, node: Node, step_num: int = 0
+    ) -> Optional[str]:
         if isinstance(node, CommandCall):
             return self._execute_command(ctx, node, step_num)
         if isinstance(node, Conditional):
@@ -255,15 +315,19 @@ class Executor:
             return self._execute_parallel(ctx, node, step_num)
         return None
 
-    def _execute_command(self, ctx: ExecutionContext, cmd: CommandCall, step_num: int) -> Optional[str]:
+    def _execute_command(
+        self, ctx: ExecutionContext, cmd: CommandCall, step_num: int
+    ) -> Optional[str]:
         # Check !! rules
         violation = ctx.check_rules(cmd.name, cmd.args)
         if violation:
-            ctx.errors.append({
-                "code": "NODUS:RULE_VIOLATION",
-                "step": step_num,
-                "reason": violation,
-            })
+            ctx.errors.append(
+                {
+                    "code": "NODUS:RULE_VIOLATION",
+                    "step": step_num,
+                    "reason": violation,
+                }
+            )
             raise ExecutionError("NODUS:RULE_VIOLATION", violation)
 
         # Dispatch to handler
@@ -286,7 +350,9 @@ class Executor:
 
         return None
 
-    def _execute_conditional(self, ctx: ExecutionContext, cond: Conditional, step_num: int) -> Optional[str]:
+    def _execute_conditional(
+        self, ctx: ExecutionContext, cond: Conditional, step_num: int
+    ) -> Optional[str]:
         if self._evaluate_condition(ctx, cond.condition):
             if cond.action:
                 signal = self._execute_node(ctx, cond.action, step_num)
@@ -321,7 +387,9 @@ class Executor:
 
         return None
 
-    def _execute_for(self, ctx: ExecutionContext, loop: ForLoop, step_num: int) -> Optional[str]:
+    def _execute_for(
+        self, ctx: ExecutionContext, loop: ForLoop, step_num: int
+    ) -> Optional[str]:
         collection = ctx.get_var(loop.collection)
         if not collection or not isinstance(collection, list):
             return None
@@ -337,9 +405,11 @@ class Executor:
                     break
         return None
 
-    def _execute_until(self, ctx: ExecutionContext, loop: UntilLoop, step_num: int) -> Optional[str]:
+    def _execute_until(
+        self, ctx: ExecutionContext, loop: UntilLoop, step_num: int
+    ) -> Optional[str]:
         max_iter = loop.max_iterations or 5
-        for i in range(max_iter):
+        for _ in range(max_iter):
             for child in loop.body:
                 signal = self._execute_node(ctx, child, step_num)
                 if signal == "BREAK":
@@ -351,7 +421,9 @@ class Executor:
         ctx.flags.append("NODUS:MAX_REACHED")
         return None
 
-    def _execute_parallel(self, ctx: ExecutionContext, block: ParallelBlock, step_num: int) -> Optional[str]:
+    def _execute_parallel(
+        self, ctx: ExecutionContext, block: ParallelBlock, step_num: int
+    ) -> Optional[str]:
         # In a real implementation, branches would run concurrently.
         # Here we execute sequentially for simplicity.
         results: Dict[str, Any] = {}
@@ -379,17 +451,15 @@ class Executor:
         # AND
         if " AND " in cond:
             parts = cond.split(" AND ", 1)
-            return (
-                self._evaluate_condition(ctx, parts[0])
-                and self._evaluate_condition(ctx, parts[1])
+            return self._evaluate_condition(ctx, parts[0]) and self._evaluate_condition(
+                ctx, parts[1]
             )
 
         # OR
         if " OR " in cond:
             parts = cond.split(" OR ", 1)
-            return (
-                self._evaluate_condition(ctx, parts[0])
-                or self._evaluate_condition(ctx, parts[1])
+            return self._evaluate_condition(ctx, parts[0]) or self._evaluate_condition(
+                ctx, parts[1]
             )
 
         # NOT CONTAINS
@@ -506,32 +576,16 @@ class Executor:
 
     @staticmethod
     def _handle_fetch(ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        _ = ctx
         return {"_stub": True, "source": cmd.args[0] if cmd.args else None}
 
-    @staticmethod
-    def _handle_analyze(ctx: ExecutionContext, cmd: CommandCall) -> Any:
-        result: Dict[str, Any] = {}
-        for flag in cmd.flags:
-            if flag == "sentiment":
-                result["sentiment"] = 0.5
-            elif flag == "intent":
-                result["intent"] = "unclear"
-            elif flag == "toxicity":
-                result["toxicity"] = 0.0
-            elif flag == "entities":
-                result["entities"] = []
-            elif flag == "lang":
-                result["lang"] = "en"
-            elif flag == "urgency":
-                result["urgency"] = 0.0
-            else:
-                result[flag] = None
-        return result
+    def _handle_analyze(self, ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        text = ctx.get_var(cmd.args[0]) if cmd.args else ""
+        return self.provider.analyze(str(text), cmd.flags)
 
-    @staticmethod
-    def _handle_gen(ctx: ExecutionContext, cmd: CommandCall) -> str:
-        tone = cmd.modifiers.get("+tone", ctx.active_tone)
-        return f"[Generated {cmd.args[0] if cmd.args else 'content'} in {tone} tone]"
+    def _handle_gen(self, ctx: ExecutionContext, cmd: CommandCall) -> str:
+        prompt = cmd.args[0] if cmd.args else ""
+        return self.provider.generate(prompt, cmd.modifiers)
 
     @staticmethod
     def _handle_validate(ctx: ExecutionContext, cmd: CommandCall) -> bool:
@@ -554,6 +608,7 @@ class Executor:
 
     @staticmethod
     def _handle_notify(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        _, _ = ctx, cmd
         return True
 
     @staticmethod
@@ -646,6 +701,7 @@ class Executor:
 
 class ExecutionError(Exception):
     """Raised when a workflow execution encounters a fatal error."""
+
     def __init__(self, code: str, message: str):
         self.code = code
         super().__init__(message)

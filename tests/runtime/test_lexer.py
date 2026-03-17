@@ -12,7 +12,11 @@ def types(source: str):
 
 
 def values(source: str):
-    return [t.value for t in tokenize(source) if t.type not in (TokenType.EOF, TokenType.NEWLINE)]
+    return [
+        t.value
+        for t in tokenize(source)
+        if t.type not in (TokenType.EOF, TokenType.NEWLINE)
+    ]
 
 
 # ── Section tokens ─────────────────────────────────────────────
