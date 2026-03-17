@@ -9,6 +9,7 @@ a parsed AST into either representation.
 
 from __future__ import annotations
 
+from .. import constants
 from .ast_nodes import (
     CommandCall,
     Comment,
@@ -22,14 +23,25 @@ from .ast_nodes import (
 
 
 class Transpiler:
-    """Converts NODUS AST between NODUS and HUMAN representations."""
+    """Converts NODUS AST between NODUS and HUMAN representations.
+
+    NODUS mode (symbolic) is optimized for machine processing and brevity.
+    HUMAN mode (semantic) is optimized for human readability and review.
+    """
 
     # ═══════════════════════════════════════
     # NODUS → HUMAN
     # ═══════════════════════════════════════
 
     def to_human(self, ast: WorkflowFile) -> str:
-        """Convert a parsed workflow AST to HUMAN mode text."""
+        """Convert a parsed workflow AST to a semantic HUMAN mode description.
+
+        Args:
+            ast: The root WorkflowFile node to transpile.
+
+        Returns:
+            A string containing the human-readable description of the workflow.
+        """
         lines: list[str] = []
 
         # Header
@@ -101,7 +113,14 @@ class Transpiler:
     # ═══════════════════════════════════════
 
     def to_nodus(self, ast: WorkflowFile) -> str:
-        """Convert a parsed workflow AST back to NODUS mode text."""
+        """Convert a parsed workflow AST back to symbolic NODUS mode text.
+
+        Args:
+            ast: The root WorkflowFile node to transpile.
+
+        Returns:
+            A string containing the NODUS symbolic representation.
+        """
         lines: list[str] = []
 
         # Header
@@ -188,6 +207,7 @@ class Transpiler:
     # ═══════════════════════════════════════
 
     def _humanize_trigger(self, condition: str) -> str:
+        """Convert a symbolic trigger condition to a human-readable phrase."""
         cond = condition.strip()
         if cond.startswith("new_"):
             return f"when a {cond.replace('_', ' ')} is received"
@@ -202,17 +222,19 @@ class Transpiler:
         return f"when {cond}"
 
     def _humanize_rule(self, content: str) -> str:
+        """Apply simple textual replacements to rule descriptions."""
         content = content.lower()
         content = content.replace("$out", "the output")
         content = content.replace("$error.level", "error level")
         return content
 
     def _humanize_step(self, step: Step) -> str:
+        """Convert a step node to its human-readable description."""
         if step.comment:
             # use comment as description
             text = step.comment.lstrip(";").strip()
-            if text.startswith("—"):
-                text = text.lstrip("—").strip()
+            if text.startswith("\u2014"):
+                text = text.lstrip("\u2014").strip()
             return text
 
         if isinstance(step.body, CommandCall):
@@ -231,28 +253,11 @@ class Transpiler:
         return ""
 
     def _humanize_command(self, cmd: CommandCall) -> str:
+        """Transform a symbolic command call into a semantic sentence."""
         name = cmd.name
         args = ", ".join(cmd.args)
 
-        verb_map = {
-            "FETCH": "Fetch",
-            "ANALYZE": "Analyze",
-            "GEN": "Generate",
-            "VALIDATE": "Validate",
-            "ROUTE": "Route to",
-            "ESCALATE": "Escalate to",
-            "LOG": "Log",
-            "PUBLISH": "Publish",
-            "NOTIFY": "Notify",
-            "REFINE": "Refine",
-            "TONE": "Set tone to",
-            "REMEMBER": "Store in memory:",
-            "RECALL": "Load from memory:",
-            "QUERY_KB": "Search knowledge base for",
-            "RUN": "Run macro",
-        }
-
-        verb = verb_map.get(name, name)
+        verb = constants.TRANSPILER_VERB_MAP.get(name, name)
         desc = f"{verb} {args}" if args else verb
 
         if cmd.flags:
@@ -261,10 +266,11 @@ class Transpiler:
             rules = ", ".join(v.lstrip("^") for v in cmd.validators)
             desc += f" against rules: {rules}"
         if cmd.pipeline_target:
-            desc += f" → store as {self._humanize_var(cmd.pipeline_target)}"
+            desc += f" \u2192 store as {self._humanize_var(cmd.pipeline_target)}"
         return desc
 
     def _humanize_conditional(self, cond: Conditional) -> str:
+        """Convert a conditional node to a semantic description."""
         desc = f"IF {cond.condition}"
         if cond.action and isinstance(cond.action, CommandCall):
             desc += f" → {self._humanize_command(cond.action)}"
@@ -273,20 +279,24 @@ class Transpiler:
         return desc
 
     def _humanize_for(self, loop: ForLoop) -> str:
+        """Convert a for-loop node to a semantic description."""
         return f"For each {self._humanize_var(loop.variable)} in {self._humanize_var(loop.collection)}"
 
     def _humanize_until(self, loop: UntilLoop) -> str:
+        """Convert an until-loop node to a semantic description."""
         desc = f"Repeat until {loop.condition}"
         if loop.max_iterations:
             desc += f" (max {loop.max_iterations} attempts)"
         return desc
 
     def _humanize_var(self, var: str) -> str:
+        """Convert symbolic variable names to semantic descriptions (e.g., $out -> the output)."""
         if not var:
             return ""
         return var.lstrip("$").replace(".", " → ")
 
     def _humanize_error(self, raw: str) -> str:
+        """Convert a symbolic error handler string into a semantic phrase."""
         if "ESCALATE" in raw and "human" in raw.lower():
             return "escalate to human"
         return raw
@@ -296,6 +306,7 @@ class Transpiler:
     # ═══════════════════════════════════════
 
     def _nodus_step(self, step: Step) -> str:
+        """Reconstruct a step node into symbolic NODUS mode text."""
         if isinstance(step.body, CommandCall):
             return self._nodus_command(step.body)
         if isinstance(step.body, Comment):
@@ -305,6 +316,7 @@ class Transpiler:
         return ""
 
     def _nodus_command(self, cmd: CommandCall) -> str:
+        """Reconstruct a command call node into symbolic NODUS mode text."""
         parts = [f"{cmd.name}({', '.join(cmd.args)})"]
         for mod_name, mod_val in cmd.modifiers.items():
             if mod_val:

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.5] - 2026-03-17
+
+### Added
+
+- Comprehensive docstrings and comments across all `runtime/interpreter` files (`parser.py`, `lexer.py`, `transpiler.py`, `validator.py`, `ast_nodes.py`).
+
+### Changed
+
+- Refactored `transpiler.py`, `executor.py`, and `validator.py` to use a centralized `constants.py` for static strings and mappings.
+- Improved code clarity and maintainability in the runtime core.
+
 ## [0.3.4] - 2026-03-17
 
 ### Changed

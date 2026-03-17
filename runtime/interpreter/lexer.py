@@ -10,12 +10,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 
+from .. import constants
+
 # ─────────────────────────────────────────────
 # TOKEN TYPES
 # ─────────────────────────────────────────────
 
 
 class TokenType(Enum):
+    """Enumeration of all valid NODUS token types."""
+
     # Structure
     SECTION = auto()  # § followed by identifier
     COMMENT = auto()  # ;; ...
@@ -114,6 +118,8 @@ class TokenType(Enum):
 
 @dataclass
 class Token:
+    """Represents a single terminal symbol in the NODUS language."""
+
     type: TokenType
     value: str
     line: int
@@ -129,6 +135,8 @@ class Token:
 
 
 class LexerError(Exception):
+    """Exception raised when tokenization fails."""
+
     def __init__(self, message: str, line: int, column: int):
         self.line = line
         self.column = column
@@ -162,45 +170,6 @@ _TILDE_KEYWORDS = {
     "END": TokenType.TILDE_END,
 }
 
-# Commands defined in schema.nodus §commands + §commands_system
-_KNOWN_COMMANDS = {
-    "FETCH",
-    "STORE",
-    "LOAD",
-    "APPEND",
-    "MERGE",
-    "ANALYZE",
-    "SCORE",
-    "COMPARE",
-    "GEN",
-    "REFINE",
-    "TRANSLATE",
-    "SUMMARIZE",
-    "VALIDATE",
-    "ROUTE",
-    "ESCALATE",
-    "NOTIFY",
-    "PUBLISH",
-    "QUERY_KB",
-    "REMEMBER",
-    "RECALL",
-    "FORGET",
-    "LOG",
-    "WAIT",
-    "TONE",
-    "DEBUG",
-    "WRITE",
-    "MKDIR",
-    "FILE_EXISTS",
-    "FILL",
-    "PARSE",
-    "EXECUTE",
-    "SIMULATE",
-    "EXTRACT",
-    "FILTER",
-    "EXECUTE_TEST",
-}
-
 
 # ─────────────────────────────────────────────
 # LEXER
@@ -221,7 +190,11 @@ class Lexer:
     # ── public ─────────────────────────────
 
     def tokenize(self) -> list[Token]:
-        """Tokenize the entire source and return the token list."""
+        """Convert the entire source string into a list of NODUS tokens.
+
+        Returns:
+            A list of Token objects representing the source code.
+        """
         while self.pos < len(self.source):
             self._skip_spaces()
             if self._at_end():
@@ -369,20 +342,25 @@ class Lexer:
     # ── character helpers ──────────────────
 
     def _at_end(self) -> bool:
+        """Check if end of source reached."""
         return self.pos >= len(self.source)
 
     def _ch(self) -> str:
+        """Return the character at the current cursor position."""
         return self.source[self.pos]
 
     def _peek(self) -> str | None:
+        """Look at next character without advancing."""
         p = self.pos + 1
         return self.source[p] if p < len(self.source) else None
 
     def _peek_is_digit(self) -> bool:
+        """Check if next character is a digit."""
         p = self.pos + 1
         return p < len(self.source) and self.source[p].isdigit()
 
     def _advance(self) -> None:
+        """Advance cursor and update line/column counters."""
         if self.pos < len(self.source):
             if self.source[self.pos] == "\n":
                 self.line += 1
@@ -392,13 +370,16 @@ class Lexer:
             self.pos += 1
 
     def _emit(self, ttype: TokenType, value: str) -> None:
+        """Create and append a new token."""
         self.tokens.append(Token(ttype, value, self.line, self.column))
 
     def _skip_spaces(self) -> None:
+        """Consume all consecutive horizontal whitespace (spaces and tabs)."""
         while self.pos < len(self.source) and self.source[self.pos] in " \t":
             self._advance()
 
     def _read_word(self) -> str:
+        """Accumulate alphanumeric characters into a string."""
         start = self.pos
         while self.pos < len(self.source) and (
             self.source[self.pos].isalnum() or self.source[self.pos] == "_"
@@ -410,6 +391,7 @@ class Lexer:
     # ── token readers ─────────────────────
 
     def _read_newline(self) -> None:
+        """Handle CR/LF and emit a NEWLINE token."""
         self._emit(TokenType.NEWLINE, "\\n")
         if self._ch() == "\r":
             self._advance()
@@ -419,6 +401,7 @@ class Lexer:
             self._advance()
 
     def _read_comment(self) -> None:
+        """Consume double-semicolon comment until EOL."""
         col = self.column
         start = self.pos
         while self.pos < len(self.source) and self.source[self.pos] != "\n":
@@ -428,6 +411,7 @@ class Lexer:
         self.tokens.append(Token(TokenType.COMMENT, text, self.line, col))
 
     def _read_string(self) -> None:
+        """Read a double-quoted string with support for escaped quotes."""
         col = self.column
         self._advance()  # skip opening "
         chars: list[str] = []
@@ -444,9 +428,11 @@ class Lexer:
         self.tokens.append(Token(TokenType.STRING, "".join(chars), self.line, col))
 
     def _read_number(self) -> None:
+        """Read an integer or decimal number."""
         col = self.column
         start = self.pos
         if self.source[self.pos] == "-":
+            # potential negative number or operator
             self.pos += 1
             self.column += 1
         while self.pos < len(self.source) and self.source[self.pos].isdigit():
@@ -474,6 +460,7 @@ class Lexer:
         )
 
     def _read_section(self) -> None:
+        """Read a § section declaration."""
         col = self.column
         self._advance()  # skip §
         word = self._read_word()
@@ -490,6 +477,7 @@ class Lexer:
         self.tokens.append(Token(TokenType.SECTION, value, self.line, col))
 
     def _read_at(self) -> None:
+        """Read a @-prefixed keyword or declaration."""
         col = self.column
         self._advance()  # skip @
         word = self._read_word()
@@ -523,6 +511,7 @@ class Lexer:
             self.tokens.append(Token(TokenType.IDENTIFIER, "@" + key, self.line, col))
 
     def _read_bang(self) -> None:
+        """Read a !-prefixed rule, flag, or "!=" operator."""
         col = self.column
         self._advance()  # skip first !
 
@@ -558,6 +547,7 @@ class Lexer:
             self.tokens.append(Token(TokenType.IDENTIFIER, "!" + key, self.line, col))
 
     def _read_question(self) -> None:
+        """Read a ?-prefixed conditional keyword or optionality marker."""
         col = self.column
         self._advance()  # skip ?
 
@@ -578,6 +568,7 @@ class Lexer:
                 self.column -= len(word)
 
     def _read_tilde(self) -> None:
+        """Read a ~-prefixed control flow keyword or flag."""
         col = self.column
         self._advance()  # skip ~
         word = self._read_word()
@@ -588,6 +579,7 @@ class Lexer:
             self.tokens.append(Token(TokenType.FLAG, word, self.line, col))
 
     def _read_variable(self) -> None:
+        """Read a $-prefixed variable reference with dotted field access."""
         col = self.column
         self._advance()  # skip $
         name = self._read_word()
@@ -608,12 +600,14 @@ class Lexer:
         self.tokens.append(Token(TokenType.VARIABLE, "$" + name, self.line, col))
 
     def _read_modifier(self) -> None:
+        """Read a +-prefixed modifier."""
         col = self.column
         self._advance()  # skip +
         name = self._read_word()
         self.tokens.append(Token(TokenType.MODIFIER, "+" + name, self.line, col))
 
     def _read_validator(self) -> None:
+        """Read a ^-prefixed validator with optional parameters."""
         col = self.column
         self._advance()  # skip ^
         name = self._read_word()
@@ -634,6 +628,7 @@ class Lexer:
         self.tokens.append(Token(TokenType.VALIDATOR, "^" + full, self.line, col))
 
     def _read_identifier(self) -> None:
+        """Read a generic identifier, keyword, command or boolean/null literal."""
         col = self.column
         word = self._read_word()
 
@@ -674,7 +669,7 @@ class Lexer:
             return
 
         # Command name (ALL_CAPS, len > 1)
-        if word.isupper() and len(word) > 1 and word in _KNOWN_COMMANDS:
+        if word.isupper() and len(word) > 1 and word in constants.KNOWN_COMMANDS:
             self.tokens.append(Token(TokenType.COMMAND_NAME, word, self.line, col))
             return
 

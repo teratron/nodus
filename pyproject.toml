@@ -1,6 +1,6 @@
 [project]
 name = "nodus"
-version = "0.3.4"
+version = "0.3.5"
 description = "NODUS — Node Orchestration DSL for Unified Systems"
 authors = [{ name = "Oleg Alexandrov", email = "alexandrovoleg.ru@gmail.com" }]
 license = { text = "MIT License" }
@@ -58,7 +58,7 @@ ignore = [
 max-complexity = 30
 
 [tool.ruff.lint.isort]
-known-first-party = ["metaexpert"]
+known-first-party = ["nodus"]
 
 [tool.ruff.format]
 quote-style = "double"

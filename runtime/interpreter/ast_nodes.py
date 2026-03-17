@@ -17,7 +17,13 @@ from typing import Any
 
 @dataclass
 class Position:
-    """Source location for error reporting."""
+    """Source location for error reporting.
+
+    Attributes:
+        line: 1-based line number.
+        column: 0-based column number.
+        filename: Source file path.
+    """
 
     line: int
     column: int = 0
@@ -35,7 +41,11 @@ class Position:
 
 @dataclass
 class Node:
-    """Base class for all AST nodes."""
+    """Base class for all AST nodes.
+
+    Attributes:
+        pos: Position in the source file.
+    """
 
     pos: Position | None = field(default=None, repr=False)
 
@@ -47,7 +57,11 @@ class Node:
 
 @dataclass
 class WorkflowFile(Node):
-    """Top-level node for a .nodus workflow file."""
+    """Top-level node for a .nodus workflow file.
+
+    Represents the entire structure of a NODUS workflow including
+    headers, rules, inputs, and the step execution sequence.
+    """
 
     header: FileHeader | None = None
     runtime: RuntimeBlock | None = None
@@ -67,7 +81,10 @@ class WorkflowFile(Node):
 
 @dataclass
 class SchemaFile(Node):
-    """Top-level node for a schema .nodus file."""
+    """Top-level node for a schema .nodus file.
+
+    Defines the layout, rules, and preferences for a specific NODUS protocol.
+    """
 
     header: FileHeader | None = None
     meta: dict[str, Any] | None = None
@@ -78,7 +95,10 @@ class SchemaFile(Node):
 
 @dataclass
 class ConfigFile(Node):
-    """Top-level node for a config .nodus file."""
+    """Top-level node for a config .nodus file.
+
+    Contains global settings, shared triggers, and environment configuration.
+    """
 
     header: FileHeader | None = None
     runtime: RuntimeBlock | None = None
@@ -97,6 +117,8 @@ class ConfigFile(Node):
 
 
 class FileType(Enum):
+    """Supported NODUS file types."""
+
     WORKFLOW = "wf"
     SCHEMA = "schema"
     CONFIG = "config"
@@ -104,7 +126,7 @@ class FileType(Enum):
 
 @dataclass
 class FileHeader(Node):
-    """§wf:name v1.0 / §schema:nodus v0.3 / §config:project v1.0"""
+    """File type and version header (e.g., §wf:name v1.0)."""
 
     file_type: FileType = FileType.WORKFLOW
     name: str = ""
@@ -118,7 +140,10 @@ class FileHeader(Node):
 
 @dataclass
 class RuntimeBlock(Node):
-    """§runtime: { core: ..., extends: [...], agents: {...}, mode: ... }"""
+    """Runtime configuration block (§runtime).
+
+    Specifies core schema, extensions, and agent metadata.
+    """
 
     core: str = ""
     extends: list[str] = field(default_factory=list)
@@ -134,7 +159,7 @@ class RuntimeBlock(Node):
 
 @dataclass
 class Trigger(Node):
-    """@ON: condition → action"""
+    """Reactive trigger declaration (@ON)."""
 
     condition: str = ""
     action: str = ""
@@ -144,7 +169,7 @@ class Trigger(Node):
 
 @dataclass
 class AbsoluteRule(Node):
-    """!!NEVER: content / !!ALWAYS: content"""
+    """Absolute constraint (!!NEVER or !!ALWAYS)."""
 
     rule_type: str = ""  # "NEVER" or "ALWAYS"
     content: str = ""
@@ -152,7 +177,7 @@ class AbsoluteRule(Node):
 
 @dataclass
 class Preference(Node):
-    """!PREF: a OVER b IF condition"""
+    """Soft preference rule (!PREF)."""
 
     preferred: str = ""
     over: str = ""
@@ -161,7 +186,7 @@ class Preference(Node):
 
 @dataclass
 class InputField(Node):
-    """Single field in an @in: declaration."""
+    """Single field definition in an @in block."""
 
     name: str = ""
     type_name: str = "any"
@@ -172,28 +197,28 @@ class InputField(Node):
 
 @dataclass
 class InputDecl(Node):
-    """@in: { field: type, ... }"""
+    """Workflow input declaration (@in)."""
 
     fields: list[InputField] = field(default_factory=list)
 
 
 @dataclass
 class OutputDecl(Node):
-    """@out: $variable"""
+    """Workflow output target declaration (@out)."""
 
     variable: str = ""
 
 
 @dataclass
 class ContextDecl(Node):
-    """@ctx: [key1, key2, ...]"""
+    """Required context keys declaration (@ctx)."""
 
     contexts: list[str] = field(default_factory=list)
 
 
 @dataclass
 class ErrorDecl(Node):
-    """@err: ESCALATE(human) +msg=..."""
+    """Error handler declaration (@err)."""
 
     handler: CommandCall | None = None
     raw: str = ""
@@ -206,7 +231,7 @@ class ErrorDecl(Node):
 
 @dataclass
 class Step(Node):
-    """A numbered step in @steps: block."""
+    """A numbered execution step in the @steps block."""
 
     number: int = 0
     body: Node | None = None
@@ -221,7 +246,7 @@ class Step(Node):
 
 @dataclass
 class CommandCall(Node):
-    """COMMAND(args) +mod=val ^validator ~flag → $target"""
+    """A single command invocation (e.g., FETCH(...))."""
 
     name: str = ""
     args: list[str] = field(default_factory=list)
@@ -238,7 +263,7 @@ class CommandCall(Node):
 
 @dataclass
 class Conditional(Node):
-    """?IF / ?ELIF / ?ELSE chain."""
+    """Conditional execution node (?IF / ?ELIF / ?ELSE)."""
 
     condition: str = ""
     action: Node | None = None
@@ -252,7 +277,7 @@ class Conditional(Node):
 
 @dataclass
 class ForLoop(Node):
-    """~FOR $var IN $collection: ... ~END"""
+    """Iterator loop (~FOR $var IN $collection)."""
 
     variable: str = ""
     collection: str = ""
@@ -261,7 +286,7 @@ class ForLoop(Node):
 
 @dataclass
 class UntilLoop(Node):
-    """~UNTIL condition | MAX:n: ... ~END"""
+    """Conditional loop (~UNTIL condition | MAX:n)."""
 
     condition: str = ""
     max_iterations: int | None = None
@@ -270,7 +295,7 @@ class UntilLoop(Node):
 
 @dataclass
 class ParallelBlock(Node):
-    """~PARALLEL: ... ~JOIN → $var"""
+    """Parallel execution block (~PARALLEL ... ~JOIN)."""
 
     branches: list[Node] = field(default_factory=list)
     join_target: str | None = None
@@ -283,18 +308,19 @@ class ParallelBlock(Node):
 
 @dataclass
 class Variable(Node):
-    """$name or $name.field.subfield"""
+    """A NODUS variable expression (e.g., $in.title)."""
 
     name: str = ""
 
     @property
     def parts(self) -> list[str]:
+        """Split the variable name into segments (dot-notation)."""
         return self.name.lstrip("$").split(".")
 
 
 @dataclass
 class Literal(Node):
-    """A literal value: string, number, bool, null."""
+    """A literal value node (string, number, boolean, or null)."""
 
     value: Any = None
     type_name: str = ""  # "str", "int", "float", "bool", "null"
@@ -302,16 +328,22 @@ class Literal(Node):
 
 @dataclass
 class ArrayLiteral(Node):
+    """A literal array of values."""
+
     elements: list[Any] = field(default_factory=list)
 
 
 @dataclass
 class ObjectLiteral(Node):
+    """A literal object (dictionary) of values."""
+
     fields: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class BinaryOp(Node):
+    """A binary operation (e.g., $val > 5)."""
+
     left: Node | None = None
     operator: str = ""
     right: Node | None = None
@@ -319,19 +351,21 @@ class BinaryOp(Node):
 
 @dataclass
 class Identifier(Node):
+    """A generic identifier node."""
+
     name: str = ""
 
 
 @dataclass
 class WfRef(Node):
-    """wf:workflow_name"""
+    """Reference to another workflow (wf:name)."""
 
     name: str = ""
 
 
 @dataclass
 class MacroRef(Node):
-    """@macro:MACRO_NAME"""
+    """Reference to a macro (@macro:name)."""
 
     name: str = ""
 
@@ -343,7 +377,7 @@ class MacroRef(Node):
 
 @dataclass
 class NamedBlock(Node):
-    """§blockname { ... } — generic named block in schema/config files."""
+    """Generic named block in schema or config files (§name)."""
 
     name: str = ""
     entries: dict[str, Any] = field(default_factory=dict)
@@ -352,7 +386,7 @@ class NamedBlock(Node):
 
 @dataclass
 class NodusTestBlock(Node):
-    """@test:name { input: {}, expected: {}, mock: {}, tags: [] }"""
+    """Simulation test definition (@test)."""
 
     __test__ = False
 
@@ -366,7 +400,7 @@ class NodusTestBlock(Node):
 
 @dataclass
 class MacroBlock(Node):
-    """@macro:name { ... }"""
+    """Reusable macro definition (@macro)."""
 
     name: str = ""
     body: list[Node] = field(default_factory=list)
@@ -375,7 +409,7 @@ class MacroBlock(Node):
 
 @dataclass
 class Comment(Node):
-    """A ;; comment line."""
+    """A NODUS comment line (;;)."""
 
     text: str = ""
 
@@ -386,6 +420,8 @@ class Comment(Node):
 
 
 class Severity(Enum):
+    """Diagnostic severity levels."""
+
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
@@ -393,7 +429,7 @@ class Severity(Enum):
 
 @dataclass
 class Diagnostic:
-    """A lint/parse diagnostic message."""
+    """A lint or parse diagnostic message."""
 
     severity: Severity
     code: str  # E001, W003, etc.

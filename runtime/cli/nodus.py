@@ -1,14 +1,6 @@
 """NODUS CLI — command-line interface for the NODUS language runtime.
 
-Commands:
-    nodus validate <file>       Lint/validate a .nodus file
-    nodus run <file> [--input]  Execute a workflow
-    nodus transpile <file>      Convert between NODUS and HUMAN modes
-    nodus test <file>           Run embedded @test blocks
-    nodus new <name>            Scaffold a new .nodus workflow
-    nodus schema inspect        Show loaded schema summary
-    nodus version               Print version info
-    nodus help                  Show this help
+Provides commands for validation, execution, transpilation, and project management.
 """
 
 from __future__ import annotations
@@ -17,15 +9,10 @@ import json
 import sys
 from pathlib import Path
 
+from .. import constants, settings
 from ..interpreter import Executor, Parser, Transpiler, Validator
 from ..interpreter.ast_nodes import SchemaFile as _SchemaFile
 from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
-
-# ---------------------------------------------------------------------------
-# Version
-# ---------------------------------------------------------------------------
-
-__version__ = "0.3.4"
 
 # ---------------------------------------------------------------------------
 # Colour helpers (ANSI, disabled when not a TTY)
@@ -35,28 +22,34 @@ _USE_COLOUR = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
 
 def _c(code: str, text: str) -> str:
+    """Wrap text in ANSI colour codes if supported."""
     if not _USE_COLOUR:
         return text
     return f"\033[{code}m{text}\033[0m"
 
 
 def _red(t: str) -> str:
+    """Return red text."""
     return _c("31", t)
 
 
 def _yellow(t: str) -> str:
+    """Return yellow text."""
     return _c("33", t)
 
 
 def _green(t: str) -> str:
+    """Return green text."""
     return _c("32", t)
 
 
 def _cyan(t: str) -> str:
+    """Return cyan text."""
     return _c("36", t)
 
 
 def _bold(t: str) -> str:
+    """Return bold text."""
     return _c("1", t)
 
 
@@ -66,6 +59,7 @@ def _bold(t: str) -> str:
 
 
 def _read_file(path: str) -> str:
+    """Read a .nodus file and perform basic extension checks."""
     p = Path(path)
     if not p.exists():
         print(_red(f"Error: file not found — {path}"), file=sys.stderr)
@@ -224,8 +218,6 @@ def cmd_transpile(args: list[str]) -> int:
         )
         return 1
 
-    from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
-
     parser = Parser()
     ast = parser.parse(source, filename=file_path)
     if not isinstance(ast, _WorkflowFile):
@@ -253,8 +245,6 @@ def cmd_test(args: list[str]) -> int:
 
     file_path = args[0]
     source = _read_file(file_path)
-
-    from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
 
     parser = Parser()
     ast = parser.parse(source, filename=file_path)
@@ -311,21 +301,7 @@ def cmd_new(args: list[str]) -> int:
         print(_red(f"Error: {filename} already exists"), file=sys.stderr)
         return 1
 
-    template = f"""\u00a7wf:{stem} v0.1
-
-\u00a7runtime: {{
-  core:    core/schema.nodus
-  mode:    NODUS
-}}
-
-@in: {{ }}
-@out: $out
-
-@steps:
-  1. ;; TODO: define workflow steps
-
-@err: ESCALATE("human")
-"""
+    template = settings.NEW_WORKFLOW_TEMPLATE.format(stem=stem)
 
     Path(filename).write_text(template, encoding="utf-8")
     print(_green(f"Created {filename}"))
@@ -334,7 +310,7 @@ def cmd_new(args: list[str]) -> int:
 
 def cmd_schema_inspect(args: list[str]) -> int:
     """Show a summary of the loaded schema."""
-    schema_path = args[0] if args else "core/schema.nodus"
+    schema_path = args[0] if args else settings.DEFAULT_SCHEMA_PATH
 
     source = _read_file(schema_path)
     parser = Parser()
@@ -353,33 +329,21 @@ def cmd_schema_inspect(args: list[str]) -> int:
         print(f"\n  Sections ({len(ast.sections)}):")
         for name, block in ast.sections.items():
             line_count = len(block.raw_lines) if hasattr(block, "raw_lines") else 0
-            print(f"    \u00a7{name}  ({line_count} lines)")
+            print(f"    §{name}  ({line_count} lines)")
 
     return 0
 
 
 def cmd_version(_args: list[str]) -> int:
     """Print the version of NODUS."""
-    print(f"nodus {__version__}")
+    print(f"nodus {constants.__version__}")
     return 0
 
 
 def cmd_help(_args: list[str]) -> int:
     """Show help message."""
-    print(_bold("NODUS CLI") + f"  v{__version__}\n")
-    print("Usage: nodus <command> [options]\n")
-    print("Commands:")
-    print(f"  {_cyan('init')}                          Initialize a new NODUS project")
-    print(f"  {_cyan('validate')}  <file>               Lint / validate a .nodus file")
-    print(f"  {_cyan('run')}       <file> [--input JSON] Execute a workflow")
-    print(
-        f"  {_cyan('transpile')} <file> [--mode M]     Convert NODUS \u2194 HUMAN (default: human)"
-    )
-    print(f"  {_cyan('test')}      <file>               Run embedded @test blocks")
-    print(f"  {_cyan('new')}       <name>               Scaffold a new workflow")
-    print(f"  {_cyan('schema inspect')} [file]           Show schema summary")
-    print(f"  {_cyan('version')}                        Print version")
-    print(f"  {_cyan('help')}                           Show this help")
+    print(_bold("NODUS CLI") + f"  v{constants.__version__}\n")
+    print(settings.CLI_HELP)
     return 0
 
 
@@ -406,20 +370,11 @@ def cmd_init(args: list[str]) -> int:
 
     for sub in ["core", "extensions", "schema", "context", ".cache"]:
         (dot_nodus / sub).mkdir(exist_ok=True)
+
     config = dot_nodus / "config.json"
     if not config.exists():
-        default_config = {
-            "version": "0.1",
-            "project": Path.cwd().name,
-            "schema": {"core": ".nodus/core/schema.nodus", "extends": []},
-            "agents": {
-                "executor": {
-                    "model": "claude-sonnet-4",
-                    "context_files": [".nodus/core/AGENTS.md"],
-                }
-            },
-            "logging": {"enabled": True, "output": "./logs"},
-        }
+        default_config = settings.DEFAULT_CONFIG_DATA.copy()
+        default_config["project"] = Path.cwd().name
         config.write_text(json.dumps(default_config, indent=2), encoding="utf-8")
         print(_green("Created .nodus/config.json"))
 

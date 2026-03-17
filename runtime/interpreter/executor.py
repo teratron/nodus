@@ -21,6 +21,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from .. import constants, settings
 from .ast_nodes import (
     AbsoluteRule,
     CommandCall,
@@ -56,13 +57,19 @@ class StubProvider(ModelProvider):
     """Default provider that returns stubs."""
 
     def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
+        """Generate a stub response."""
         tone = modifiers.get("+tone", "brand")
-        return f"[Generated {prompt} in {tone} tone (STUB)]"
+        return settings.STUB_GENERATE_TEMPLATE.format(prompt=prompt, tone=tone)
 
     def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
+        """Return stub analysis results."""
         result: dict[str, Any] = {}
         for flag in flags:
-            result[flag] = "mock_value" if flag == "intent" else 0.5
+            result[flag] = (
+                settings.STUB_ANALYZE_VALUE
+                if flag == "intent"
+                else settings.STUB_ANALYZE_SCORE
+            )
         return result
 
 
@@ -70,10 +77,11 @@ class AnthropicProvider(ModelProvider):
     """Example provider for Anthropic Claude (Stubbed for now)."""
 
     def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
-        # TODO: Implement real call to anthropic-sdk
+        """TODO: Implement real call to anthropic-sdk."""
         return f"[Generated via ANTHROPIC: {prompt}]"
 
     def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
+        """Return analyzed results via Anthropic."""
         return {"intent": "analyzed_by_anthropic", "sentiment": 0.9}
 
 
@@ -96,7 +104,7 @@ class ExecutionContext:
         if clean == "out" and self.out_locked:
             self.errors.append(
                 {
-                    "code": "NODUS:RULE_VIOLATION",
+                    "code": constants.ERR_RULE_VIOLATION,
                     "reason": "Cannot modify $out after LOG() has been called.",
                 }
             )
@@ -162,7 +170,7 @@ class NodusResult:
         self.errors: list[dict[str, Any]] = []
         self.flags: list[str] = []
         self.ts_end: str = ""
-        self.agent_id: str = "nodus-executor"
+        self.agent_id: str = settings.AGENT_ID
 
     def to_dict(self) -> dict[str, Any]:
         """Convert result to a dictionary."""
@@ -209,7 +217,7 @@ class Executor:
         if not isinstance(ast, WorkflowFile):
             result.status = "failed"
             result.errors.append(
-                {"code": "NODUS:PARSE_ERROR", "reason": "Expected WorkflowFile"}
+                {"code": constants.ERR_PARSE_ERROR, "reason": "Expected WorkflowFile"}
             )
             result.ts_end = datetime.now(UTC).isoformat()
             return result
@@ -303,6 +311,7 @@ class Executor:
     def _execute_node(
         self, ctx: ExecutionContext, node: Node, step_num: int = 0
     ) -> str | None:
+        """Execute an AST node based on its type."""
         if isinstance(node, CommandCall):
             return self._execute_command(ctx, node, step_num)
         if isinstance(node, Conditional):
@@ -318,17 +327,18 @@ class Executor:
     def _execute_command(
         self, ctx: ExecutionContext, cmd: CommandCall, step_num: int
     ) -> str | None:
+        """Execute a command call."""
         # Check !! rules
         violation = ctx.check_rules(cmd.name, cmd.args)
         if violation:
             ctx.errors.append(
                 {
-                    "code": "NODUS:RULE_VIOLATION",
+                    "code": constants.ERR_RULE_VIOLATION,
                     "step": step_num,
                     "reason": violation,
                 }
             )
-            raise ExecutionError("NODUS:RULE_VIOLATION", violation)
+            raise ExecutionError(constants.ERR_RULE_VIOLATION, violation)
 
         # Dispatch to handler
         handler = self.handlers.get(cmd.name)
@@ -353,6 +363,7 @@ class Executor:
     def _execute_conditional(
         self, ctx: ExecutionContext, cond: Conditional, step_num: int
     ) -> str | None:
+        """Execute a ?IF / ?ELIF / ?ELSE block."""
         if self._evaluate_condition(ctx, cond.condition):
             if cond.action:
                 signal = self._execute_node(ctx, cond.action, step_num)
@@ -390,6 +401,7 @@ class Executor:
     def _execute_for(
         self, ctx: ExecutionContext, loop: ForLoop, step_num: int
     ) -> str | None:
+        """Execute a ~FOR loop over a collection."""
         collection = ctx.get_var(loop.collection)
         if not collection or not isinstance(collection, list):
             return None
@@ -408,7 +420,8 @@ class Executor:
     def _execute_until(
         self, ctx: ExecutionContext, loop: UntilLoop, step_num: int
     ) -> str | None:
-        max_iter = loop.max_iterations or 5
+        """Execute a ~UNTIL loop until the condition is met."""
+        max_iter = loop.max_iterations or settings.DEFAULT_UNTIL_ITERATIONS
         for _ in range(max_iter):
             for child in loop.body:
                 signal = self._execute_node(ctx, child, step_num)
@@ -418,12 +431,13 @@ class Executor:
             if self._evaluate_condition(ctx, loop.condition):
                 return None
 
-        ctx.flags.append("NODUS:MAX_REACHED")
+        ctx.flags.append(constants.ERR_MAX_REACHED)
         return None
 
     def _execute_parallel(
         self, ctx: ExecutionContext, block: ParallelBlock, step_num: int
     ) -> str | None:
+        """Execute branches in a ~PARALLEL block. Currently sequential pseudo-implementation."""
         # In a real implementation, branches would run concurrently.
         # Here we execute sequentially for simplicity.
         results: dict[str, Any] = {}
@@ -513,6 +527,7 @@ class Executor:
 
     @staticmethod
     def _compare(left: Any, op: str, right: Any) -> bool:
+        """Apply comparison operator to values."""
         # Try numeric comparison first
         try:
             lf = float(left) if left is not None else 0.0
@@ -576,64 +591,78 @@ class Executor:
 
     @staticmethod
     def _handle_fetch(ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        """STUB: Simulate fetching content."""
         _ = ctx
         return {"_stub": True, "source": cmd.args[0] if cmd.args else None}
 
     def _handle_analyze(self, ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        """STUB: Analyze text via the provider."""
         text = ctx.get_var(cmd.args[0]) if cmd.args else ""
         return self.provider.analyze(str(text), cmd.flags)
 
     def _handle_gen(self, ctx: ExecutionContext, cmd: CommandCall) -> str:
+        """STUB: Generate content via the provider."""
         prompt = cmd.args[0] if cmd.args else ""
         return self.provider.generate(prompt, cmd.modifiers)
 
     @staticmethod
     def _handle_validate(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        """STUB: Always returns True."""
         return True
 
     @staticmethod
     def _handle_route(ctx: ExecutionContext, cmd: CommandCall) -> None:
+        """STUB: Record routing target in flags."""
         target = cmd.args[0] if cmd.args else "unknown"
         ctx.flags.append(f"ROUTE:{target}")
 
     @staticmethod
     def _handle_escalate(ctx: ExecutionContext, cmd: CommandCall) -> None:
+        """STUB: Record escalation target in flags."""
         target = cmd.args[0] if cmd.args else "human"
         ctx.flags.append(f"ESCALATE:{target}")
 
     @staticmethod
     def _handle_log(ctx: ExecutionContext, cmd: CommandCall) -> None:
+        """STUB: Log a value."""
         value = cmd.args[0] if cmd.args else ctx.get_var("out")
         ctx.variables.setdefault("log_entries", []).append(value)
 
     @staticmethod
     def _handle_notify(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        """STUB: Always returns True."""
         _, _ = ctx, cmd
         return True
 
     @staticmethod
     def _handle_publish(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        """STUB: Always returns True."""
         return True
 
     @staticmethod
     def _handle_tone(ctx: ExecutionContext, cmd: CommandCall) -> None:
+        """STUB: Update active tone."""
         if cmd.args:
             ctx.active_tone = cmd.args[0]
 
     @staticmethod
     def _handle_refine(ctx: ExecutionContext, cmd: CommandCall) -> Any:
-        return ctx.get_var("draft") or "[Refined content]"
+        """STUB: Return refined drafting."""
+        return ctx.get_var("draft") or settings.STUB_REFINE_TEXT
 
     @staticmethod
     def _handle_score(ctx: ExecutionContext, cmd: CommandCall) -> float:
-        return 0.85
+        """STUB: Return a constant score."""
+        return settings.STUB_SCORE_VALUE
 
     @staticmethod
     def _handle_append(ctx: ExecutionContext, cmd: CommandCall) -> list:
+        """STUB: Return empty list."""
         return []
 
     @staticmethod
     def _handle_merge(ctx: ExecutionContext, cmd: CommandCall) -> dict:
+        """STUB: Merge dictionaries from variables."""
         result: dict[str, Any] = {}
         for arg in cmd.args:
             val = ctx.get_var(arg) if arg.startswith("$") else {}
@@ -643,56 +672,69 @@ class Executor:
 
     @staticmethod
     def _handle_store(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        """STUB: Always returns True."""
         return True
 
     @staticmethod
     def _handle_load(ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        """STUB: Returns None."""
         return None
 
     @staticmethod
     def _handle_compare(ctx: ExecutionContext, cmd: CommandCall) -> dict:
+        """STUB: Return default comparison result."""
         return {"match": False, "diff": {}, "score": 0.0}
 
     @staticmethod
     def _handle_translate(ctx: ExecutionContext, cmd: CommandCall) -> str:
-        return "[Translated content]"
+        """STUB: Return stub translation."""
+        return settings.STUB_TRANSLATE_TEXT
 
     @staticmethod
     def _handle_summarize(ctx: ExecutionContext, cmd: CommandCall) -> str:
-        return "[Summary]"
+        """STUB: Return stub summary."""
+        return settings.STUB_SUMMARIZE_TEXT
 
     @staticmethod
     def _handle_wait(ctx: ExecutionContext, cmd: CommandCall) -> None:
+        """STUB: Does nothing."""
         pass
 
     @staticmethod
     def _handle_debug(ctx: ExecutionContext, cmd: CommandCall) -> None:
+        """STUB: Does nothing."""
         pass
 
     @staticmethod
     def _handle_query_kb(ctx: ExecutionContext, cmd: CommandCall) -> list:
+        """STUB: Return empty list."""
         return []
 
     @staticmethod
     def _handle_remember(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        """STUB: Always returns True."""
         return True
 
     @staticmethod
     def _handle_recall(ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        """STUB: Returns None."""
         return None
 
     @staticmethod
     def _handle_forget(ctx: ExecutionContext, cmd: CommandCall) -> bool:
+        """STUB: Always returns True."""
         return True
 
     @staticmethod
     def _handle_run(ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        """STUB: Record run trigger in flags."""
         macro = cmd.args[0] if cmd.args else "unknown"
         ctx.flags.append(f"RUN:{macro}")
         return None
 
     @staticmethod
     def _handle_assign(ctx: ExecutionContext, cmd: CommandCall) -> Any:
+        """STUB: Assign value to variable."""
         if len(cmd.args) >= 2:
             ctx.set_var(cmd.args[0], cmd.args[1])
             return cmd.args[1]

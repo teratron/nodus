@@ -50,9 +50,15 @@ class ParseError(Exception):
 
 
 class Parser:
-    """Recursive-descent parser for NODUS .nodus files."""
+    """Recursive-descent parser for NODUS .nodus files.
+
+    This parser follows the grammar of the NODUS language, converting
+    a stream of tokens into an Abstract Syntax Tree (AST). It supports
+    Workflow, Schema, and Config file formats.
+    """
 
     def __init__(self) -> None:
+        """Initialize the parser with empty state."""
         self.filename: str = ""
         self.tokens: list[Token] = []
         self.pos: int = 0
@@ -63,7 +69,16 @@ class Parser:
     # ═══════════════════════════════════════
 
     def parse(self, source: str, filename: str = "") -> Node | None:
-        """Parse source text into a file-level AST node."""
+        """Parse source text into a file-level AST node.
+
+        Args:
+            source: The raw NODUS source code to parse.
+            filename: The name of the file being parsed (for diagnostics).
+
+        Returns:
+            A file-level node (WorkflowFile, SchemaFile, or ConfigFile)
+            or None if the file is empty or type cannot be determined.
+        """
         self.filename = filename
         self.tokens = Lexer(source, filename).tokenize()
         self.pos = 0
@@ -95,6 +110,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_workflow(self) -> WorkflowFile:
+        """Parse a .nodus workflow file, scanning for all top-level blocks."""
         wf = WorkflowFile(pos=self._pos())
         wf.header = self._parse_header(FileType.WORKFLOW)
 
@@ -148,6 +164,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_schema(self) -> SchemaFile:
+        """Parse a .nodus schema file, collecting rules and sections."""
         sf = SchemaFile(pos=self._pos())
         sf.header = self._parse_header(FileType.SCHEMA)
 
@@ -178,6 +195,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_config(self) -> ConfigFile:
+        """Parse a .nodus config file, setting up runtime parameters."""
         cf = ConfigFile(pos=self._pos())
         cf.header = self._parse_header(FileType.CONFIG)
 
@@ -222,6 +240,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_header(self, file_type: FileType) -> FileHeader:
+        """Parse §wf:name v1.0 style header. Identifies name and version."""
         pos = self._pos()
         tok = self._current()
         self._advance()
@@ -267,6 +286,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_runtime(self) -> RuntimeBlock:
+        """Parse §runtime block (single line : or braced { })."""
         pos = self._pos()
         self._advance()  # skip §runtime token
 
@@ -294,6 +314,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_trigger(self) -> Trigger:
+        """Parse @ON: condition → action reactor."""
         pos = self._pos()
         self._advance()  # skip @ON:
         cond = self._consume_until_arrow()
@@ -306,6 +327,7 @@ class Parser:
         return Trigger(condition=cond.strip(), action=action.strip(), pos=pos)
 
     def _parse_absolute_rule(self) -> AbsoluteRule:
+        """Parse !!NEVER: / !!ALWAYS: constraints."""
         pos = self._pos()
         self._advance()  # skip !!
         rule_type = ""
@@ -321,6 +343,7 @@ class Parser:
         return AbsoluteRule(rule_type=rule_type, content=content.strip(), pos=pos)
 
     def _parse_preference(self) -> Preference:
+        """Parse !PREF: preferred OVER other IF condition."""
         pos = self._pos()
         self._advance()  # skip !PREF:
         line = self._consume_rest_of_line()
@@ -340,6 +363,7 @@ class Parser:
         return Preference(preferred=preferred, over=over, condition=condition, pos=pos)
 
     def _parse_input_decl(self) -> InputDecl:
+        """Parse @in block and its fields."""
         pos = self._pos()
         self._advance()  # skip @in:
         self._skip_noise()
@@ -353,6 +377,7 @@ class Parser:
         return InputDecl(fields=fields, pos=pos)
 
     def _parse_field_list(self) -> list[InputField]:
+        """Parse the interior of a braced field list."""
         fields: list[InputField] = []
         while not self._at_end() and not self._check(TokenType.RBRACE):
             self._skip_noise()
@@ -406,6 +431,7 @@ class Parser:
         return fields
 
     def _parse_output_decl(self) -> OutputDecl:
+        """Parse @out target variable."""
         pos = self._pos()
         self._advance()  # skip @out:
         self._skip_noise()
@@ -419,6 +445,7 @@ class Parser:
         return OutputDecl(variable=var, pos=pos)
 
     def _parse_context_decl(self) -> ContextDecl:
+        """Parse @ctx bracketed context names."""
         pos = self._pos()
         self._advance()  # skip @ctx:
         self._skip_noise()
@@ -442,6 +469,7 @@ class Parser:
         return ContextDecl(contexts=contexts, pos=pos)
 
     def _parse_error_decl(self) -> ErrorDecl:
+        """Parse @err handler declaration."""
         pos = self._pos()
         self._advance()  # skip @err:
         raw = self._consume_rest_of_line().strip()
@@ -453,6 +481,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_steps(self) -> list[Step]:
+        """Parse the @steps block sequence."""
         self._advance()  # skip @steps:
         self._skip_noise()
         steps: list[Step] = []
@@ -503,6 +532,7 @@ class Parser:
         return steps
 
     def _parse_step(self) -> Step:
+        """Parse a single numbered step and its nested contents."""
         pos = self._pos()
         num = int(self._current().value)
         self._advance()  # skip step number
@@ -569,6 +599,7 @@ class Parser:
         return step
 
     def _parse_step_body(self) -> Node | None:
+        """Parse the main action on a step line (Command, IF, etc.)."""
         if self._at_end():
             return None
         tok = self._current()
@@ -596,6 +627,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_command_call(self) -> CommandCall:
+        """Parse a full command call: NAME(args) +mods ^validators ~flags → $target."""
         pos = self._pos()
         name = self._current().value
         self._advance()
@@ -667,6 +699,7 @@ class Parser:
         )
 
     def _parse_arg_list(self) -> list[str]:
+        """Parse a comma-separated list of arguments inside parentheses."""
         args: list[str] = []
         depth = 0
         current: list[str] = []
@@ -699,7 +732,7 @@ class Parser:
         return args
 
     def _parse_modifier_value(self) -> str:
-        """Read a modifier value — could be simple or a brace/bracket block."""
+        """Read a modifier value — handle simple values and braced/bracketed blocks."""
         self._skip_noise()
         if self._at_end():
             return ""
@@ -747,6 +780,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_conditional(self) -> Conditional | None:
+        """Entry point for parsing ?IF / ?ELIF / ?ELSE blocks."""
         if self._at_end():
             return None
         tok = self._current()
@@ -760,6 +794,7 @@ class Parser:
         return None
 
     def _parse_if_chain(self) -> Conditional:
+        """Parse a full ?IF chain including any ELIF/ELSE branches."""
         pos = self._pos()
         self._advance()  # skip ?IF
 
@@ -808,6 +843,7 @@ class Parser:
         return node
 
     def _parse_elif(self) -> Conditional:
+        """Parse a single ?ELIF branch."""
         pos = self._pos()
         self._advance()  # skip ?ELIF
         cond_str = self._consume_until_action_sep()
@@ -834,6 +870,7 @@ class Parser:
         )
 
     def _parse_else(self) -> Conditional:
+        """Parse the ?ELSE branch of a chain."""
         pos = self._pos()
         self._advance()  # skip ?ELSE
         action_node = None
@@ -863,6 +900,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_control_flow(self) -> Node | None:
+        """Entry point for ~FOR, ~UNTIL, and ~PARALLEL blocks."""
         tok = self._current()
         if tok.type == TokenType.TILDE_FOR:
             return self._parse_for_loop()
@@ -878,6 +916,7 @@ class Parser:
         return None
 
     def _parse_for_loop(self) -> ForLoop:
+        """Parse ~FOR $var IN $collection block."""
         pos = self._pos()
         self._advance()  # skip ~FOR
         self._skip_noise()
@@ -906,6 +945,7 @@ class Parser:
         return ForLoop(variable=variable, collection=collection, body=body, pos=pos)
 
     def _parse_until_loop(self) -> UntilLoop:
+        """Parse ~UNTIL condition | MAX:n block."""
         pos = self._pos()
         self._advance()  # skip ~UNTIL
 
@@ -943,6 +983,7 @@ class Parser:
         )
 
     def _parse_parallel(self) -> ParallelBlock:
+        """Parse ~PARALLEL ... ~JOIN concurrent block."""
         pos = self._pos()
         self._advance()  # skip ~PARALLEL
         if self._check(TokenType.COLON):
@@ -981,7 +1022,7 @@ class Parser:
         return ParallelBlock(branches=branches, join_target=join_target, pos=pos)
 
     def _collect_body_until_end(self) -> list[Node]:
-        """Collect step body lines until ~END."""
+        """Collect step body lines until a matching ~END is encountered."""
         body: list[Node] = []
         while not self._at_end():
             self._skip_noise()
@@ -1005,6 +1046,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_named_block(self, name: str) -> NamedBlock:
+        """Parse §name { ... } blocks found in schema/config files."""
         pos = self._pos()
         self._skip_noise()
 
@@ -1029,7 +1071,7 @@ class Parser:
         return NamedBlock(name=name, raw_lines=raw_lines, pos=pos)
 
     def _parse_brace_block(self) -> dict[str, Any]:
-        """Parse { key: value, ... } into a dict. Handles nesting."""
+        """Parse structural { key: value } blocks into Python dictionaries."""
         self._advance()  # skip {
         result: dict[str, Any] = {}
 
@@ -1078,7 +1120,7 @@ class Parser:
         return result
 
     def _parse_bracket_list(self) -> list[str]:
-        """Parse [ val, val, ... ] into a list of strings."""
+        """Parse [ val, val ] bracketed lists into Python lists."""
         self._advance()  # skip [
         items: list[str] = []
         while not self._at_end() and not self._check(TokenType.RBRACKET):
@@ -1099,6 +1141,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_test_block(self) -> NodusTestBlock:
+        """Parse @test simulation block and collect its raw body lines."""
         pos = self._pos()
         name = self._current().value
         self._advance()  # skip @test:name
@@ -1125,6 +1168,7 @@ class Parser:
         return NodusTestBlock(name=name, raw_lines=raw_lines, pos=pos)
 
     def _parse_macro_block(self) -> MacroBlock:
+        """Parse @macro definition and collect its body content."""
         pos = self._pos()
         name = self._current().value
         self._advance()  # skip @macro:name
@@ -1155,7 +1199,7 @@ class Parser:
     # ═══════════════════════════════════════
 
     def _parse_assignment_or_expr(self) -> Node | None:
-        """Handle $var = value or standalone variable reference."""
+        """Parse $var = value assignments or standalone variable references."""
         pos = self._pos()
         var_name = self._current().value
         self._advance()
@@ -1184,18 +1228,22 @@ class Parser:
         return Position(tok.line, tok.column, self.filename)
 
     def _at_end(self) -> bool:
+        """Check if the parser has reached the end of the token stream."""
         return (
             self.pos >= len(self.tokens) or self.tokens[self.pos].type == TokenType.EOF
         )
 
     def _current(self) -> Token:
+        """Return the current token without advancing."""
         return self.tokens[self.pos]
 
     def _advance(self) -> None:
+        """Advance the parser position to the next token."""
         if self.pos < len(self.tokens):
             self.pos += 1
 
     def _check(self, ttype: TokenType) -> bool:
+        """Check if the current token matches the specified type."""
         return not self._at_end() and self._current().type == ttype
 
     def _skip_noise(self) -> None:
@@ -1204,13 +1252,14 @@ class Parser:
             self._advance()
 
     def _skip_to_newline(self) -> None:
-        """Advance past the current line."""
+        """Advance the parser until after the current line ends."""
         while not self._at_end() and self._current().type != TokenType.NEWLINE:
             self._advance()
         if self._check(TokenType.NEWLINE):
             self._advance()
 
     def _consume_rest_of_line(self) -> str:
+        """Consume all remaining tokens on the current line and return as a string."""
         parts: list[str] = []
         while not self._at_end() and self._current().type not in (
             TokenType.NEWLINE,
@@ -1223,6 +1272,7 @@ class Parser:
         return " ".join(parts)
 
     def _consume_until_arrow(self) -> str:
+        """Consume tokens until the → arrow is reached."""
         parts: list[str] = []
         while not self._at_end() and self._current().type not in (
             TokenType.ARROW,
@@ -1234,7 +1284,7 @@ class Parser:
         return " ".join(parts)
 
     def _consume_until_action_sep(self) -> str:
-        """Consume tokens until →, :, !BREAK, !SKIP, NEWLINE."""
+        """Consume tokens until an action or control flow separator is reached."""
         parts: list[str] = []
         while not self._at_end():
             tok = self._current()
@@ -1253,7 +1303,7 @@ class Parser:
         return " ".join(parts)
 
     def _collect_comment_block(self) -> str:
-        """Collect consecutive comment lines into a single string."""
+        """Collect consecutive ;; comment lines into a single newline-delimited block."""
         lines: list[str] = []
         while not self._at_end() and self._current().type == TokenType.COMMENT:
             lines.append(self._current().value)
@@ -1262,7 +1312,7 @@ class Parser:
         return "\n".join(lines)
 
     def _collect_brace_raw(self) -> str:
-        """Collect { ... } including nesting as raw string."""
+        """Collect balanced { ... } block content as a raw space-joined string."""
         parts: list[str] = ["{"]
         self._advance()  # skip {
         depth = 1
@@ -1277,6 +1327,7 @@ class Parser:
         return " ".join(parts)
 
     def _collect_bracket_raw(self) -> str:
+        """Collect balanced [ ... ] block content as a raw space-joined string."""
         parts: list[str] = ["["]
         self._advance()  # skip [
         depth = 1
@@ -1291,7 +1342,7 @@ class Parser:
         return " ".join(parts)
 
     def _try_parse_command_from_string(self, raw: str) -> CommandCall | None:
-        """Best-effort parse of a command string like 'ESCALATE(human) +msg=...'"""
+        """Perform best-effort parsing of a command call from a raw string."""
         if not raw:
             return None
         parts = raw.split("(", 1)
@@ -1305,7 +1356,8 @@ class Parser:
         return CommandCall(name=name, args=args, pos=self._pos())
 
     @staticmethod
-    def _extract_flags(text: str) -> tuple:
+    def _extract_flags(text: str) -> tuple[bool, bool, bool]:
+        """Extract !BREAK, !SKIP, and !OVERRIDE flags from an action string."""
         brk = "!BREAK" in text
         skip = "!SKIP" in text
         ovr = "!OVERRIDE" in text
@@ -1313,11 +1365,13 @@ class Parser:
 
     @staticmethod
     def _strip_flags(text: str) -> str:
+        """Remove control flow flags from a command or action string."""
         for flag in ("!BREAK", "!SKIP", "!OVERRIDE"):
             text = text.replace(flag, "")
         return text.strip()
 
     def _diag(self, severity: Severity, code: str, message: str) -> None:
+        """Log a diagnostic message during the parsing process."""
         pos = self._pos()
         self.diagnostics.append(
             Diagnostic(severity, code, message, pos.line, pos.column, self.filename)
