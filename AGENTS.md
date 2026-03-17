@@ -30,7 +30,7 @@ The project strictly adheres to **uv-first** philosophy.
 
 Always initialize and activate the environment before execution:
 
-```shell
+```bash
 # Initialization
 uv sync
 
