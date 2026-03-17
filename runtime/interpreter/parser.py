@@ -6,9 +6,8 @@ using node types from ast_nodes.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from .lexer import Lexer, Token, TokenType
 from .ast_nodes import (
     AbsoluteRule,
     CommandCall,
@@ -26,6 +25,7 @@ from .ast_nodes import (
     MacroBlock,
     NamedBlock,
     Node,
+    NodusTestBlock,
     OutputDecl,
     ParallelBlock,
     Position,
@@ -34,12 +34,12 @@ from .ast_nodes import (
     SchemaFile,
     Severity,
     Step,
-    TestBlock,
     Trigger,
     UntilLoop,
     Variable,
     WorkflowFile,
 )
+from .lexer import Lexer, Token, TokenType
 
 
 class ParseError(Exception):
@@ -54,15 +54,15 @@ class Parser:
 
     def __init__(self) -> None:
         self.filename: str = ""
-        self.tokens: List[Token] = []
+        self.tokens: list[Token] = []
         self.pos: int = 0
-        self.diagnostics: List[Diagnostic] = []
+        self.diagnostics: list[Diagnostic] = []
 
     # ═══════════════════════════════════════
     # PUBLIC
     # ═══════════════════════════════════════
 
-    def parse(self, source: str, filename: str = "") -> Optional[Node]:
+    def parse(self, source: str, filename: str = "") -> Node | None:
         """Parse source text into a file-level AST node."""
         self.filename = filename
         self.tokens = Lexer(source, filename).tokenize()
@@ -276,7 +276,7 @@ class Parser:
             self._advance()
         self._skip_noise()
 
-        raw: Dict[str, Any] = {}
+        raw: dict[str, Any] = {}
         if self._check(TokenType.LBRACE):
             raw = self._parse_brace_block()
 
@@ -343,7 +343,7 @@ class Parser:
         pos = self._pos()
         self._advance()  # skip @in:
         self._skip_noise()
-        fields: List[InputField] = []
+        fields: list[InputField] = []
         if self._check(TokenType.LBRACE):
             self._advance()
             fields = self._parse_field_list()
@@ -352,8 +352,8 @@ class Parser:
         self._skip_to_newline()
         return InputDecl(fields=fields, pos=pos)
 
-    def _parse_field_list(self) -> List[InputField]:
-        fields: List[InputField] = []
+    def _parse_field_list(self) -> list[InputField]:
+        fields: list[InputField] = []
         while not self._at_end() and not self._check(TokenType.RBRACE):
             self._skip_noise()
             if self._check(TokenType.RBRACE):
@@ -422,7 +422,7 @@ class Parser:
         pos = self._pos()
         self._advance()  # skip @ctx:
         self._skip_noise()
-        contexts: List[str] = []
+        contexts: list[str] = []
         if self._check(TokenType.LBRACKET):
             self._advance()
             while not self._at_end() and not self._check(TokenType.RBRACKET):
@@ -452,10 +452,10 @@ class Parser:
     # STEPS
     # ═══════════════════════════════════════
 
-    def _parse_steps(self) -> List[Step]:
+    def _parse_steps(self) -> list[Step]:
         self._advance()  # skip @steps:
         self._skip_noise()
-        steps: List[Step] = []
+        steps: list[Step] = []
 
         while not self._at_end():
             self._skip_noise()
@@ -568,7 +568,7 @@ class Parser:
 
         return step
 
-    def _parse_step_body(self) -> Optional[Node]:
+    def _parse_step_body(self) -> Node | None:
         if self._at_end():
             return None
         tok = self._current()
@@ -601,17 +601,17 @@ class Parser:
         self._advance()
 
         # RUN(@macro:NAME)
-        args: List[str] = []
+        args: list[str] = []
         if self._check(TokenType.LPAREN):
             self._advance()
             args = self._parse_arg_list()
             if self._check(TokenType.RPAREN):
                 self._advance()
 
-        mods: Dict[str, str] = {}
-        validators: List[str] = []
-        flags: List[str] = []
-        target: Optional[str] = None
+        mods: dict[str, str] = {}
+        validators: list[str] = []
+        flags: list[str] = []
+        target: str | None = None
 
         # collect modifiers, validators, flags, pipeline, and control flags
         while not self._at_end():
@@ -666,10 +666,10 @@ class Parser:
             pos=pos,
         )
 
-    def _parse_arg_list(self) -> List[str]:
-        args: List[str] = []
+    def _parse_arg_list(self) -> list[str]:
+        args: list[str] = []
         depth = 0
-        current: List[str] = []
+        current: list[str] = []
 
         while not self._at_end():
             tok = self._current()
@@ -746,7 +746,7 @@ class Parser:
     # CONDITIONALS
     # ═══════════════════════════════════════
 
-    def _parse_conditional(self) -> Optional[Conditional]:
+    def _parse_conditional(self) -> Conditional | None:
         if self._at_end():
             return None
         tok = self._current()
@@ -862,7 +862,7 @@ class Parser:
     # CONTROL FLOW (LOOPS, PARALLEL)
     # ═══════════════════════════════════════
 
-    def _parse_control_flow(self) -> Optional[Node]:
+    def _parse_control_flow(self) -> Node | None:
         tok = self._current()
         if tok.type == TokenType.TILDE_FOR:
             return self._parse_for_loop()
@@ -910,8 +910,8 @@ class Parser:
         self._advance()  # skip ~UNTIL
 
         # condition | MAX:n:
-        cond_parts: List[str] = []
-        max_iter: Optional[int] = None
+        cond_parts: list[str] = []
+        max_iter: int | None = None
 
         while not self._at_end():
             tok = self._current()
@@ -949,8 +949,8 @@ class Parser:
             self._advance()
         self._skip_to_newline()
 
-        branches: List[Node] = []
-        join_target: Optional[str] = None
+        branches: list[Node] = []
+        join_target: str | None = None
 
         while not self._at_end():
             self._skip_noise()
@@ -980,9 +980,9 @@ class Parser:
 
         return ParallelBlock(branches=branches, join_target=join_target, pos=pos)
 
-    def _collect_body_until_end(self) -> List[Node]:
+    def _collect_body_until_end(self) -> list[Node]:
         """Collect step body lines until ~END."""
-        body: List[Node] = []
+        body: list[Node] = []
         while not self._at_end():
             self._skip_noise()
             if self._at_end():
@@ -1008,7 +1008,7 @@ class Parser:
         pos = self._pos()
         self._skip_noise()
 
-        raw_lines: List[str] = []
+        raw_lines: list[str] = []
         if self._check(TokenType.LBRACE):
             self._advance()
             depth = 1
@@ -1028,10 +1028,10 @@ class Parser:
         self._skip_to_newline()
         return NamedBlock(name=name, raw_lines=raw_lines, pos=pos)
 
-    def _parse_brace_block(self) -> Dict[str, Any]:
+    def _parse_brace_block(self) -> dict[str, Any]:
         """Parse { key: value, ... } into a dict. Handles nesting."""
         self._advance()  # skip {
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         while not self._at_end() and not self._check(TokenType.RBRACE):
             self._skip_noise()
@@ -1077,10 +1077,10 @@ class Parser:
         self._skip_to_newline()
         return result
 
-    def _parse_bracket_list(self) -> List[str]:
+    def _parse_bracket_list(self) -> list[str]:
         """Parse [ val, val, ... ] into a list of strings."""
         self._advance()  # skip [
-        items: List[str] = []
+        items: list[str] = []
         while not self._at_end() and not self._check(TokenType.RBRACKET):
             self._skip_noise()
             if self._check(TokenType.RBRACKET):
@@ -1098,13 +1098,13 @@ class Parser:
     # TEST & MACRO BLOCKS
     # ═══════════════════════════════════════
 
-    def _parse_test_block(self) -> TestBlock:
+    def _parse_test_block(self) -> NodusTestBlock:
         pos = self._pos()
         name = self._current().value
         self._advance()  # skip @test:name
         self._skip_noise()
 
-        raw_lines: List[str] = []
+        raw_lines: list[str] = []
         if self._check(TokenType.LBRACE):
             self._advance()
             depth = 1
@@ -1122,7 +1122,7 @@ class Parser:
                 self._advance()
 
         self._skip_to_newline()
-        return TestBlock(name=name, raw_lines=raw_lines, pos=pos)
+        return NodusTestBlock(name=name, raw_lines=raw_lines, pos=pos)
 
     def _parse_macro_block(self) -> MacroBlock:
         pos = self._pos()
@@ -1130,7 +1130,7 @@ class Parser:
         self._advance()  # skip @macro:name
         self._skip_noise()
 
-        raw_lines: List[str] = []
+        raw_lines: list[str] = []
         if self._check(TokenType.LBRACE):
             self._advance()
             depth = 1
@@ -1154,7 +1154,7 @@ class Parser:
     # ASSIGNMENT
     # ═══════════════════════════════════════
 
-    def _parse_assignment_or_expr(self) -> Optional[Node]:
+    def _parse_assignment_or_expr(self) -> Node | None:
         """Handle $var = value or standalone variable reference."""
         pos = self._pos()
         var_name = self._current().value
@@ -1211,7 +1211,7 @@ class Parser:
             self._advance()
 
     def _consume_rest_of_line(self) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         while not self._at_end() and self._current().type not in (
             TokenType.NEWLINE,
             TokenType.EOF,
@@ -1223,7 +1223,7 @@ class Parser:
         return " ".join(parts)
 
     def _consume_until_arrow(self) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         while not self._at_end() and self._current().type not in (
             TokenType.ARROW,
             TokenType.NEWLINE,
@@ -1235,7 +1235,7 @@ class Parser:
 
     def _consume_until_action_sep(self) -> str:
         """Consume tokens until →, :, !BREAK, !SKIP, NEWLINE."""
-        parts: List[str] = []
+        parts: list[str] = []
         while not self._at_end():
             tok = self._current()
             if tok.type in (
@@ -1254,7 +1254,7 @@ class Parser:
 
     def _collect_comment_block(self) -> str:
         """Collect consecutive comment lines into a single string."""
-        lines: List[str] = []
+        lines: list[str] = []
         while not self._at_end() and self._current().type == TokenType.COMMENT:
             lines.append(self._current().value)
             self._advance()
@@ -1263,7 +1263,7 @@ class Parser:
 
     def _collect_brace_raw(self) -> str:
         """Collect { ... } including nesting as raw string."""
-        parts: List[str] = ["{"]
+        parts: list[str] = ["{"]
         self._advance()  # skip {
         depth = 1
         while not self._at_end() and depth > 0:
@@ -1277,7 +1277,7 @@ class Parser:
         return " ".join(parts)
 
     def _collect_bracket_raw(self) -> str:
-        parts: List[str] = ["["]
+        parts: list[str] = ["["]
         self._advance()  # skip [
         depth = 1
         while not self._at_end() and depth > 0:
@@ -1290,7 +1290,7 @@ class Parser:
             self._advance()
         return " ".join(parts)
 
-    def _try_parse_command_from_string(self, raw: str) -> Optional[CommandCall]:
+    def _try_parse_command_from_string(self, raw: str) -> CommandCall | None:
         """Best-effort parse of a command string like 'ESCALATE(human) +msg=...'"""
         if not raw:
             return None
@@ -1298,7 +1298,7 @@ class Parser:
         name = parts[0].strip()
         if not name or not name[0].isupper():
             return CommandCall(name=raw, pos=self._pos())
-        args: List[str] = []
+        args: list[str] = []
         if len(parts) > 1:
             arg_str = parts[1].split(")", 1)[0]
             args = [a.strip() for a in arg_str.split(",") if a.strip()]

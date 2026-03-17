@@ -1,6 +1,6 @@
 [project]
 name = "nodus"
-version = "0.3.0"
+version = "0.3.4"
 description = "NODUS — Node Orchestration DSL for Unified Systems"
 authors = [{ name = "Oleg Alexandrov", email = "alexandrovoleg.ru@gmail.com" }]
 license = { text = "MIT License" }
@@ -51,7 +51,11 @@ ignore = [
     "E501",   # Line too long (handled by formatter)
     "B008",   # Do not perform function calls in argument defaults
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "RUF002", # Ambiguous characters in docstrings
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
 
 [tool.ruff.lint.isort]
 known-first-party = ["metaexpert"]
@@ -60,6 +64,9 @@ known-first-party = ["metaexpert"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+[tool.pytest.ini_options]
+python_classes = ["Test", "Describe"]
 
 [build-system]
 requires = ["hatchling"]

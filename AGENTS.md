@@ -1,54 +1,63 @@
-# Agent Rules
+# Agent Rules & Guidelines
 
-## Language Preferences
+## 1. Language Policy
 
-### Brief overview
+Consistency in communication and code is paramount.
 
-This set of guidelines outlines language preferences for the project, ensuring consistency in code and communication.
+### 1.1 Technical Content (English ONLY)
 
-### Code and documentation language
+* Codebase: All identifiers (variables, functions, classes), comments, and docstrings.
+* Documentation: Technical guides, READMEs, and implementation notes.
+* Process: Commit messages, PR descriptions, and issue titles.
+* Environment: Error messages, logs, and API definitions.
 
-- All code, comments, documentation, variable names, function names, class names, method names, attribute names, and technical terms must be in English
-- Maintain English as the primary language for all technical elements including error messages, log entries, configuration keys, and API responses to ensure readability and maintainability
-- Technical documentation, inline comments, docstrings, and README files must be written in English
-- All commit messages, pull request descriptions, and issue titles related to code changes should be in English
+### 1.2 Communication (Russian)
 
-### Communication style
+* Chat Interaction: Discussions, explanations, and project planning.
+* Decision Making: Strategic choices and high-level feature discussions.
+* Reviews: Conversational feedback during pair programming.
 
-- Explanations and discussions in the chat interface should be in Russian
-- Use Russian for conversational responses, clarifications, project planning, and non-technical interactions
-- Project management communications, feature discussions, and strategic decisions should be conducted in Russian
-- Code review comments and technical discussions during development can be in Russian unless collaborating with English-speaking developers
+## 2. Markdown Guidelines
 
-## Toolchain
+* **Separators**: Avoid horizontal rules (`---`). Use them only in the footer if absolutely necessary.
+* **Links**: No hardcoded absolute links (e.g., `file:///D:/...`). Use relative paths or just backticks for filenames (e.g., `pyproject.toml`).
 
-This project uses **uv** as the package manager. Prefer native uv commands (`uv run`, `uv sync`, `uv add`) over pip-compatible wrappers (`uv pip install`) wherever possible.
+## 3. Development Toolchain
 
-Before running any commands, activate the virtual environment:
+The project strictly adheres to **uv-first** philosophy.
 
-- **Windows:** `.venv\Scripts\activate`
-- **Unix/macOS:** `source .venv/bin/activate`
+### 3.1 Virtual Environment
 
-If `.venv` does not exist, create it first:
+Always initialize and activate the environment before execution:
 
-```bash
+```powershell
+# Initialization
 uv sync
+
+# Activation (Windows)
+.venv\Scripts\activate
 ```
-
-## Quality Checks
-
-Run these before committing:
 
 ```bash
-# Lint and auto-fix (including warnings)
-ruff check --fix
-ruff format
+# Linting & Formatting
+uv run ruff check --fix
+uv run ruff format
 
-# Type checking
-pyright
+# Static Analysis
+uv run pyright
 
-# Tests
-pytest
+# Verification
+uv run pytest
 ```
 
-All three must pass with zero errors and zero warnings before any commit.
+## 4. Completion Protocol
+
+Follow this checklist before declaring a task finished:
+
+* [ ] **Validated**: All quality checks pass with zero warnings.
+* [ ] **Versioned**: Increment the patch version (e.g., `0.3.1` → `0.3.2`) in:
+  * `pyproject.toml`
+  * `runtime/cli/nodus.py`
+  * `CHANGELOG.md`
+* [ ] **Documented**: Update `README.md`, `CHANGELOG.md`, and internal docs to reflect all changes.
+* [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date.

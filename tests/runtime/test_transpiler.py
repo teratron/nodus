@@ -1,27 +1,27 @@
 """Tests for the NODUS Transpiler (NODUS ↔ HUMAN mode)."""
 
-from runtime.interpreter.transpiler import Transpiler
 from runtime.interpreter.ast_nodes import (
-    WorkflowFile,
-    FileHeader,
-    FileType,
-    RuntimeBlock,
     AbsoluteRule,
-    Preference,
-    InputDecl,
-    InputField,
-    OutputDecl,
-    ContextDecl,
-    ErrorDecl,
-    Step,
     CommandCall,
     Conditional,
+    ContextDecl,
+    ErrorDecl,
+    FileHeader,
+    FileType,
     ForLoop,
-    UntilLoop,
+    InputDecl,
+    InputField,
+    NodusTestBlock,
+    OutputDecl,
     ParallelBlock,
+    Preference,
+    RuntimeBlock,
+    Step,
     Trigger,
-    TestBlock,
+    UntilLoop,
+    WorkflowFile,
 )
+from runtime.interpreter.transpiler import Transpiler
 
 
 def make_wf(**kwargs):
@@ -256,7 +256,7 @@ def test_nodus_pipeline_arrow():
 
 
 def test_nodus_includes_tests():
-    test_block = TestBlock(name="smoke", raw_lines=['input: { msg: "hello" }'])
+    test_block = NodusTestBlock(name="smoke", raw_lines=['input: { msg: "hello" }'])
     wf = make_wf(steps=[], tests=[test_block])
     out = Transpiler().to_nodus(wf)
     assert "@test:smoke" in out

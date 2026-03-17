@@ -1,22 +1,22 @@
 """Tests for the NODUS Executor."""
 
-from runtime.interpreter.executor import Executor, ExecutionContext, NodusResult
 from runtime.interpreter.ast_nodes import (
-    WorkflowFile,
-    FileHeader,
-    FileType,
-    RuntimeBlock,
     AbsoluteRule,
-    Step,
     CommandCall,
     Conditional,
+    FileHeader,
+    FileType,
     ForLoop,
-    UntilLoop,
-    ParallelBlock,
     InputDecl,
     InputField,
     OutputDecl,
+    ParallelBlock,
+    RuntimeBlock,
+    Step,
+    UntilLoop,
+    WorkflowFile,
 )
+from runtime.interpreter.executor import ExecutionContext, Executor, NodusResult
 
 
 def make_wf(steps=None, rules=None, input_fields=None, output_var="$out"):

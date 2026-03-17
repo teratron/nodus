@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import List, Optional, Set, Type, TypeVar, cast
+from typing import TypeVar, cast
 
 from .ast_nodes import (
     CommandCall,
@@ -40,7 +40,7 @@ class Validator:
     def __init__(self, project_root: str = "."):
         self.project_root = project_root
 
-    def validate(self, ast: Node, filename: str = "") -> List[Diagnostic]:
+    def validate(self, ast: Node, filename: str = "") -> list[Diagnostic]:
         """Run all applicable lint rules and return diagnostics."""
         if isinstance(ast, WorkflowFile):
             return self._validate_workflow(ast, filename)
@@ -54,8 +54,8 @@ class Validator:
     # WORKFLOW VALIDATION
     # ═══════════════════════════════════════
 
-    def _validate_workflow(self, wf: WorkflowFile, filename: str) -> List[Diagnostic]:
-        d: List[Diagnostic] = []
+    def _validate_workflow(self, wf: WorkflowFile, filename: str) -> list[Diagnostic]:
+        d: list[Diagnostic] = []
 
         d.extend(self._e001_runtime_present(wf, filename))
         d.extend(self._e002_runtime_second(wf, filename))
@@ -90,7 +90,7 @@ class Validator:
 
     # ── ERRORS ────────────────────────────
 
-    def _e001_runtime_present(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e001_runtime_present(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         _ = fn  # Unused in this rule
         if wf.runtime is None:
             return [
@@ -104,7 +104,7 @@ class Validator:
             ]
         return []
 
-    def _e002_runtime_second(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e002_runtime_second(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if wf.runtime and wf.header and wf.runtime.pos and wf.header.pos:
             # rules/triggers/steps should not appear before runtime
             for rule in wf.rules:
@@ -120,7 +120,7 @@ class Validator:
                     ]
         return []
 
-    def _e003_rules_before_steps(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e003_rules_before_steps(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if not wf.steps or not wf.rules:
             return []
         first_step_line = wf.steps[0].pos.line if wf.steps[0].pos else 9999
@@ -137,8 +137,8 @@ class Validator:
                 ]
         return []
 
-    def _e004_variables_declared(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        declared: Set[str] = set()
+    def _e004_variables_declared(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        declared: set[str] = set()
 
         # reserved variables always available
         declared.update(
@@ -169,11 +169,11 @@ class Validator:
                 declared.add("$" + f.name)
 
         # scan steps for assignments (→ $var)
-        used: Set[str] = set()
+        used: set[str] = set()
         for step in wf.steps:
             self._collect_vars(step, declared, used)
 
-        diags: List[Diagnostic] = []
+        diags: list[Diagnostic] = []
         for var in used - declared:
             # allow dotted sub-access if root is declared
             root = var.split(".")[0]
@@ -188,7 +188,7 @@ class Validator:
 
     def _e005_publish_after_validate(
         self, wf: WorkflowFile, fn: str
-    ) -> List[Diagnostic]:
+    ) -> list[Diagnostic]:
         has_validate = False
         for step in wf.steps:
             cmds = self._extract_commands(step)
@@ -207,8 +207,8 @@ class Validator:
                     ]
         return []
 
-    def _e006_route_target_exists(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _e006_route_target_exists(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         for step in wf.steps:
             cmds = self._extract_commands(step)
             for cmd in cmds:
@@ -230,20 +230,20 @@ class Validator:
                                 )
         return diags
 
-    def _e007_loops_closed(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e007_loops_closed(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         # The parser handles ~END matching. If a ForLoop or UntilLoop node
         _, _ = wf, fn
         # exists in the AST, it was properly closed during parsing.
         # This rule catches raw text that might have been missed.
         return []
 
-    def _e008_parallel_closed(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e008_parallel_closed(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         # Same as E007 — parser handles ~JOIN matching.
         _, _ = wf, fn
         return []
 
-    def _e009_required_no_default(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _e009_required_no_default(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         if wf.input_decl:
             for f in wf.input_decl.fields:
                 if not f.optional and f.default is not None:
@@ -258,8 +258,8 @@ class Validator:
                     )
         return diags
 
-    def _e010_until_has_max(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _e010_until_has_max(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         for step in wf.steps:
             loops = self._find_nodes(step, UntilLoop)
             for loop in loops:
@@ -275,7 +275,7 @@ class Validator:
                     )
         return diags
 
-    def _e011_core_path_valid(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e011_core_path_valid(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if wf.runtime and wf.runtime.core:
             core_path = os.path.join(self.project_root, wf.runtime.core)
             if not os.path.exists(core_path):
@@ -290,7 +290,7 @@ class Validator:
                 ]
         return []
 
-    def _e012_name_matches_file(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _e012_name_matches_file(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if not fn or not wf.header:
             return []
         basename = os.path.splitext(os.path.basename(fn))[0]
@@ -308,7 +308,7 @@ class Validator:
 
     # ── WARNINGS ──────────────────────────
 
-    def _w001_err_handler(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w001_err_handler(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if wf.error_decl is None:
             return [
                 self._d(
@@ -321,12 +321,12 @@ class Validator:
             ]
         return []
 
-    def _w002_has_tests(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w002_has_tests(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if not wf.tests:
             return [self._d(Severity.WARNING, "W002", "No @test blocks found.", fn, wf)]
         return []
 
-    def _w003_human_mode(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w003_human_mode(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if wf.human_mode is None:
             return [
                 self._d(
@@ -339,7 +339,7 @@ class Validator:
             ]
         return []
 
-    def _w004_step_count(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w004_step_count(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         n = len(wf.steps)
         if n > 20:
             return [
@@ -353,7 +353,7 @@ class Validator:
             ]
         return []
 
-    def _w005_nesting_depth(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w005_nesting_depth(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         for step in wf.steps:
             depth = self._max_conditional_depth(step, 0)
             if depth > 3:
@@ -368,9 +368,9 @@ class Validator:
                 ]
         return []
 
-    def _w006_route_test_coverage(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w006_route_test_coverage(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         # collect all ROUTE targets
-        route_targets: Set[str] = set()
+        route_targets: set[str] = set()
         for step in wf.steps:
             for cmd in self._extract_commands(step):
                 if cmd.name == "ROUTE":
@@ -379,7 +379,7 @@ class Validator:
 
         # check if any test exercises each route
         # (simplified: just check if route target appears in any test raw_lines)
-        diags: List[Diagnostic] = []
+        diags: list[Diagnostic] = []
         for target in route_targets:
             found = False
             for test in wf.tests:
@@ -398,7 +398,7 @@ class Validator:
                 )
         return diags
 
-    def _w007_out_assigned(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w007_out_assigned(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if not wf.output_decl or not wf.output_decl.variable:
             return []
         target_var = wf.output_decl.variable
@@ -416,7 +416,7 @@ class Validator:
             )
         ]
 
-    def _w008_log_last(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w008_log_last(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if not wf.steps:
             return []
         # check last two steps for LOG
@@ -439,13 +439,13 @@ class Validator:
                     ]
         return []
 
-    def _w009_ctx_in_config(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _w009_ctx_in_config(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         # would require loading nodus.config.json — simplified check
         _, _ = wf, fn
         return []
 
-    def _w010_extends_resolve(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _w010_extends_resolve(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         if wf.runtime:
             for ext_path in wf.runtime.extends:
                 full = os.path.join(self.project_root, ext_path)
@@ -463,8 +463,8 @@ class Validator:
 
     # ── INFO ──────────────────────────────
 
-    def _i001_step_comments(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _i001_step_comments(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         for step in wf.steps:
             if not step.comment and not isinstance(step.body, Comment):
                 diags.append(
@@ -478,7 +478,7 @@ class Validator:
                 )
         return diags
 
-    def _i003_smoke_tag(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
+    def _i003_smoke_tag(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         if not wf.tests:
             return []
         for test in wf.tests:
@@ -488,8 +488,8 @@ class Validator:
                 return []
         return [self._d(Severity.INFO, "I003", "No smoke test defined.", fn, wf)]
 
-    def _i004_pref_tones(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _i004_pref_tones(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         for pref in wf.preferences:
             for token in (pref.preferred + " " + pref.over).split():
                 if token.startswith("tone") or token in _VALID_TONES:
@@ -511,8 +511,8 @@ class Validator:
                     break
         return diags
 
-    def _i006_header_fields(self, wf: WorkflowFile, fn: str) -> List[Diagnostic]:
-        diags: List[Diagnostic] = []
+    def _i006_header_fields(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
+        diags: list[Diagnostic] = []
         if wf.header:
             if not wf.header.name:
                 diags.append(
@@ -532,8 +532,8 @@ class Validator:
     # SCHEMA / CONFIG VALIDATION
     # ═══════════════════════════════════════
 
-    def _validate_schema(self, sf: SchemaFile, fn: str) -> List[Diagnostic]:
-        d: List[Diagnostic] = []
+    def _validate_schema(self, sf: SchemaFile, fn: str) -> list[Diagnostic]:
+        d: list[Diagnostic] = []
         if sf.header and not sf.header.version:
             d.append(
                 self._d(
@@ -542,8 +542,8 @@ class Validator:
             )
         return d
 
-    def _validate_config(self, cf: ConfigFile, fn: str) -> List[Diagnostic]:
-        d: List[Diagnostic] = []
+    def _validate_config(self, cf: ConfigFile, fn: str) -> list[Diagnostic]:
+        d: list[Diagnostic] = []
         if cf.runtime is None:
             d.append(
                 self._d(
@@ -562,13 +562,13 @@ class Validator:
         code: str,
         msg: str,
         filename: str,
-        node: Optional[Node] = None,
+        node: Node | None = None,
     ) -> Diagnostic:
         line = node.pos.line if node and node.pos else 0
         col = node.pos.column if node and node.pos else 0
         return Diagnostic(severity, code, msg, line, col, filename)
 
-    def _collect_vars(self, node: Node, declared: Set[str], used: Set[str]) -> None:
+    def _collect_vars(self, node: Node, declared: set[str], used: set[str]) -> None:
         """Walk a node tree collecting declared and used variables."""
         if isinstance(node, Step):
             if node.body:
@@ -620,9 +620,9 @@ class Validator:
             if node.join_target and node.join_target.startswith("$"):
                 declared.add(node.join_target)
 
-    def _extract_commands(self, node: Node) -> List[CommandCall]:
+    def _extract_commands(self, node: Node) -> list[CommandCall]:
         """Extract all CommandCall nodes from a step tree."""
-        cmds: List[CommandCall] = []
+        cmds: list[CommandCall] = []
         if isinstance(node, CommandCall):
             cmds.append(node)
         elif isinstance(node, Step):
@@ -647,9 +647,9 @@ class Validator:
                 cmds.extend(self._extract_commands(child))
         return cmds
 
-    def _find_nodes(self, node: Node, node_type: Type[_T]) -> List[_T]:
+    def _find_nodes(self, node: Node, node_type: type[_T]) -> list[_T]:
         """Find all nodes of a given type in the tree."""
-        results: List[Node] = []
+        results: list[Node] = []
         if isinstance(node, node_type):
             results.append(node)
         if isinstance(node, Step):
@@ -670,7 +670,7 @@ class Validator:
                 results.extend(self._find_nodes(br, node_type))
             if node.else_branch:
                 results.extend(self._find_nodes(node.else_branch, node_type))
-        return cast(List[_T], results)
+        return cast(list[_T], results)
 
     def _max_conditional_depth(self, node: Node, current: int) -> int:
         """Calculate maximum ?IF nesting depth."""

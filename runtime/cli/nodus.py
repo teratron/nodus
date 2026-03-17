@@ -16,17 +16,16 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from ..interpreter import Executor, Parser, Transpiler, Validator
-from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
 from ..interpreter.ast_nodes import SchemaFile as _SchemaFile
+from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
 
 # ---------------------------------------------------------------------------
 # Version
 # ---------------------------------------------------------------------------
 
-__version__ = "0.3.0"
+__version__ = "0.3.4"
 
 # ---------------------------------------------------------------------------
 # Colour helpers (ANSI, disabled when not a TTY)
@@ -84,7 +83,7 @@ def _read_file(path: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def cmd_validate(args: List[str]) -> int:
+def cmd_validate(args: list[str]) -> int:
     """Validate / lint a .nodus file."""
     if not args:
         print(_red("Usage: nodus validate <file.nodus>"), file=sys.stderr)
@@ -131,7 +130,7 @@ def cmd_validate(args: List[str]) -> int:
     return 1 if errors else 0
 
 
-def cmd_run(args: List[str]) -> int:
+def cmd_run(args: list[str]) -> int:
     """Execute a .nodus workflow."""
     if not args:
         print(_red("Usage: nodus run <file.nodus> [--input '{...}']"), file=sys.stderr)
@@ -141,7 +140,7 @@ def cmd_run(args: List[str]) -> int:
     source = _read_file(file_path)
 
     # Parse optional --input JSON
-    input_data: Dict = {}
+    input_data: dict = {}
     if "--input" in args:
         idx = args.index("--input")
         if idx + 1 >= len(args):
@@ -200,7 +199,7 @@ def cmd_run(args: List[str]) -> int:
     return 0 if status == "ok" else 1
 
 
-def cmd_transpile(args: List[str]) -> int:
+def cmd_transpile(args: list[str]) -> int:
     """Transpile between NODUS and HUMAN modes."""
     if not args:
         print(
@@ -246,7 +245,7 @@ def cmd_transpile(args: List[str]) -> int:
     return 0
 
 
-def cmd_test(args: List[str]) -> int:
+def cmd_test(args: list[str]) -> int:
     """Run embedded @test blocks in a .nodus file."""
     if not args:
         print(_red("Usage: nodus test <file.nodus>"), file=sys.stderr)
@@ -298,7 +297,7 @@ def cmd_test(args: List[str]) -> int:
     return 1 if failed else 0
 
 
-def cmd_new(args: List[str]) -> int:
+def cmd_new(args: list[str]) -> int:
     """Scaffold a new .nodus workflow file."""
     if not args:
         print(_red("Usage: nodus new <workflow_name>"), file=sys.stderr)
@@ -333,7 +332,7 @@ def cmd_new(args: List[str]) -> int:
     return 0
 
 
-def cmd_schema_inspect(args: List[str]) -> int:
+def cmd_schema_inspect(args: list[str]) -> int:
     """Show a summary of the loaded schema."""
     schema_path = args[0] if args else "core/schema.nodus"
 
@@ -359,13 +358,13 @@ def cmd_schema_inspect(args: List[str]) -> int:
     return 0
 
 
-def cmd_version(_args: List[str]) -> int:
+def cmd_version(_args: list[str]) -> int:
     """Print the version of NODUS."""
     print(f"nodus {__version__}")
     return 0
 
 
-def cmd_help(_args: List[str]) -> int:
+def cmd_help(_args: list[str]) -> int:
     """Show help message."""
     print(_bold("NODUS CLI") + f"  v{__version__}\n")
     print("Usage: nodus <command> [options]\n")
@@ -389,7 +388,7 @@ def cmd_help(_args: List[str]) -> int:
 # ---------------------------------------------------------------------------
 
 
-def find_config() -> Optional[Path]:
+def find_config() -> Path | None:
     """Look for config.json in .nodus/ or project root."""
     paths = [Path(".nodus/config.json"), Path("config.json"), Path("nodus.config.json")]
     for p in paths:
@@ -398,7 +397,7 @@ def find_config() -> Optional[Path]:
     return None
 
 
-def cmd_init(args: List[str]) -> int:
+def cmd_init(args: list[str]) -> int:
     """Initialize a new NODUS project."""
     _ = args
     print(_cyan("Initializing NODUS project..."))

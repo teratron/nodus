@@ -2,17 +2,17 @@
 
 from typing import Any
 
-from runtime.interpreter.parser import Parser
 from runtime.interpreter.ast_nodes import (
-    WorkflowFile,
-    SchemaFile,
-    ConfigFile,
-    FileType,
-    RuntimeBlock,
-    InputDecl,
     CommandCall,
     Conditional,
+    ConfigFile,
+    FileType,
+    InputDecl,
+    RuntimeBlock,
+    SchemaFile,
+    WorkflowFile,
 )
+from runtime.interpreter.parser import Parser
 
 
 def parse(source: str, filename: str = "test.nodus") -> Any:

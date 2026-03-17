@@ -7,10 +7,8 @@ structural keywords.
 
 from __future__ import annotations
 
-from enum import Enum, auto
 from dataclasses import dataclass
-from typing import List, Optional
-
+from enum import Enum, auto
 
 # ─────────────────────────────────────────────
 # TOKEN TYPES
@@ -218,11 +216,11 @@ class Lexer:
         self.pos = 0
         self.line = 1
         self.column = 1
-        self.tokens: List[Token] = []
+        self.tokens: list[Token] = []
 
     # ── public ─────────────────────────────
 
-    def tokenize(self) -> List[Token]:
+    def tokenize(self) -> list[Token]:
         """Tokenize the entire source and return the token list."""
         while self.pos < len(self.source):
             self._skip_spaces()
@@ -376,7 +374,7 @@ class Lexer:
     def _ch(self) -> str:
         return self.source[self.pos]
 
-    def _peek(self) -> Optional[str]:
+    def _peek(self) -> str | None:
         p = self.pos + 1
         return self.source[p] if p < len(self.source) else None
 
@@ -432,7 +430,7 @@ class Lexer:
     def _read_string(self) -> None:
         col = self.column
         self._advance()  # skip opening "
-        chars: List[str] = []
+        chars: list[str] = []
         while not self._at_end() and self._ch() != '"':
             if self._ch() == "\\" and self._peek() == '"':
                 chars.append('"')
@@ -626,7 +624,7 @@ class Lexer:
             full += ":"
             self.pos += 1
             self.column += 1
-            part: List[str] = []
+            part: list[str] = []
             while not self._at_end() and self._ch() not in " \t\n\r,)^~+":
                 part.append(self._ch())
                 self.pos += 1
@@ -651,7 +649,7 @@ class Lexer:
         if word == "MAX" and not self._at_end() and self._ch() == ":":
             self.pos += 1
             self.column += 1
-            num_chars: List[str] = []
+            num_chars: list[str] = []
             while not self._at_end() and self._ch().isdigit():
                 num_chars.append(self._ch())
                 self.pos += 1

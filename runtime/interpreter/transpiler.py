@@ -9,8 +9,6 @@ a parsed AST into either representation.
 
 from __future__ import annotations
 
-from typing import List
-
 from .ast_nodes import (
     CommandCall,
     Comment,
@@ -32,7 +30,7 @@ class Transpiler:
 
     def to_human(self, ast: WorkflowFile) -> str:
         """Convert a parsed workflow AST to HUMAN mode text."""
-        lines: List[str] = []
+        lines: list[str] = []
 
         # Header
         if ast.header:
@@ -49,7 +47,7 @@ class Transpiler:
 
         # Input
         if ast.input_decl and ast.input_decl.fields:
-            parts: List[str] = []
+            parts: list[str] = []
             for f in ast.input_decl.fields:
                 desc = f.name
                 if f.optional and f.default:
@@ -104,7 +102,7 @@ class Transpiler:
 
     def to_nodus(self, ast: WorkflowFile) -> str:
         """Convert a parsed workflow AST back to NODUS mode text."""
-        lines: List[str] = []
+        lines: list[str] = []
 
         # Header
         if ast.header:
@@ -144,7 +142,7 @@ class Transpiler:
 
         # Declarations
         if ast.input_decl:
-            fields: List[str] = []
+            fields: list[str] = []
             for f in ast.input_decl.fields:
                 decl = f.name
                 if f.optional:
@@ -236,7 +234,7 @@ class Transpiler:
         name = cmd.name
         args = ", ".join(cmd.args)
 
-        _VERB_MAP = {
+        verb_map = {
             "FETCH": "Fetch",
             "ANALYZE": "Analyze",
             "GEN": "Generate",
@@ -254,7 +252,7 @@ class Transpiler:
             "RUN": "Run macro",
         }
 
-        verb = _VERB_MAP.get(name, name)
+        verb = verb_map.get(name, name)
         desc = f"{verb} {args}" if args else verb
 
         if cmd.flags:

@@ -7,9 +7,8 @@ Position information is attached for error reporting.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 from enum import Enum
-
+from typing import Any
 
 # ─────────────────────────────────────────────
 # POSITION
@@ -38,7 +37,7 @@ class Position:
 class Node:
     """Base class for all AST nodes."""
 
-    pos: Optional[Position] = field(default=None, repr=False)
+    pos: Position | None = field(default=None, repr=False)
 
 
 # ─────────────────────────────────────────────
@@ -50,46 +49,46 @@ class Node:
 class WorkflowFile(Node):
     """Top-level node for a .nodus workflow file."""
 
-    header: Optional[FileHeader] = None
-    runtime: Optional[RuntimeBlock] = None
-    triggers: List[Trigger] = field(default_factory=list)
-    rules: List[AbsoluteRule] = field(default_factory=list)
-    preferences: List[Preference] = field(default_factory=list)
-    input_decl: Optional[InputDecl] = None
-    output_decl: Optional[OutputDecl] = None
-    context_decl: Optional[ContextDecl] = None
-    error_decl: Optional[ErrorDecl] = None
-    steps: List[Step] = field(default_factory=list)
-    tests: List[TestBlock] = field(default_factory=list)
-    macros: List[MacroBlock] = field(default_factory=list)
-    human_mode: Optional[str] = None
-    comments: List[Comment] = field(default_factory=list)
+    header: FileHeader | None = None
+    runtime: RuntimeBlock | None = None
+    triggers: list[Trigger] = field(default_factory=list)
+    rules: list[AbsoluteRule] = field(default_factory=list)
+    preferences: list[Preference] = field(default_factory=list)
+    input_decl: InputDecl | None = None
+    output_decl: OutputDecl | None = None
+    context_decl: ContextDecl | None = None
+    error_decl: ErrorDecl | None = None
+    steps: list[Step] = field(default_factory=list)
+    tests: list[NodusTestBlock] = field(default_factory=list)
+    macros: list[MacroBlock] = field(default_factory=list)
+    human_mode: str | None = None
+    comments: list[Comment] = field(default_factory=list)
 
 
 @dataclass
 class SchemaFile(Node):
     """Top-level node for a schema .nodus file."""
 
-    header: Optional[FileHeader] = None
-    meta: Optional[Dict[str, Any]] = None
-    rules: List[AbsoluteRule] = field(default_factory=list)
-    preferences: List[Preference] = field(default_factory=list)
-    sections: Dict[str, NamedBlock] = field(default_factory=dict)
+    header: FileHeader | None = None
+    meta: dict[str, Any] | None = None
+    rules: list[AbsoluteRule] = field(default_factory=list)
+    preferences: list[Preference] = field(default_factory=list)
+    sections: dict[str, NamedBlock] = field(default_factory=dict)
 
 
 @dataclass
 class ConfigFile(Node):
     """Top-level node for a config .nodus file."""
 
-    header: Optional[FileHeader] = None
-    runtime: Optional[RuntimeBlock] = None
-    rules: List[AbsoluteRule] = field(default_factory=list)
-    preferences: List[Preference] = field(default_factory=list)
-    triggers: List[Trigger] = field(default_factory=list)
-    constants: Optional[NamedBlock] = None
-    context: Optional[NamedBlock] = None
-    error_routing: Optional[NamedBlock] = None
-    comments: List[Comment] = field(default_factory=list)
+    header: FileHeader | None = None
+    runtime: RuntimeBlock | None = None
+    rules: list[AbsoluteRule] = field(default_factory=list)
+    preferences: list[Preference] = field(default_factory=list)
+    triggers: list[Trigger] = field(default_factory=list)
+    constants: NamedBlock | None = None
+    context: NamedBlock | None = None
+    error_routing: NamedBlock | None = None
+    comments: list[Comment] = field(default_factory=list)
 
 
 # ─────────────────────────────────────────────
@@ -122,10 +121,10 @@ class RuntimeBlock(Node):
     """§runtime: { core: ..., extends: [...], agents: {...}, mode: ... }"""
 
     core: str = ""
-    extends: List[str] = field(default_factory=list)
-    agents: Dict[str, str] = field(default_factory=dict)
+    extends: list[str] = field(default_factory=list)
+    agents: dict[str, str] = field(default_factory=dict)
     mode: str = "production"
-    raw_fields: Dict[str, Any] = field(default_factory=dict)
+    raw_fields: dict[str, Any] = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────
@@ -139,8 +138,8 @@ class Trigger(Node):
 
     condition: str = ""
     action: str = ""
-    condition_expr: Optional[Node] = None
-    action_expr: Optional[Node] = None
+    condition_expr: Node | None = None
+    action_expr: Node | None = None
 
 
 @dataclass
@@ -157,7 +156,7 @@ class Preference(Node):
 
     preferred: str = ""
     over: str = ""
-    condition: Optional[str] = None
+    condition: str | None = None
 
 
 @dataclass
@@ -167,7 +166,7 @@ class InputField(Node):
     name: str = ""
     type_name: str = "any"
     optional: bool = False
-    default: Optional[str] = None
+    default: str | None = None
     comment: str = ""
 
 
@@ -175,7 +174,7 @@ class InputField(Node):
 class InputDecl(Node):
     """@in: { field: type, ... }"""
 
-    fields: List[InputField] = field(default_factory=list)
+    fields: list[InputField] = field(default_factory=list)
 
 
 @dataclass
@@ -189,14 +188,14 @@ class OutputDecl(Node):
 class ContextDecl(Node):
     """@ctx: [key1, key2, ...]"""
 
-    contexts: List[str] = field(default_factory=list)
+    contexts: list[str] = field(default_factory=list)
 
 
 @dataclass
 class ErrorDecl(Node):
     """@err: ESCALATE(human) +msg=..."""
 
-    handler: Optional[CommandCall] = None
+    handler: CommandCall | None = None
     raw: str = ""
 
 
@@ -210,9 +209,9 @@ class Step(Node):
     """A numbered step in @steps: block."""
 
     number: int = 0
-    body: Optional[Node] = None
+    body: Node | None = None
     comment: str = ""
-    sub_steps: List[Node] = field(default_factory=list)
+    sub_steps: list[Node] = field(default_factory=list)
 
 
 # ─────────────────────────────────────────────
@@ -225,11 +224,11 @@ class CommandCall(Node):
     """COMMAND(args) +mod=val ^validator ~flag → $target"""
 
     name: str = ""
-    args: List[str] = field(default_factory=list)
-    modifiers: Dict[str, str] = field(default_factory=dict)
-    validators: List[str] = field(default_factory=list)
-    flags: List[str] = field(default_factory=list)
-    pipeline_target: Optional[str] = None
+    args: list[str] = field(default_factory=list)
+    modifiers: dict[str, str] = field(default_factory=dict)
+    validators: list[str] = field(default_factory=list)
+    flags: list[str] = field(default_factory=list)
+    pipeline_target: str | None = None
 
 
 # ─────────────────────────────────────────────
@@ -242,13 +241,13 @@ class Conditional(Node):
     """?IF / ?ELIF / ?ELSE chain."""
 
     condition: str = ""
-    action: Optional[Node] = None
-    body: List[Node] = field(default_factory=list)
+    action: Node | None = None
+    body: list[Node] = field(default_factory=list)
     break_flag: bool = False
     skip_flag: bool = False
     override_flag: bool = False
-    elif_branches: List[Conditional] = field(default_factory=list)
-    else_branch: Optional[Conditional] = None
+    elif_branches: list[Conditional] = field(default_factory=list)
+    else_branch: Conditional | None = None
 
 
 @dataclass
@@ -257,7 +256,7 @@ class ForLoop(Node):
 
     variable: str = ""
     collection: str = ""
-    body: List[Node] = field(default_factory=list)
+    body: list[Node] = field(default_factory=list)
 
 
 @dataclass
@@ -265,16 +264,16 @@ class UntilLoop(Node):
     """~UNTIL condition | MAX:n: ... ~END"""
 
     condition: str = ""
-    max_iterations: Optional[int] = None
-    body: List[Node] = field(default_factory=list)
+    max_iterations: int | None = None
+    body: list[Node] = field(default_factory=list)
 
 
 @dataclass
 class ParallelBlock(Node):
     """~PARALLEL: ... ~JOIN → $var"""
 
-    branches: List[Node] = field(default_factory=list)
-    join_target: Optional[str] = None
+    branches: list[Node] = field(default_factory=list)
+    join_target: str | None = None
 
 
 # ─────────────────────────────────────────────
@@ -289,7 +288,7 @@ class Variable(Node):
     name: str = ""
 
     @property
-    def parts(self) -> List[str]:
+    def parts(self) -> list[str]:
         return self.name.lstrip("$").split(".")
 
 
@@ -303,19 +302,19 @@ class Literal(Node):
 
 @dataclass
 class ArrayLiteral(Node):
-    elements: List[Any] = field(default_factory=list)
+    elements: list[Any] = field(default_factory=list)
 
 
 @dataclass
 class ObjectLiteral(Node):
-    fields: Dict[str, Any] = field(default_factory=dict)
+    fields: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class BinaryOp(Node):
-    left: Optional[Node] = None
+    left: Node | None = None
     operator: str = ""
-    right: Optional[Node] = None
+    right: Node | None = None
 
 
 @dataclass
@@ -347,20 +346,22 @@ class NamedBlock(Node):
     """§blockname { ... } — generic named block in schema/config files."""
 
     name: str = ""
-    entries: Dict[str, Any] = field(default_factory=dict)
-    raw_lines: List[str] = field(default_factory=list)
+    entries: dict[str, Any] = field(default_factory=dict)
+    raw_lines: list[str] = field(default_factory=list)
 
 
 @dataclass
-class TestBlock(Node):
+class NodusTestBlock(Node):
     """@test:name { input: {}, expected: {}, mock: {}, tags: [] }"""
 
+    __test__ = False
+
     name: str = ""
-    input_data: Dict[str, Any] = field(default_factory=dict)
-    expected: Dict[str, Any] = field(default_factory=dict)
-    mock: Dict[str, Any] = field(default_factory=dict)
-    tags: List[str] = field(default_factory=list)
-    raw_lines: List[str] = field(default_factory=list)
+    input_data: dict[str, Any] = field(default_factory=dict)
+    expected: dict[str, Any] = field(default_factory=dict)
+    mock: dict[str, Any] = field(default_factory=dict)
+    tags: list[str] = field(default_factory=list)
+    raw_lines: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -368,8 +369,8 @@ class MacroBlock(Node):
     """@macro:name { ... }"""
 
     name: str = ""
-    body: List[Node] = field(default_factory=list)
-    raw_lines: List[str] = field(default_factory=list)
+    body: list[Node] = field(default_factory=list)
+    raw_lines: list[str] = field(default_factory=list)
 
 
 @dataclass

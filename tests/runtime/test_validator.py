@@ -1,21 +1,21 @@
 """Tests for the NODUS Validator (lint rules)."""
 
-from runtime.interpreter.parser import Parser
-from runtime.interpreter.validator import Validator
 from runtime.interpreter.ast_nodes import (
-    WorkflowFile,
+    CommandCall,
+    ErrorDecl,
     FileHeader,
     FileType,
-    RuntimeBlock,
-    Step,
-    CommandCall,
     InputDecl,
     InputField,
     OutputDecl,
-    ErrorDecl,
-    UntilLoop,
+    RuntimeBlock,
     Severity,
+    Step,
+    UntilLoop,
+    WorkflowFile,
 )
+from runtime.interpreter.parser import Parser
+from runtime.interpreter.validator import Validator
 
 
 def parse(source: str, filename: str = "test.nodus"):

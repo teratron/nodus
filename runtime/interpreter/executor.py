@@ -15,10 +15,11 @@ The executor follows the boot sequence defined in AGENTS.md:
 
 from __future__ import annotations
 
-import time
 import abc
-from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+import time
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from .ast_nodes import (
     AbsoluteRule,
@@ -33,7 +34,6 @@ from .ast_nodes import (
     WorkflowFile,
 )
 
-
 # Type alias for command handler functions
 CommandHandler = Callable[["ExecutionContext", CommandCall], Any]
 
@@ -42,12 +42,12 @@ class ModelProvider(abc.ABC):
     """Abstract base class for LLM providers."""
 
     @abc.abstractmethod
-    def generate(self, prompt: str, modifiers: Dict[str, Any]) -> str:
+    def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
         """Generate text."""
         ...
 
     @abc.abstractmethod
-    def analyze(self, text: str, flags: List[str]) -> Dict[str, Any]:
+    def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
         """Analyze text."""
         ...
 
@@ -55,12 +55,12 @@ class ModelProvider(abc.ABC):
 class StubProvider(ModelProvider):
     """Default provider that returns stubs."""
 
-    def generate(self, prompt: str, modifiers: Dict[str, Any]) -> str:
+    def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
         tone = modifiers.get("+tone", "brand")
         return f"[Generated {prompt} in {tone} tone (STUB)]"
 
-    def analyze(self, text: str, flags: List[str]) -> Dict[str, Any]:
-        result: Dict[str, Any] = {}
+    def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
         for flag in flags:
             result[flag] = "mock_value" if flag == "intent" else 0.5
         return result
@@ -69,11 +69,11 @@ class StubProvider(ModelProvider):
 class AnthropicProvider(ModelProvider):
     """Example provider for Anthropic Claude (Stubbed for now)."""
 
-    def generate(self, prompt: str, modifiers: Dict[str, Any]) -> str:
+    def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
         # TODO: Implement real call to anthropic-sdk
         return f"[Generated via ANTHROPIC: {prompt}]"
 
-    def analyze(self, text: str, flags: List[str]) -> Dict[str, Any]:
+    def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
         return {"intent": "analyzed_by_anthropic", "sentiment": 0.9}
 
 
@@ -81,12 +81,12 @@ class ExecutionContext:
     """Runtime state for a single workflow execution."""
 
     def __init__(self) -> None:
-        self.variables: Dict[str, Any] = {}
-        self.rules: List[AbsoluteRule] = []
-        self.preferences: List[Preference] = []
-        self.log: List[Dict[str, Any]] = []
-        self.errors: List[Dict[str, Any]] = []
-        self.flags: List[str] = []
+        self.variables: dict[str, Any] = {}
+        self.rules: list[AbsoluteRule] = []
+        self.preferences: list[Preference] = []
+        self.log: list[dict[str, Any]] = []
+        self.errors: list[dict[str, Any]] = []
+        self.flags: list[str] = []
         self.active_tone: str = "brand"
         self.out_locked: bool = False
 
@@ -122,11 +122,11 @@ class ExecutionContext:
                 "step": step_num,
                 "command": command,
                 "result": result,
-                "ts": datetime.now(timezone.utc).isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
             }
         )
 
-    def check_rules(self, command: str, args: List[str]) -> Optional[str]:
+    def check_rules(self, command: str, args: list[str]) -> str | None:
         """Check if a command violates any !! rules. Returns violation message or None."""
         _ = args  # Unused for now
         cmd_lower = command.lower()
@@ -158,13 +158,13 @@ class NodusResult:
         self.version: str = ""
         self.status: str = "ok"  # ok | partial | failed | aborted
         self.out: Any = None
-        self.log: List[Dict[str, Any]] = []
-        self.errors: List[Dict[str, Any]] = []
-        self.flags: List[str] = []
+        self.log: list[dict[str, Any]] = []
+        self.errors: list[dict[str, Any]] = []
+        self.flags: list[str] = []
         self.ts_end: str = ""
         self.agent_id: str = "nodus-executor"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert result to a dictionary."""
         return {
             "workflow": self.workflow,
@@ -182,8 +182,8 @@ class NodusResult:
 class Executor:
     """Executes a parsed NODUS workflow AST."""
 
-    def __init__(self, provider: Optional[ModelProvider] = None) -> None:
-        self.handlers: Dict[str, CommandHandler] = self._default_handlers()
+    def __init__(self, provider: ModelProvider | None = None) -> None:
+        self.handlers: dict[str, CommandHandler] = self._default_handlers()
         self.provider: ModelProvider = provider or StubProvider()
 
     def set_provider(self, provider: ModelProvider) -> None:
@@ -201,7 +201,7 @@ class Executor:
     def execute(
         self,
         ast: WorkflowFile,
-        input_data: Optional[Dict[str, Any]] = None,
+        input_data: dict[str, Any] | None = None,
     ) -> NodusResult:
         """Execute a workflow and return NODUS:RESULT."""
         result = NodusResult()
@@ -211,7 +211,7 @@ class Executor:
             result.errors.append(
                 {"code": "NODUS:PARSE_ERROR", "reason": "Expected WorkflowFile"}
             )
-            result.ts_end = datetime.now(timezone.utc).isoformat()
+            result.ts_end = datetime.now(UTC).isoformat()
             return result
 
         ctx = ExecutionContext()
@@ -234,7 +234,7 @@ class Executor:
             for k, v in input_data.items():
                 ctx.variables[k] = v
         elif ast.input_decl:
-            defaults: Dict[str, Any] = {}
+            defaults: dict[str, Any] = {}
             for field in ast.input_decl.fields:
                 if field.default is not None:
                     defaults[field.name] = field.default
@@ -248,7 +248,7 @@ class Executor:
             "session",
             {
                 "id": f"session_{int(time.time())}",
-                "ts_start": datetime.now(timezone.utc).isoformat(),
+                "ts_start": datetime.now(UTC).isoformat(),
                 "agent_id": result.agent_id,
                 "workflow": result.workflow,
             },
@@ -273,7 +273,7 @@ class Executor:
         result.log = ctx.log
         result.errors = ctx.errors
         result.flags = ctx.flags
-        result.ts_end = datetime.now(timezone.utc).isoformat()
+        result.ts_end = datetime.now(UTC).isoformat()
 
         if ctx.errors and result.status == "ok":
             result.status = "partial"
@@ -284,7 +284,7 @@ class Executor:
     # STEP EXECUTION
     # ═══════════════════════════════════════
 
-    def _execute_step(self, ctx: ExecutionContext, step: Step) -> Optional[str]:
+    def _execute_step(self, ctx: ExecutionContext, step: Step) -> str | None:
         """Execute a single step. Returns 'BREAK' or 'SKIP' or None."""
         if step.body is None:
             return None
@@ -302,7 +302,7 @@ class Executor:
 
     def _execute_node(
         self, ctx: ExecutionContext, node: Node, step_num: int = 0
-    ) -> Optional[str]:
+    ) -> str | None:
         if isinstance(node, CommandCall):
             return self._execute_command(ctx, node, step_num)
         if isinstance(node, Conditional):
@@ -317,7 +317,7 @@ class Executor:
 
     def _execute_command(
         self, ctx: ExecutionContext, cmd: CommandCall, step_num: int
-    ) -> Optional[str]:
+    ) -> str | None:
         # Check !! rules
         violation = ctx.check_rules(cmd.name, cmd.args)
         if violation:
@@ -352,7 +352,7 @@ class Executor:
 
     def _execute_conditional(
         self, ctx: ExecutionContext, cond: Conditional, step_num: int
-    ) -> Optional[str]:
+    ) -> str | None:
         if self._evaluate_condition(ctx, cond.condition):
             if cond.action:
                 signal = self._execute_node(ctx, cond.action, step_num)
@@ -389,7 +389,7 @@ class Executor:
 
     def _execute_for(
         self, ctx: ExecutionContext, loop: ForLoop, step_num: int
-    ) -> Optional[str]:
+    ) -> str | None:
         collection = ctx.get_var(loop.collection)
         if not collection or not isinstance(collection, list):
             return None
@@ -407,7 +407,7 @@ class Executor:
 
     def _execute_until(
         self, ctx: ExecutionContext, loop: UntilLoop, step_num: int
-    ) -> Optional[str]:
+    ) -> str | None:
         max_iter = loop.max_iterations or 5
         for _ in range(max_iter):
             for child in loop.body:
@@ -423,10 +423,10 @@ class Executor:
 
     def _execute_parallel(
         self, ctx: ExecutionContext, block: ParallelBlock, step_num: int
-    ) -> Optional[str]:
+    ) -> str | None:
         # In a real implementation, branches would run concurrently.
         # Here we execute sequentially for simplicity.
-        results: Dict[str, Any] = {}
+        results: dict[str, Any] = {}
         for branch in block.branches:
             self._execute_node(ctx, branch, step_num)
 
@@ -542,7 +542,7 @@ class Executor:
     # DEFAULT HANDLERS (stubs)
     # ═══════════════════════════════════════
 
-    def _default_handlers(self) -> Dict[str, CommandHandler]:
+    def _default_handlers(self) -> dict[str, CommandHandler]:
         """Return default stub handlers for all core commands."""
         return {
             "FETCH": self._handle_fetch,
@@ -634,7 +634,7 @@ class Executor:
 
     @staticmethod
     def _handle_merge(ctx: ExecutionContext, cmd: CommandCall) -> dict:
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for arg in cmd.args:
             val = ctx.get_var(arg) if arg.startswith("$") else {}
             if isinstance(val, dict):
