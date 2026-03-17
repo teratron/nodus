@@ -1,5 +1,7 @@
 §wf:beautiful_mention v1.0
-;; Example workflow for social media mentions.
+;; MINIMAL EXAMPLE — for learning purposes only.
+;; See workflows/beautiful_mention.nodus for the full production-ready version.
+;; This file demonstrates the basic NODUS workflow structure in ~10 lines.
 
 @ON: new_mention
 @steps:

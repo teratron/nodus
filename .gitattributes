@@ -1,8 +1,13 @@
-# Configure line endings
+# Normalise line endings to LF for all text files
 * text=auto eol=lf
 
-# Markdown files should use LF line endings
-*.md text eol=lf
-
-# Nodus files should use LF line endings
-*.nodus text eol=lf
+# Treat common binary formats as binary (no diff / merge mangling)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

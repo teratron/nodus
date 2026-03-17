@@ -19,3 +19,35 @@ This set of guidelines outlines language preferences for the project, ensuring c
 - Use Russian for conversational responses, clarifications, project planning, and non-technical interactions
 - Project management communications, feature discussions, and strategic decisions should be conducted in Russian
 - Code review comments and technical discussions during development can be in Russian unless collaborating with English-speaking developers
+
+## Toolchain
+
+This project uses **uv** as the package manager. Prefer native uv commands (`uv run`, `uv sync`, `uv add`) over pip-compatible wrappers (`uv pip install`) wherever possible.
+
+Before running any commands, activate the virtual environment:
+
+- **Windows:** `.venv\Scripts\activate`
+- **Unix/macOS:** `source .venv/bin/activate`
+
+If `.venv` does not exist, create it first:
+
+```bash
+uv sync
+```
+
+## Quality Checks
+
+Run these before committing:
+
+```bash
+# Lint and auto-fix
+ruff check --fix .
+
+# Type checking
+pyright
+
+# Tests
+pytest
+```
+
+All three must pass with zero errors before any commit.

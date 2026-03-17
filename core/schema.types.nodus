@@ -1,5 +1,139 @@
-§wf:schema_types v1.0
+§schema:types v0.3
 ;; NODUS | Extended Type Definitions
-;; Defines additional data types and structures for the NODUS language.
+;; Defines composite types, type constraints, and type aliases
+;; that extend the primitive types declared in schema.nodus.
 
-!!ALWAYS: follow schema.nodus primitives
+!!ALWAYS: follow schema.nodus primitives as base types
+
+;; ─────────────────────────────────────────────
+;; COMPOSITE TYPES
+;; Structured types built from primitives.
+;; ─────────────────────────────────────────────
+
+§types_composite {
+
+  ;; — References —
+  wf_ref      ::  str     ;; wf:<identifier> — references a workflow by name
+  macro_ref   ::  str     ;; @macro:<identifier> — references a macro by name
+  channel_ref ::  str     ;; must match a key in §channels registry
+  error_code  ::  str     ;; must match a key in §errors registry
+  type_ref    ::  str     ;; must match a key in §types or §types_composite
+
+  ;; — Constrained Numerics —
+  score       ::  float   ;; constrained 0.0–1.0, used for quality/confidence
+  sentiment   ::  float   ;; constrained -1.0–1.0, negative to positive
+  percentage  ::  float   ;; constrained 0.0–100.0
+
+  ;; — Field Declaration (used in @in blocks) —
+  field_decl {
+    name:      str        ;; field identifier
+    type:      type_ref   ;; type of the field
+    optional:  bool       ;; true if field has ? marker
+    default:   any        ;; default value (only if optional = true)
+    comment:   str        ;; inline documentation
+  }
+
+  ;; — NODUS:RESULT (returned by every workflow) —
+  nodus_result {
+    workflow:   wf_ref
+    version:    str
+    status:     enum      ;; SUCCESS | PARTIAL | FAILED | ABORTED
+    out:        any
+    log:        list
+    errors:     list
+    flags:      list
+    ts_end:     ts
+    agent_id:   str
+  }
+
+  ;; — NODUS:TEST_RESULT (returned by test runner) —
+  nodus_test_result {
+    test:         str
+    workflow:     wf_ref
+    status:       enum    ;; PASS | FAIL | SKIP | ERROR
+    assertions:   list
+    duration_ms:  int
+    ts:           ts
+  }
+
+  ;; — Error Object —
+  error_obj {
+    code:    error_code
+    step:    int
+    reason:  str
+    ts:      ts
+  }
+
+  ;; — User Object —
+  user_obj {
+    id:       str
+    tier:     enum        ;; standard | vip | enterprise
+    lang:     str         ;; ISO 639-1 language code
+    mood:     str
+    history:  list
+  }
+
+  ;; — Session Object —
+  session_obj {
+    id:         str
+    ts_start:   ts
+    agent_id:   str
+    workflow:   wf_ref
+  }
+
+  ;; — KB Result Item —
+  kb_result {
+    content:  str
+    score:    score
+    meta:     obj
+  }
+
+  ;; — Channel Config —
+  channel_config {
+    max_len:   int|null
+    format:    enum       ;; plain | markdown | html | json
+    tone:      str        ;; must match §tones key
+  }
+
+  ;; — Assertion (used in test results) —
+  assertion {
+    field:     str
+    expected:  any
+    actual:    any
+    passed:    bool
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; TYPE CONSTRAINTS
+;; Rules for type validation at runtime.
+;; ─────────────────────────────────────────────
+
+§type_constraints {
+  score      :: value >= 0.0 AND value <= 1.0
+  sentiment  :: value >= -1.0 AND value <= 1.0
+  percentage :: value >= 0.0 AND value <= 100.0
+  url        :: value MATCHES "^https?://.+"
+  ts         :: value MATCHES "^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
+  wf_ref     :: value MATCHES "^wf:[a-z_][a-z0-9_.]+$"
+  macro_ref  :: value MATCHES "^@macro:[A-Z_][A-Z0-9_]+$"
+}
+
+;; ─────────────────────────────────────────────
+;; ENUM DEFINITIONS
+;; Closed sets of valid values.
+;; ─────────────────────────────────────────────
+
+§enums {
+  result_status   :: [SUCCESS, PARTIAL, FAILED, ABORTED]
+  test_status     :: [PASS, FAIL, SKIP, ERROR]
+  user_tier       :: [standard, vip, enterprise]
+  output_format   :: [plain, markdown, html, json]
+  memory_scope    :: [session, user, global]
+  runtime_mode    :: [production, development, debug, dry_run]
+  intent_type     :: [question, complaint, praise, request, spam, unclear]
+}
+
+;; ─────────────────────────────────────────────
+;; END §schema:types v0.3
+;; ─────────────────────────────────────────────

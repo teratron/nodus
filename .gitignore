@@ -1,14 +1,13 @@
-# IDE files
+# IDE
 .idea/
 .vscode/
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
+# Claude
+.claude/settings.json
 
-# Python build/env
+# Python build / env
 __pycache__/
+.*_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -21,18 +20,13 @@ build/
 dist/
 *.egg-info/
 .hatch/
-uv.lock
 
-# Dotenv files (local secrets — never commit)
+# Secrets
 .env*
 !.env.example
 
 # Misc
-*.txt
 *.log
 *.tgz
-
-# Node installer build artifacts
-dist/
 temp/
 *tmp/

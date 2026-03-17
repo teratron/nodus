@@ -1,4 +1,4 @@
-§schema:nodus v0.2
+§schema:nodus v0.3
 ;;  NODUS Core Schema
 ;;  This file is the vocabulary contract for all NODUS workflows.
 ;;  Load this file FIRST into any agent context before executing any .nodus workflow.
@@ -210,6 +210,55 @@
     ;; Params are passed into the macro as $in
     ;; Returns the last assigned variable in the macro body
 
+}
+
+;; ─────────────────────────────────────────────
+;; 5b. SYSTEM COMMANDS (CLI & tooling)
+;; Used by cli.nodus and internal tooling.
+;; Not intended for use in user workflows.
+;; ─────────────────────────────────────────────
+
+§commands_system {
+
+  ;; — FILE OPERATIONS —
+  WRITE(content:any, path:str)             → bool
+    ;; Write content to a file path
+    ;; !!NEVER overwrite without confirmation
+
+  MKDIR(path:str)                           → bool
+    ;; Create a directory (recursive)
+
+  FILE_EXISTS(path:str)                     → bool
+    ;; Check if a file or directory exists
+
+  ;; — TEMPLATE OPERATIONS —
+  FILL(template:str) +fields=obj            → str
+    ;; Replace placeholders in a template with field values
+
+  PARSE(input:str)                          → obj
+    ;; Parse a string into a structured object
+    ;; Context-dependent: CLI parses commands, runtime parses expressions
+
+  ;; — EXECUTION OPERATIONS —
+  EXECUTE(workflow:wf_ref)                  → obj
+    ;; Execute a workflow and return NODUS:RESULT
+    ;; Used internally by cli.run
+
+  SIMULATE(workflow:wf_ref)                 → obj
+    ;; Dry-run a workflow without side effects
+    ;; Returns simulated NODUS:RESULT
+
+  ;; — TEST OPERATIONS —
+  EXTRACT(source:any) ~target               → any
+    ;; Extract specific elements from a source
+    ;; ~test_blocks: extract @test blocks from a .nodus file
+
+  FILTER(collection:list) +where=str        → list
+    ;; Filter a list by condition string
+
+  EXECUTE_TEST(test:obj) +mock=obj          → obj
+    ;; Run a single @test block with mocked commands
+    ;; Returns NODUS:TEST_RESULT
 }
 
 ;; ─────────────────────────────────────────────

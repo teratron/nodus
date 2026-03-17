@@ -1,10 +1,182 @@
 §wf:{{name}} v1.0
-;; Purpose: {{purpose}}
-;; Author: {{author}}
+;; Workflow:  {{name}}
+;; Purpose:   {{purpose}}
+;; Pack:      {{pack}}
+;; Author:    {{author}}
+;; Updated:   {{date}}
+
+;; ─────────────────────────────────────────────
+;; RUNTIME ENVIRONMENT
+;; Resolved FIRST — before rules, before steps.
+;; core:    base schema (required)
+;; extends: project-level extensions (in load order)
+;; agents:  which model plays which role
+;; mode:    production | debug | test
+;; ─────────────────────────────────────────────
 
 §runtime: {
-  core: .nodus/core/schema.nodus
+  core:    ../../core/schema.nodus
+  extends: []
+  agents: {
+    executor:     claude-sonnet-4
+    orchestrator: claude-opus-4
+  }
+  mode: production
 }
 
+;; ─────────────────────────────────────────────
+;; TRIGGERS
+;; ─────────────────────────────────────────────
+
+@ON: {{trigger}}                              → RUN(wf:{{name}})
+;; @ON: $in.field = value                    → RUN(wf:{{name}})
+;; @ON: schedule:HH:MM                       → RUN(wf:{{name}})
+;; @ON: webhook:event_key                    → RUN(wf:{{name}})
+
+;; ─────────────────────────────────────────────
+;; WORKFLOW-LEVEL RULES
+;; ─────────────────────────────────────────────
+
+!!NEVER:  [define what must never happen]
+!!ALWAYS: [define what must always happen]
+
+!PREF: [preferred behaviour] OVER [alternative]
+
+;; ─────────────────────────────────────────────
+;; DECLARATIONS
+;; ─────────────────────────────────────────────
+
+@in: {
+  required_field:   str             ;; description (required)
+  required_url:     url             ;; description (required)
+  optional_field?:  str = default   ;; description (optional, default: value)
+  optional_flag?:   bool = false    ;; description (optional, default: false)
+}
+
+@ctx: [brand_voice]                 ;; add context files needed
+@out: $out                          ;; final output variable
+@err: ESCALATE(human)               ;; default error handler
+
+;; ─────────────────────────────────────────────
+;; STEPS
+;; ─────────────────────────────────────────────
+
 @steps:
-1. LOG("Workflow {{name}} started")
+
+  ;; — FETCH / LOAD DATA —
+  1. FETCH($in.required_url) +cache=false +timeout=10 → $raw
+     ?IF $raw = null → !BREAK
+
+  ;; — ANALYZE —
+  2. ANALYZE($raw) ~sentiment ~intent ~toxicity → $meta
+
+  ;; — GATE: filter unwanted input —
+  3. ?IF $meta.intent = spam    → !BREAK
+     ?IF $meta.toxicity > 0.7  → ESCALATE(human) !BREAK
+
+  ;; — CONDITIONAL ROUTING —
+  4. ?IF [condition_a]:
+       ROUTE(wf:other_workflow) !BREAK
+     ?ELIF [condition_b]:
+       TONE(empathetic)
+     ?ELSE:
+       TONE(neutral)
+
+  ;; — GENERATE —
+  5. GEN(reply)
+       +ctx=$meta
+       +tone=$active_tone
+       +lang=$meta.lang
+       +max_len=280
+       +format=plain
+     → $draft
+
+  ;; — QUALITY LOOP (optional) —
+  ;; ~UNTIL $quality > 0.85 | MAX:3:
+  ;;   REFINE($draft) +target=clarity → $draft
+  ;;   SCORE($draft) ^brand_voice     → $quality
+  ;; ~END
+
+  ;; — VALIDATE —
+  6. VALIDATE($draft) ^brand_voice ^no_toxic ^no_pii → $validated
+     ?IF $validated = false:
+       NOTIFY(human) +channel=slack +msg="Validation failed"
+       !BREAK
+
+  ;; — PUBLISH —
+  7. PUBLISH($validated) +channel=$in.source → $out
+
+  ;; — LOG —
+  8. LOG($out)
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; Keep in sync with @steps above.
+;; ─────────────────────────────────────────────
+
+;; WORKFLOW: {{name}}
+;; TRIGGER: [when does this run]
+;;
+;; INPUT: [list inputs and what they mean]
+;; CONTEXT: [what context files are loaded]
+;;
+;; RULES:
+;;   - [rule 1]
+;;   - [rule 2]
+;;
+;; STEPS:
+;;   1. Fetch content from URL
+;;   2. Run NLP analysis
+;;   3. Filter spam and toxic content
+;;   4. Route or set tone based on conditions
+;;   5. Generate reply / output
+;;   6. Validate against brand rules
+;;   7. Publish to channel
+;;   8. Log the result
+;;
+;; OUTPUT: [what $out contains]
+;; ON ERROR: escalate to human
+
+;; ─────────────────────────────────────────────
+;; TESTS
+;; Minimum: happy path + at least one edge case.
+;; ─────────────────────────────────────────────
+
+@test:happy_path {
+  input: {
+    required_field: "value",
+    required_url:   "https://example.com/test/1"
+  }
+  expected: {
+    status = SUCCESS,
+    errors = []
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/happy_path.json",
+    ANALYZE: { sentiment: 0.7, intent: "praise", toxicity: 0.01,
+               lang: "en", urgency: 0.1, entities: [] },
+    GEN:     "Mocked reply for happy path."
+  }
+  tags: [smoke, happy_path]
+}
+
+@test:gate_spam {
+  input: {
+    required_field: "value",
+    required_url:   "https://example.com/test/2"
+  }
+  expected: {
+    status = ABORTED,
+    errors = []
+  }
+  mock: {
+    FETCH:   "./tests/fixtures/spam.json",
+    ANALYZE: { sentiment: 0.1, intent: "spam", toxicity: 0.05,
+               lang: "en", urgency: 0.0, entities: [] }
+  }
+  tags: [gate, spam]
+}
+
+;; ─────────────────────────────────────────────
+;; END §wf:{{name}} v1.0
+;; ─────────────────────────────────────────────
