@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 # DEFAULT PATHS & CONFIG
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 
 DEFAULT_CONFIG_PATH = ".nodus/config.json"
 DEFAULT_SCHEMA_PATH = "core/schema.nodus"
@@ -22,18 +22,18 @@ DEFAULT_CONFIG_DATA = {
     "logging": {"enabled": True, "output": "./logs"},
 }
 
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 # TEMPLATES
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 
-NEW_WORKFLOW_TEMPLATE = """\u00a7wf:{stem} v0.1
+NEW_WORKFLOW_TEMPLATE = """§wf:{stem} v0.1
 
-\u00a7runtime: {{
+§runtime: {
   core:    .nodus/core/schema.nodus
   mode:    NODUS
-}}
+}
 
-@in: {{ }}
+@in: { }
 @out: $out
 
 @steps:
@@ -42,17 +42,17 @@ NEW_WORKFLOW_TEMPLATE = """\u00a7wf:{stem} v0.1
 @err: ESCALATE("human")
 """
 
-NEW_CONFIG_NODUS_TEMPLATE = """\u00a7config:{project} v1.0
+NEW_CONFIG_NODUS_TEMPLATE = """§config:{project} v1.0
 ;; Project Config — Business Logic Layer
 ;; Purpose:  Global rules, triggers, and constants for all workflows.
 ;;           This file is loaded by the executor agent at project startup.
 ;;           It defines WHAT the project does — not WHERE it runs.
 ;;           For infrastructure (API keys, models, webhooks) → .nodus/config.json
 
-\u00a7runtime: {{
+§runtime: {
   core:    .nodus/core/schema.nodus
   mode:    production
-}}
+}
 
 ;; ─────────────────────────────────────────────
 ;; GLOBAL ABSOLUTE RULES
@@ -70,20 +70,20 @@ NEW_CONFIG_NODUS_TEMPLATE = """\u00a7config:{project} v1.0
 !PREF: tone = brand OVER tone = neutral
 
 ;; ─────────────────────────────────────────────
-;; END \u00a7config:{project} v1.0
+;; END §config:{project} v1.0
 ;; ─────────────────────────────────────────────
 """
 
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 # EXECUTOR & AGENT DEFAULTS
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 
 AGENT_ID = "nodus-executor"
 DEFAULT_UNTIL_ITERATIONS = 5
 
-# ─────────────────────────────────────────────
-# STUBS & MOCKS (Testing)
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+# STUBS & MOCKS (TESTING)
+# ═══════════════════════════════════════════════════════════════════════════
 
 STUB_GENERATE_TEMPLATE = "[Generated {prompt} in {tone} tone (STUB)]"
 STUB_ANALYZE_VALUE = "mock_value"
@@ -93,9 +93,9 @@ STUB_TRANSLATE_TEXT = "[Translated content]"
 STUB_SUMMARIZE_TEXT = "[Summary]"
 STUB_SCORE_VALUE = 0.85
 
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 # UI STRINGS
-# ─────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
 
 CLI_HELP = """NODUS CLI — command-line interface for the NODUS language runtime.
 

@@ -33,13 +33,30 @@ _T = TypeVar("_T", bound=Node)
 
 
 class Validator:
-    """Validates a parsed NODUS AST against lint rules."""
+    """Validates a parsed NODUS AST against lint rules.
 
-    def __init__(self, project_root: str = "."):
+    The validator checks for structural errors, potential runtime issues,
+    and style inconsistencies across Workflow, Schema, and Config files.
+    """
+
+    def __init__(self, project_root: str = ".") -> None:
+        """Initialize validator with project context.
+
+        Args:
+            project_root: The root directory for resolving file paths.
+        """
         self.project_root = project_root
 
     def validate(self, ast: Node, filename: str = "") -> list[Diagnostic]:
-        """Run all applicable lint rules and return diagnostics."""
+        """Run all applicable lint rules and return diagnostics.
+
+        Args:
+            ast: The root AST node to validate.
+            filename: The name of the file (used in diagnostic messages).
+
+        Returns:
+            A list of Diagnostic objects found during validation.
+        """
         if isinstance(ast, WorkflowFile):
             return self._validate_workflow(ast, filename)
         if isinstance(ast, SchemaFile):
@@ -48,14 +65,23 @@ class Validator:
             return self._validate_config(ast, filename)
         return []
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # WORKFLOW VALIDATION
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _validate_workflow(self, wf: WorkflowFile, filename: str) -> list[Diagnostic]:
-        """Orchestrate all workflow-specific lint rules."""
+        """Orchestrate all workflow-specific lint rules.
+
+        Args:
+            wf: The WorkflowFile node.
+            filename: The file path.
+
+        Returns:
+            Accumulated list of diagnostics.
+        """
         d: list[Diagnostic] = []
 
+        # Errors
         d.extend(self._e001_runtime_present(wf, filename))
         d.extend(self._e002_runtime_second(wf, filename))
         d.extend(self._e003_rules_before_steps(wf, filename))
@@ -69,6 +95,7 @@ class Validator:
         d.extend(self._e011_core_path_valid(wf, filename))
         d.extend(self._e012_name_matches_file(wf, filename))
 
+        # Warnings
         d.extend(self._w001_err_handler(wf, filename))
         d.extend(self._w002_has_tests(wf, filename))
         d.extend(self._w003_human_mode(wf, filename))
@@ -80,6 +107,7 @@ class Validator:
         d.extend(self._w009_ctx_in_config(wf, filename))
         d.extend(self._w010_extends_resolve(wf, filename))
 
+        # Info
         d.extend(self._i001_step_comments(wf, filename))
         d.extend(self._i003_smoke_tag(wf, filename))
         d.extend(self._i004_pref_tones(wf, filename))
@@ -87,7 +115,9 @@ class Validator:
 
         return d
 
-    # ── ERRORS ────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────────
+    # Errors (E00x)
+    # ───────────────────────────────────────────────────────────────────────────
 
     def _e001_runtime_present(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         """E001: Missing §runtime block."""
@@ -297,7 +327,9 @@ class Validator:
             ]
         return []
 
-    # ── WARNINGS ──────────────────────────
+    # ───────────────────────────────────────────────────────────────────────────
+    # Warnings (W00x)
+    # ───────────────────────────────────────────────────────────────────────────
 
     def _w001_err_handler(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         """W001: No @err handler."""
@@ -460,7 +492,9 @@ class Validator:
                     )
         return diags
 
-    # ── INFO ──────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────────
+    # Info (I00x)
+    # ───────────────────────────────────────────────────────────────────────────
 
     def _i001_step_comments(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
         """I001: Step has no comment."""
@@ -498,23 +532,24 @@ class Validator:
                     continue
                 # check if a tone value is mentioned
                 if "=" in pref.preferred:
-                    _, val = pref.preferred.split("=", 1)
-                    val = val.strip()
-                    if (
-                        val
-                        and val not in constants.VALID_TONES
-                        and val.startswith("$") is False
-                    ):
-                        diags.append(
-                            self._d(
-                                Severity.INFO,
-                                "I004",
-                                f"Unknown tone '{val}' in !PREF rule.",
-                                fn,
-                                pref,
+                    parts = pref.preferred.split("=", 1)
+                    if len(parts) > 1:
+                        val = parts[1].strip()
+                        if (
+                            val
+                            and val not in constants.VALID_TONES
+                            and val.startswith("$") is False
+                        ):
+                            diags.append(
+                                self._d(
+                                    Severity.INFO,
+                                    "I004",
+                                    f"Unknown tone '{val}' in !PREF rule.",
+                                    fn,
+                                    pref,
+                                )
                             )
-                        )
-                    break
+                        break
         return diags
 
     def _i006_header_fields(self, wf: WorkflowFile, fn: str) -> list[Diagnostic]:
@@ -535,9 +570,9 @@ class Validator:
                 )
         return diags
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # SCHEMA / CONFIG VALIDATION
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _validate_schema(self, sf: SchemaFile, fn: str) -> list[Diagnostic]:
         """Validate SchemaFile nodes."""
@@ -561,9 +596,9 @@ class Validator:
             )
         return d
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # UTILITY
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     @staticmethod
     def _d(
@@ -573,13 +608,30 @@ class Validator:
         filename: str,
         node: Node | None = None,
     ) -> Diagnostic:
-        """Create a Diagnostic object."""
+        """Create a Diagnostic object from a node or file location.
+
+        Args:
+            severity: Severity level (error, warning, info).
+            code: Unique rule code (e.g. E001).
+            msg: Descriptive message.
+            filename: The file being validated.
+            node: Optional AST node to extract line/column from.
+
+        Returns:
+            A populated Diagnostic object.
+        """
         line = node.pos.line if node and node.pos else 0
         col = node.pos.column if node and node.pos else 0
         return Diagnostic(severity, code, msg, line, col, filename)
 
     def _collect_vars(self, node: Node, declared: set[str], used: set[str]) -> None:
-        """Recursively walk the node tree to collect declared (assigned) and used variables."""
+        """Recursively walk the node tree to collect declared and used variables.
+
+        Args:
+            node: Subtree root.
+            declared: Set of assigned variable names.
+            used: Set of referenced variable names.
+        """
         if isinstance(node, Step):
             if node.body:
                 self._collect_vars(node.body, declared, used)
@@ -631,7 +683,14 @@ class Validator:
                 declared.add(node.join_target)
 
     def _extract_commands(self, node: Node) -> list[CommandCall]:
-        """Deeply extract all CommandCall nodes from any given AST subtree."""
+        """Deeply extract all CommandCall nodes from any given AST subtree.
+
+        Args:
+            node: Subtree root.
+
+        Returns:
+            Flat list of CommandCall nodes.
+        """
         cmds: list[CommandCall] = []
         if isinstance(node, CommandCall):
             cmds.append(node)
@@ -658,7 +717,15 @@ class Validator:
         return cmds
 
     def _find_nodes(self, node: Node, node_type: type[_T]) -> list[_T]:
-        """General-purpose search to find all nodes of a specific type in the tree."""
+        """General-purpose search to find all nodes of a specific type.
+
+        Args:
+            node: Subtree root.
+            node_type: Class reference to search for.
+
+        Returns:
+            List of matching nodes.
+        """
         results: list[Node] = []
         if isinstance(node, node_type):
             results.append(node)
@@ -683,7 +750,15 @@ class Validator:
         return cast(list[_T], results)
 
     def _max_conditional_depth(self, node: Node, current: int) -> int:
-        """Calculate maximum ?IF nesting depth."""
+        """Calculate maximum ?IF nesting depth using recursive walk.
+
+        Args:
+            node: Subtree root.
+            current: Current depth level.
+
+        Returns:
+            Deepest level found.
+        """
         if isinstance(node, Conditional):
             depth = current + 1
             for br in node.elif_branches:
@@ -703,7 +778,14 @@ class Validator:
         return current
 
     def _find_workflow(self, name: str) -> bool:
-        """Check if a workflow file exists by name."""
+        """Check if a workflow file exists by name in standard locations.
+
+        Args:
+            name: Workflow identifier (e.g. social/reply).
+
+        Returns:
+            True if at least one candidate matches an existing file.
+        """
         candidates = [
             os.path.join(self.project_root, "workflows", f"{name}.nodus"),
             os.path.join(self.project_root, "workflows", "social", f"{name}.nodus"),

@@ -30,7 +30,7 @@ The project strictly adheres to **uv-first** philosophy.
 
 Always initialize and activate the environment before execution:
 
-```powershell
+```shell
 # Initialization
 uv sync
 
@@ -64,3 +64,35 @@ Follow this checklist before declaring a task finished:
   * `CHANGELOG.md`
 * [ ] **Documented**: Update `README.md`, `CHANGELOG.md`, and internal docs to reflect all changes.
 * [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date.
+
+## 5. Python Coding Style
+
+All Python source files must adhere to a premium and uniform visual style.
+
+### 5.1 Documentation (Google Style)
+
+* Use Google-style docstrings for all functions, methods, and classes.
+* Include `Args:`, `Returns:`, and `Raises:` sections where applicable.
+* Maintain `from __future__ import annotations` at the top of every file.
+
+### 5.2 Navigation & Section Blocks
+
+Use consistent Unicode-based separators to improve code readablity:
+
+* **Major Sections** (File-level, Classes, Public API):
+
+    ```python
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION NAME (ALL CAPS)
+    # ═══════════════════════════════════════════════════════════════════════════
+    ```
+
+* **Minor Sections** (Internal logic groups, Utility functions):
+
+    ```python
+    # ───────────────────────────────────────────────────────────────────────────
+    # Sub-section Name (Title Case)
+    # ───────────────────────────────────────────────────────────────────────────
+    ```
+
+* Avoid standard standard PEP8 horizontal lines or excessive whitespace. Use Unicode box characters to create a clean, modern look.

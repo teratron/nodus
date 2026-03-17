@@ -43,7 +43,16 @@ from .lexer import Lexer, Token, TokenType
 
 
 class ParseError(Exception):
+    """Raised when the parser encountered an unexpected terminal.
+
+    Attributes:
+        line: Line number where error occurred.
+        column: Column number where error occurred.
+        message: Descriptive error message.
+    """
+
     def __init__(self, message: str, line: int = 0, column: int = 0):
+        """Initialize with location and message."""
         self.line = line
         self.column = column
         super().__init__(f"Parse error at {line}:{column}: {message}")
@@ -64,9 +73,9 @@ class Parser:
         self.pos: int = 0
         self.diagnostics: list[Diagnostic] = []
 
-    # ═══════════════════════════════════════
-    # PUBLIC
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PUBLIC API
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def parse(self, source: str, filename: str = "") -> Node | None:
         """Parse source text into a file-level AST node.
@@ -105,12 +114,16 @@ class Parser:
         self._diag(Severity.ERROR, "E000", f"Unknown file type: {val}")
         return None
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # WORKFLOW FILE
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_workflow(self) -> WorkflowFile:
-        """Parse a .nodus workflow file, scanning for all top-level blocks."""
+        """Parse a .nodus workflow file, scanning for all top-level blocks.
+
+        Returns:
+            A WorkflowFile node containing all parsed blocks.
+        """
         wf = WorkflowFile(pos=self._pos())
         wf.header = self._parse_header(FileType.WORKFLOW)
 
@@ -159,12 +172,16 @@ class Parser:
 
         return wf
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # SCHEMA FILE
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_schema(self) -> SchemaFile:
-        """Parse a .nodus schema file, collecting rules and sections."""
+        """Parse a .nodus schema file, collecting rules and sections.
+
+        Returns:
+            A SchemaFile node.
+        """
         sf = SchemaFile(pos=self._pos())
         sf.header = self._parse_header(FileType.SCHEMA)
 
@@ -190,12 +207,16 @@ class Parser:
 
         return sf
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # CONFIG FILE
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_config(self) -> ConfigFile:
-        """Parse a .nodus config file, setting up runtime parameters."""
+        """Parse a .nodus config file, setting up runtime parameters.
+
+        Returns:
+            A ConfigFile node.
+        """
         cf = ConfigFile(pos=self._pos())
         cf.header = self._parse_header(FileType.CONFIG)
 
@@ -235,12 +256,19 @@ class Parser:
 
         return cf
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # HEADER
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_header(self, file_type: FileType) -> FileHeader:
-        """Parse §wf:name v1.0 style header. Identifies name and version."""
+        """Parse §wf:name v1.0 style header. Identifies name and version.
+
+        Args:
+            file_type: The expected file type.
+
+        Returns:
+            A parsed FileHeader node.
+        """
         pos = self._pos()
         tok = self._current()
         self._advance()
@@ -281,12 +309,16 @@ class Parser:
         self._skip_to_newline()
         return FileHeader(file_type=file_type, name=name, version=version, pos=pos)
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # RUNTIME BLOCK
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_runtime(self) -> RuntimeBlock:
-        """Parse §runtime block (single line : or braced { })."""
+        """Parse §runtime block (single line : or braced { }).
+
+        Returns:
+            A populated RuntimeBlock node.
+        """
         pos = self._pos()
         self._advance()  # skip §runtime token
 
@@ -309,12 +341,16 @@ class Parser:
         rt.agents = agents if isinstance(agents, dict) else {}
         return rt
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # DECLARATIONS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_trigger(self) -> Trigger:
-        """Parse @ON: condition → action reactor."""
+        """Parse @ON: condition → action reactor.
+
+        Returns:
+            A Trigger node.
+        """
         pos = self._pos()
         self._advance()  # skip @ON:
         cond = self._consume_until_arrow()
@@ -327,7 +363,11 @@ class Parser:
         return Trigger(condition=cond.strip(), action=action.strip(), pos=pos)
 
     def _parse_absolute_rule(self) -> AbsoluteRule:
-        """Parse !!NEVER: / !!ALWAYS: constraints."""
+        """Parse !!NEVER: / !!ALWAYS: constraints.
+
+        Returns:
+            An AbsoluteRule node.
+        """
         pos = self._pos()
         self._advance()  # skip !!
         rule_type = ""
@@ -343,7 +383,11 @@ class Parser:
         return AbsoluteRule(rule_type=rule_type, content=content.strip(), pos=pos)
 
     def _parse_preference(self) -> Preference:
-        """Parse !PREF: preferred OVER other IF condition."""
+        """Parse !PREF: preferred OVER other IF condition.
+
+        Returns:
+            A Preference node.
+        """
         pos = self._pos()
         self._advance()  # skip !PREF:
         line = self._consume_rest_of_line()
@@ -363,7 +407,11 @@ class Parser:
         return Preference(preferred=preferred, over=over, condition=condition, pos=pos)
 
     def _parse_input_decl(self) -> InputDecl:
-        """Parse @in block and its fields."""
+        """Parse @in block and its fields.
+
+        Returns:
+            An InputDecl node.
+        """
         pos = self._pos()
         self._advance()  # skip @in:
         self._skip_noise()
@@ -377,7 +425,11 @@ class Parser:
         return InputDecl(fields=fields, pos=pos)
 
     def _parse_field_list(self) -> list[InputField]:
-        """Parse the interior of a braced field list."""
+        """Parse the interior of a braced field list.
+
+        Returns:
+            A list of InputField objects.
+        """
         fields: list[InputField] = []
         while not self._at_end() and not self._check(TokenType.RBRACE):
             self._skip_noise()
@@ -412,7 +464,10 @@ class Parser:
                 if self._check(TokenType.EQUALS):
                     self._advance()
                     self._skip_noise()
-                    if not self._at_end() and self._current().type != TokenType.RBRACE:
+                    if (
+                        not self._at_end()
+                        and self._current().type != TokenType.RBRACE
+                    ):
                         f.default = self._current().value
                         f.optional = True
                         self._advance()
@@ -431,7 +486,11 @@ class Parser:
         return fields
 
     def _parse_output_decl(self) -> OutputDecl:
-        """Parse @out target variable."""
+        """Parse @out target variable.
+
+        Returns:
+            An OutputDecl node.
+        """
         pos = self._pos()
         self._advance()  # skip @out:
         self._skip_noise()
@@ -445,43 +504,56 @@ class Parser:
         return OutputDecl(variable=var, pos=pos)
 
     def _parse_context_decl(self) -> ContextDecl:
-        """Parse @ctx bracketed context names."""
+        """Parse @ctx bracketed context names.
+
+        Returns:
+            A ContextDecl node.
+        """
+        tt = TokenType  # alias to satisfy static analysis
         pos = self._pos()
         self._advance()  # skip @ctx:
         self._skip_noise()
         contexts: list[str] = []
-        if self._check(TokenType.LBRACKET):
+        if self._check(tt.LBRACKET):
             self._advance()
-            while not self._at_end() and not self._check(TokenType.RBRACKET):
+            while not self._at_end() and not self._check(tt.RBRACKET):
                 self._skip_noise()
-                if self._check(TokenType.RBRACKET):
+                if self._check(tt.RBRACKET):
                     break
-                if self._current().type in (TokenType.IDENTIFIER, TokenType.STRING):
+                if self._current().type in (tt.IDENTIFIER, tt.STRING):
                     contexts.append(self._current().value)
                     self._advance()
-                elif self._check(TokenType.COMMA):
+                elif self._check(tt.COMMA):
                     self._advance()
                 else:
                     self._advance()
-            if self._check(TokenType.RBRACKET):
+            if self._check(tt.RBRACKET):
                 self._advance()
         self._skip_to_newline()
         return ContextDecl(contexts=contexts, pos=pos)
 
     def _parse_error_decl(self) -> ErrorDecl:
-        """Parse @err handler declaration."""
+        """Parse @err handler declaration.
+
+        Returns:
+            An ErrorDecl node.
+        """
         pos = self._pos()
         self._advance()  # skip @err:
         raw = self._consume_rest_of_line().strip()
         cmd = self._try_parse_command_from_string(raw)
         return ErrorDecl(handler=cmd, raw=raw, pos=pos)
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # STEPS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_steps(self) -> list[Step]:
-        """Parse the @steps block sequence."""
+        """Parse the @steps block sequence.
+
+        Returns:
+            A list of Step nodes.
+        """
         self._advance()  # skip @steps:
         self._skip_noise()
         steps: list[Step] = []
@@ -532,7 +604,11 @@ class Parser:
         return steps
 
     def _parse_step(self) -> Step:
-        """Parse a single numbered step and its nested contents."""
+        """Parse a single numbered step and its nested contents.
+
+        Returns:
+            A Step node.
+        """
         pos = self._pos()
         num = int(self._current().value)
         self._advance()  # skip step number
@@ -599,7 +675,11 @@ class Parser:
         return step
 
     def _parse_step_body(self) -> Node | None:
-        """Parse the main action on a step line (Command, IF, etc.)."""
+        """Parse the main action on a step line (Command, IF, etc.).
+
+        Returns:
+            The parsed action node or None.
+        """
         if self._at_end():
             return None
         tok = self._current()
@@ -622,12 +702,16 @@ class Parser:
         raw = self._consume_rest_of_line()
         return Comment(text=raw.strip(), pos=self._pos()) if raw.strip() else None
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # COMMAND CALLS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_command_call(self) -> CommandCall:
-        """Parse a full command call: NAME(args) +mods ^validators ~flags → $target."""
+        """Parse a full command call: NAME(args) +mods ^validators ~flags → $target.
+
+        Returns:
+            A CommandCall node.
+        """
         pos = self._pos()
         name = self._current().value
         self._advance()
@@ -699,7 +783,11 @@ class Parser:
         )
 
     def _parse_arg_list(self) -> list[str]:
-        """Parse a comma-separated list of arguments inside parentheses."""
+        """Parse a comma-separated list of arguments inside parentheses.
+
+        Returns:
+            List of string arguments.
+        """
         args: list[str] = []
         depth = 0
         current: list[str] = []
@@ -732,7 +820,11 @@ class Parser:
         return args
 
     def _parse_modifier_value(self) -> str:
-        """Read a modifier value — handle simple values and braced/bracketed blocks."""
+        """Read a modifier value — handle literals and complex blocks.
+
+        Returns:
+            The raw string representation of the modifier value.
+        """
         self._skip_noise()
         if self._at_end():
             return ""
@@ -775,12 +867,16 @@ class Parser:
             return val
         return ""
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # CONDITIONALS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_conditional(self) -> Conditional | None:
-        """Entry point for parsing ?IF / ?ELIF / ?ELSE blocks."""
+        """Entry point for parsing ?IF / ?ELIF / ?ELSE blocks.
+
+        Returns:
+            A Conditional node or None.
+        """
         if self._at_end():
             return None
         tok = self._current()
@@ -794,7 +890,11 @@ class Parser:
         return None
 
     def _parse_if_chain(self) -> Conditional:
-        """Parse a full ?IF chain including any ELIF/ELSE branches."""
+        """Parse a full ?IF chain including any ELIF/ELSE branches.
+
+        Returns:
+            The root Conditional node of the chain.
+        """
         pos = self._pos()
         self._advance()  # skip ?IF
 
@@ -843,7 +943,11 @@ class Parser:
         return node
 
     def _parse_elif(self) -> Conditional:
-        """Parse a single ?ELIF branch."""
+        """Parse a single ?ELIF branch.
+
+        Returns:
+            A Conditional node representing the ELIF.
+        """
         pos = self._pos()
         self._advance()  # skip ?ELIF
         cond_str = self._consume_until_action_sep()
@@ -870,7 +974,11 @@ class Parser:
         )
 
     def _parse_else(self) -> Conditional:
-        """Parse the ?ELSE branch of a chain."""
+        """Parse the ?ELSE branch of a chain.
+
+        Returns:
+            A Conditional node representing the ELSE.
+        """
         pos = self._pos()
         self._advance()  # skip ?ELSE
         action_node = None
@@ -895,12 +1003,16 @@ class Parser:
             pos=pos,
         )
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # CONTROL FLOW (LOOPS, PARALLEL)
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_control_flow(self) -> Node | None:
-        """Entry point for ~FOR, ~UNTIL, and ~PARALLEL blocks."""
+        """Entry point for ~FOR, ~UNTIL, and ~PARALLEL blocks.
+
+        Returns:
+            The parsed loop or parallel node, or None.
+        """
         tok = self._current()
         if tok.type == TokenType.TILDE_FOR:
             return self._parse_for_loop()
@@ -916,7 +1028,11 @@ class Parser:
         return None
 
     def _parse_for_loop(self) -> ForLoop:
-        """Parse ~FOR $var IN $collection block."""
+        """Parse ~FOR $var IN $collection block.
+
+        Returns:
+            A ForLoop node.
+        """
         pos = self._pos()
         self._advance()  # skip ~FOR
         self._skip_noise()
@@ -945,7 +1061,11 @@ class Parser:
         return ForLoop(variable=variable, collection=collection, body=body, pos=pos)
 
     def _parse_until_loop(self) -> UntilLoop:
-        """Parse ~UNTIL condition | MAX:n block."""
+        """Parse ~UNTIL condition | MAX:n block.
+
+        Returns:
+            An UntilLoop node.
+        """
         pos = self._pos()
         self._advance()  # skip ~UNTIL
 
@@ -983,7 +1103,11 @@ class Parser:
         )
 
     def _parse_parallel(self) -> ParallelBlock:
-        """Parse ~PARALLEL ... ~JOIN concurrent block."""
+        """Parse ~PARALLEL ... ~JOIN concurrent block.
+
+        Returns:
+            A ParallelBlock node.
+        """
         pos = self._pos()
         self._advance()  # skip ~PARALLEL
         if self._check(TokenType.COLON):
@@ -1022,7 +1146,11 @@ class Parser:
         return ParallelBlock(branches=branches, join_target=join_target, pos=pos)
 
     def _collect_body_until_end(self) -> list[Node]:
-        """Collect step body lines until a matching ~END is encountered."""
+        """Collect step body lines until a matching ~END is encountered.
+
+        Returns:
+            List of parsed nodes for the block body.
+        """
         body: list[Node] = []
         while not self._at_end():
             self._skip_noise()
@@ -1041,12 +1169,19 @@ class Parser:
                 body.append(node)
         return body
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # NAMED BLOCKS (schema / config)
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_named_block(self, name: str) -> NamedBlock:
-        """Parse §name { ... } blocks found in schema/config files."""
+        """Parse §name { ... } blocks found in schema/config files.
+
+        Args:
+            name: The name of the section.
+
+        Returns:
+            A NamedBlock node.
+        """
         pos = self._pos()
         self._skip_noise()
 
@@ -1071,7 +1206,11 @@ class Parser:
         return NamedBlock(name=name, raw_lines=raw_lines, pos=pos)
 
     def _parse_brace_block(self) -> dict[str, Any]:
-        """Parse structural { key: value } blocks into Python dictionaries."""
+        """Parse structural { key: value } blocks into Python dictionaries.
+
+        Returns:
+            A dictionary of parsed keys and values.
+        """
         self._advance()  # skip {
         result: dict[str, Any] = {}
 
@@ -1101,10 +1240,14 @@ class Parser:
                     result[key] = self._parse_brace_block()
                 elif self._check(TokenType.LBRACKET):
                     result[key] = self._parse_bracket_list()
-                elif not self._at_end() and self._current().type not in (
-                    TokenType.RBRACE,
-                    TokenType.NEWLINE,
-                    TokenType.EOF,
+                elif (
+                    not self._at_end()
+                    and self._current().type
+                    not in (
+                        TokenType.RBRACE,
+                        TokenType.NEWLINE,
+                        TokenType.EOF,
+                    )
                 ):
                     result[key] = self._current().value
                     self._advance()
@@ -1120,7 +1263,11 @@ class Parser:
         return result
 
     def _parse_bracket_list(self) -> list[str]:
-        """Parse [ val, val ] bracketed lists into Python lists."""
+        """Parse [ val, val ] bracketed lists into Python lists.
+
+        Returns:
+            List of string values.
+        """
         self._advance()  # skip [
         items: list[str] = []
         while not self._at_end() and not self._check(TokenType.RBRACKET):
@@ -1136,12 +1283,16 @@ class Parser:
             self._advance()
         return items
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # TEST & MACRO BLOCKS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_test_block(self) -> NodusTestBlock:
-        """Parse @test simulation block and collect its raw body lines."""
+        """Parse @test simulation block and collect its raw body lines.
+
+        Returns:
+            A NodusTestBlock node.
+        """
         pos = self._pos()
         name = self._current().value
         self._advance()  # skip @test:name
@@ -1168,7 +1319,11 @@ class Parser:
         return NodusTestBlock(name=name, raw_lines=raw_lines, pos=pos)
 
     def _parse_macro_block(self) -> MacroBlock:
-        """Parse @macro definition and collect its body content."""
+        """Parse @macro definition and collect its body content.
+
+        Returns:
+            A MacroBlock node.
+        """
         pos = self._pos()
         name = self._current().value
         self._advance()  # skip @macro:name
@@ -1194,12 +1349,16 @@ class Parser:
         self._skip_to_newline()
         return MacroBlock(name=name, raw_lines=raw_lines, pos=pos)
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # ASSIGNMENT
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _parse_assignment_or_expr(self) -> Node | None:
-        """Parse $var = value assignments or standalone variable references."""
+        """Parse $var = value assignments or standalone variable references.
+
+        Returns:
+            A node for assignment or variable reference.
+        """
         pos = self._pos()
         var_name = self._current().value
         self._advance()
@@ -1217,11 +1376,16 @@ class Parser:
         self._skip_to_newline()
         return Variable(name=var_name, pos=pos)
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # HELPERS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _pos(self) -> Position:
+        """Get the current source position.
+
+        Returns:
+            A Position object.
+        """
         if self._at_end():
             return Position(0, 0, self.filename)
         tok = self._current()
@@ -1230,7 +1394,8 @@ class Parser:
     def _at_end(self) -> bool:
         """Check if the parser has reached the end of the token stream."""
         return (
-            self.pos >= len(self.tokens) or self.tokens[self.pos].type == TokenType.EOF
+            self.pos >= len(self.tokens)
+            or self.tokens[self.pos].type == TokenType.EOF
         )
 
     def _current(self) -> Token:
@@ -1259,7 +1424,11 @@ class Parser:
             self._advance()
 
     def _consume_rest_of_line(self) -> str:
-        """Consume all remaining tokens on the current line and return as a string."""
+        """Consume all remaining tokens on the current line and return as a string.
+
+        Returns:
+            Joined string of token values.
+        """
         parts: list[str] = []
         while not self._at_end() and self._current().type not in (
             TokenType.NEWLINE,
@@ -1272,7 +1441,11 @@ class Parser:
         return " ".join(parts)
 
     def _consume_until_arrow(self) -> str:
-        """Consume tokens until the → arrow is reached."""
+        """Consume tokens until the → arrow is reached.
+
+        Returns:
+            Joined string of token values prefixing the arrow.
+        """
         parts: list[str] = []
         while not self._at_end() and self._current().type not in (
             TokenType.ARROW,
@@ -1284,7 +1457,11 @@ class Parser:
         return " ".join(parts)
 
     def _consume_until_action_sep(self) -> str:
-        """Consume tokens until an action or control flow separator is reached."""
+        """Consume tokens until an action or control flow separator is reached.
+
+        Returns:
+            Joined string of token values.
+        """
         parts: list[str] = []
         while not self._at_end():
             tok = self._current()
@@ -1303,7 +1480,11 @@ class Parser:
         return " ".join(parts)
 
     def _collect_comment_block(self) -> str:
-        """Collect consecutive ;; comment lines into a single newline-delimited block."""
+        """Collect consecutive ;; comment lines into a single block.
+
+        Returns:
+            Joined multi-line comment text.
+        """
         lines: list[str] = []
         while not self._at_end() and self._current().type == TokenType.COMMENT:
             lines.append(self._current().value)
@@ -1312,7 +1493,11 @@ class Parser:
         return "\n".join(lines)
 
     def _collect_brace_raw(self) -> str:
-        """Collect balanced { ... } block content as a raw space-joined string."""
+        """Collect balanced { ... } block content as a raw space-joined string.
+
+        Returns:
+            The raw string with curly braces.
+        """
         parts: list[str] = ["{"]
         self._advance()  # skip {
         depth = 1
@@ -1327,7 +1512,11 @@ class Parser:
         return " ".join(parts)
 
     def _collect_bracket_raw(self) -> str:
-        """Collect balanced [ ... ] block content as a raw space-joined string."""
+        """Collect balanced [ ... ] block content as a raw space-joined string.
+
+        Returns:
+            The raw string with brackets.
+        """
         parts: list[str] = ["["]
         self._advance()  # skip [
         depth = 1
@@ -1342,7 +1531,14 @@ class Parser:
         return " ".join(parts)
 
     def _try_parse_command_from_string(self, raw: str) -> CommandCall | None:
-        """Perform best-effort parsing of a command call from a raw string."""
+        """Perform best-effort parsing of a command call from a raw string.
+
+        Args:
+            raw: The raw string potential command.
+
+        Returns:
+            A CommandCall node or None.
+        """
         if not raw:
             return None
         parts = raw.split("(", 1)

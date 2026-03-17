@@ -14,52 +14,105 @@ from ..interpreter import Executor, Parser, Transpiler, Validator
 from ..interpreter.ast_nodes import SchemaFile as _SchemaFile
 from ..interpreter.ast_nodes import WorkflowFile as _WorkflowFile
 
-# ---------------------------------------------------------------------------
-# Colour helpers (ANSI, disabled when not a TTY)
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# COLOUR HELPERS
+# ═══════════════════════════════════════════════════════════════════════════
 
 _USE_COLOUR = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
 
 def _c(code: str, text: str) -> str:
-    """Wrap text in ANSI colour codes if supported."""
+    """Wrap text in ANSI colour codes if supported.
+
+    Args:
+        code: ANSI color code string.
+        text: Input text to colorize.
+
+    Returns:
+        Colorized string or original text if TTY not detected.
+    """
     if not _USE_COLOUR:
         return text
     return f"\033[{code}m{text}\033[0m"
 
 
 def _red(t: str) -> str:
-    """Return red text."""
+    """Return red text.
+
+    Args:
+        t: Input text.
+
+    Returns:
+        Red wrap.
+    """
     return _c("31", t)
 
 
 def _yellow(t: str) -> str:
-    """Return yellow text."""
+    """Return yellow text.
+
+    Args:
+        t: Input text.
+
+    Returns:
+        Yellow wrap.
+    """
     return _c("33", t)
 
 
 def _green(t: str) -> str:
-    """Return green text."""
+    """Return green text.
+
+    Args:
+        t: Input text.
+
+    Returns:
+        Green wrap.
+    """
     return _c("32", t)
 
 
 def _cyan(t: str) -> str:
-    """Return cyan text."""
+    """Return cyan text.
+
+    Args:
+        t: Input text.
+
+    Returns:
+        Cyan wrap.
+    """
     return _c("36", t)
 
 
 def _bold(t: str) -> str:
-    """Return bold text."""
+    """Return bold text.
+
+    Args:
+        t: Input text.
+
+    Returns:
+        Bold wrap.
+    """
     return _c("1", t)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# FILE HELPERS
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def _read_file(path: str) -> str:
-    """Read a .nodus file and perform basic extension checks."""
+    """Read a .nodus file and perform basic extension checks.
+
+    Args:
+        path: Path to the target file.
+
+    Returns:
+        Raw file content as a string.
+
+    Raises:
+        SystemExit: If the file does not exist.
+    """
     p = Path(path)
     if not p.exists():
         print(_red(f"Error: file not found — {path}"), file=sys.stderr)
@@ -72,13 +125,20 @@ def _read_file(path: str) -> str:
     return p.read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# Commands
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# CLI COMMANDS
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def cmd_validate(args: list[str]) -> int:
-    """Validate / lint a .nodus file."""
+    """Validate / lint a .nodus file.
+
+    Args:
+        args: Command-line arguments following 'validate'.
+
+    Returns:
+        0 on success, 1 on validation error.
+    """
     if not args:
         print(_red("Usage: nodus validate <file.nodus>"), file=sys.stderr)
         return 1
@@ -125,7 +185,14 @@ def cmd_validate(args: list[str]) -> int:
 
 
 def cmd_run(args: list[str]) -> int:
-    """Execute a .nodus workflow."""
+    """Execute a .nodus workflow.
+
+    Args:
+        args: Command-line arguments following 'run'.
+
+    Returns:
+        0 on successful execution, 1 on failure.
+    """
     if not args:
         print(_red("Usage: nodus run <file.nodus> [--input '{...}']"), file=sys.stderr)
         return 1
@@ -194,7 +261,14 @@ def cmd_run(args: list[str]) -> int:
 
 
 def cmd_transpile(args: list[str]) -> int:
-    """Transpile between NODUS and HUMAN modes."""
+    """Transpile between NODUS and HUMAN modes.
+
+    Args:
+        args: Command-line arguments following 'transpile'.
+
+    Returns:
+        0 on success, 1 on error.
+    """
     if not args:
         print(
             _red("Usage: nodus transpile <file.nodus> [--mode human|nodus]"),
@@ -238,7 +312,14 @@ def cmd_transpile(args: list[str]) -> int:
 
 
 def cmd_test(args: list[str]) -> int:
-    """Run embedded @test blocks in a .nodus file."""
+    """Run embedded @test blocks in a .nodus file.
+
+    Args:
+        args: Command-line arguments following 'test'.
+
+    Returns:
+        0 if all tests passed, 1 if any failed.
+    """
     if not args:
         print(_red("Usage: nodus test <file.nodus>"), file=sys.stderr)
         return 1
@@ -292,9 +373,17 @@ def cmd_new(args: list[str]) -> int:
 
     Supports optional domain prefix: nodus new social/reply
     creates workflows/social/reply.nodus.
+
+    Args:
+        args: Command-line arguments following 'new'.
+
+    Returns:
+        0 on success, 1 on error.
     """
     if not args:
-        print(_red("Usage: nodus new <name> or nodus new <domain/name>"), file=sys.stderr)
+        print(
+            _red("Usage: nodus new <name> or nodus new <domain/name>"), file=sys.stderr
+        )
         return 1
 
     raw = args[0]
@@ -324,7 +413,14 @@ def cmd_new(args: list[str]) -> int:
 
 
 def cmd_schema_inspect(args: list[str]) -> int:
-    """Show a summary of the loaded schema."""
+    """Show a summary of the loaded schema.
+
+    Args:
+        args: Command-line arguments following 'schema inspect'.
+
+    Returns:
+        0 on success, 1 on error.
+    """
     schema_path = args[0] if args else settings.DEFAULT_SCHEMA_PATH
 
     source = _read_file(schema_path)
@@ -350,31 +446,47 @@ def cmd_schema_inspect(args: list[str]) -> int:
 
 
 def cmd_version(_args: list[str]) -> int:
-    """Print the version of NODUS."""
+    """Print the version of NODUS.
+
+    Returns:
+        Always 0.
+    """
     print(f"nodus {constants.__version__}")
     return 0
 
 
 def cmd_help(_args: list[str]) -> int:
-    """Show help message."""
+    """Show help message.
+
+    Returns:
+        Always 0.
+    """
     print(_bold("NODUS CLI") + f"  v{constants.__version__}\n")
     print(settings.CLI_HELP)
     return 0
 
 
-# ---------------------------------------------------------------------------
-# Dispatch
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# DISPATCH ENGINE
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def find_config() -> Path | None:
-    """Look for config.json in .nodus/."""
+    """Look for config.json in .nodus/ to resolve local environment.
+
+    Returns:
+        Path to config if found, else None.
+    """
     p = Path(".nodus/config.json")
     return p if p.exists() else None
 
 
 def cmd_init(_args: list[str]) -> int:
-    """Initialize a new NODUS project."""
+    """Initialize a new NODUS project directory structure.
+
+    Returns:
+        Always 0.
+    """
     print(_cyan("Initializing NODUS project..."))
     project_name = Path.cwd().name
     dot_nodus = Path(".nodus")
@@ -413,7 +525,10 @@ _COMMANDS = {
 
 
 def main() -> None:
-    """Main entry point for the NODUS CLI."""
+    """Main entry point for the NODUS CLI.
+
+    Dispatches command line arguments to their respective handlers.
+    """
     if len(sys.argv) < 2:
         cmd_help([])
         sys.exit(0)

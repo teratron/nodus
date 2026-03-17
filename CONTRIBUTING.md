@@ -3,8 +3,6 @@
 Thank you for your interest in contributing to NODUS.  
 This document covers repository structure, naming conventions, and contribution guidelines.
 
----
-
 ## Repository Structure
 
 ```
@@ -61,8 +59,6 @@ nodus/                             ← github.com/nodus-lang/nodus
 ├── README.md                      ← language spec + quick start
 └── CONTRIBUTING.md                ← this file
 ```
-
----
 
 ## User Project Structure
 
@@ -122,8 +118,6 @@ NODUS locates workflows via `.nodus/config.json`, not by folder name.
 }
 ```
 
----
-
 ## Naming Conventions
 
 ### Files
@@ -160,8 +154,6 @@ v<major>.<minor>
 $CFG.CONSTANT_NAME = value   ← SCREAMING_SNAKE_CASE with $CFG. prefix
 ```
 
----
-
 ## Workflow Checklist
 
 Before submitting a workflow, verify it passes all lint rules:
@@ -184,8 +176,6 @@ Minimum requirements (enforced by linter):
 - [ ] At least one `@test` block present (W002)
 - [ ] HUMAN MODE section present (W003)
 - [ ] At least one `@test` tagged `smoke` (I003)
-
----
 
 ## Writing a New Workflow
 
@@ -216,8 +206,6 @@ This scaffolds `workflows/<domain>/<name>.nodus` from `workflow.template.nodus`.
 ;; HUMAN MODE          ← plain-language description
 @test: ...             ← at least one test block
 ```
-
----
 
 ## Writing a Pack
 
@@ -250,8 +238,6 @@ packs/nodus-<domain>/
 }
 ```
 
----
-
 ## Contribution Types
 
 | Type | Branch | Notes |
@@ -262,15 +248,11 @@ packs/nodus-<domain>/
 | Core schema change | `core/<description>` | Maintainers review required |
 | Documentation | `docs/<page>` | Keep HUMAN MODE sections in sync |
 
----
-
 ## Language Preferences
 
 - All code, comments, variable names, and documentation: **English**
 - Commit messages and PR titles: **English**
 - Chat discussions and project planning: **Russian**
-
----
 
 ## Installation Architecture
 
@@ -367,8 +349,6 @@ nodus init
 | `v0.6` | npm package + JS runtime shim | planned |
 | `v1.0` | Stable spec + visual installer + nodus-lang.dev | planned |
 
----
-
 ## Project Layers
 
 | Layer | Purpose | Primary Actor |
@@ -378,15 +358,11 @@ nodus init
 | **user project** | Workflows, brand schema, configs | Prompt Engineers |
 | **ecosystem** | Extension, packs, visual tools | Community |
 
----
-
 ## User Personas
 
 - **Prompt Engineer**: Constructs workflows, extends schemas, reviews HUMAN mode.
 - **AI Developer**: Integrates NODUS into pipelines, manages agent bindings.
 - **Business User**: Installs packs, configures brand voice via visual tools.
-
----
 
 ## Running Tests
 

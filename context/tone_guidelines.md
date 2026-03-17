@@ -3,7 +3,7 @@
 ## Tone Spectrum
 
 | Tone | When to Use | Characteristics |
-|------|------------|-----------------|
+| --- | --- | --- |
 | warm | Positive interactions, VIP users | Friendly, appreciative, personal |
 | neutral | Informational responses | Balanced, factual, no emotional charge |
 | formal | Enterprise users, LinkedIn | Professional, structured, no contractions |

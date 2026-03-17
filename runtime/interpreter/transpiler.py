@@ -29,9 +29,9 @@ class Transpiler:
     HUMAN mode (semantic) is optimized for human readability and review.
     """
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # NODUS → HUMAN
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def to_human(self, ast: WorkflowFile) -> str:
         """Convert a parsed workflow AST to a semantic HUMAN mode description.
@@ -108,9 +108,9 @@ class Transpiler:
 
         return "\n".join(lines)
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # HUMAN → NODUS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def to_nodus(self, ast: WorkflowFile) -> str:
         """Convert a parsed workflow AST back to symbolic NODUS mode text.
@@ -202,12 +202,19 @@ class Transpiler:
 
         return "\n".join(lines)
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # HUMANIZERS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _humanize_trigger(self, condition: str) -> str:
-        """Convert a symbolic trigger condition to a human-readable phrase."""
+        """Convert a symbolic trigger condition to a human-readable phrase.
+
+        Args:
+            condition: The raw trigger condition string.
+
+        Returns:
+            A semantic description of when the trigger activates.
+        """
         cond = condition.strip()
         if cond.startswith("new_"):
             return f"when a {cond.replace('_', ' ')} is received"
@@ -222,14 +229,28 @@ class Transpiler:
         return f"when {cond}"
 
     def _humanize_rule(self, content: str) -> str:
-        """Apply simple textual replacements to rule descriptions."""
+        """Apply textual replacements to rule descriptions for clarity.
+
+        Args:
+            content: The raw rule content.
+
+        Returns:
+            A cleaned version of the rule text.
+        """
         content = content.lower()
         content = content.replace("$out", "the output")
         content = content.replace("$error.level", "error level")
         return content
 
     def _humanize_step(self, step: Step) -> str:
-        """Convert a step node to its human-readable description."""
+        """Convert a step node to its human-readable description.
+
+        Args:
+            step: The Step node to process.
+
+        Returns:
+            The human-readable description string.
+        """
         if step.comment:
             # use comment as description
             text = step.comment.lstrip(";").strip()
@@ -253,7 +274,14 @@ class Transpiler:
         return ""
 
     def _humanize_command(self, cmd: CommandCall) -> str:
-        """Transform a symbolic command call into a semantic sentence."""
+        """Transform a symbolic command call into a semantic sentence.
+
+        Args:
+            cmd: The CommandCall node to transpile.
+
+        Returns:
+            A human-readable description of the command.
+        """
         name = cmd.name
         args = ", ".join(cmd.args)
 
@@ -270,7 +298,14 @@ class Transpiler:
         return desc
 
     def _humanize_conditional(self, cond: Conditional) -> str:
-        """Convert a conditional node to a semantic description."""
+        """Convert a conditional node to a semantic description.
+
+        Args:
+            cond: The Conditional node.
+
+        Returns:
+            Human-friendly representation.
+        """
         desc = f"IF {cond.condition}"
         if cond.action and isinstance(cond.action, CommandCall):
             desc += f" → {self._humanize_command(cond.action)}"
@@ -279,34 +314,69 @@ class Transpiler:
         return desc
 
     def _humanize_for(self, loop: ForLoop) -> str:
-        """Convert a for-loop node to a semantic description."""
+        """Convert a for-loop node to a semantic description.
+
+        Args:
+            loop: The ForLoop node.
+
+        Returns:
+            Loop description string.
+        """
         return f"For each {self._humanize_var(loop.variable)} in {self._humanize_var(loop.collection)}"
 
     def _humanize_until(self, loop: UntilLoop) -> str:
-        """Convert an until-loop node to a semantic description."""
+        """Convert an until-loop node to a semantic description.
+
+        Args:
+            loop: The UntilLoop node.
+
+        Returns:
+            Repeat clause description.
+        """
         desc = f"Repeat until {loop.condition}"
         if loop.max_iterations:
             desc += f" (max {loop.max_iterations} attempts)"
         return desc
 
     def _humanize_var(self, var: str) -> str:
-        """Convert symbolic variable names to semantic descriptions (e.g., $out -> the output)."""
+        """Convert symbolic variable names to semantic descriptions.
+
+        Args:
+            var: The raw variable string (e.g. $out.data).
+
+        Returns:
+            The semantic version (e.g. out → data).
+        """
         if not var:
             return ""
         return var.lstrip("$").replace(".", " → ")
 
     def _humanize_error(self, raw: str) -> str:
-        """Convert a symbolic error handler string into a semantic phrase."""
+        """Convert a symbolic error handler string into a semantic phrase.
+
+        Args:
+            raw: The raw error handler text.
+
+        Returns:
+            Humanized error handler.
+        """
         if "ESCALATE" in raw and "human" in raw.lower():
             return "escalate to human"
         return raw
 
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # NODUS RECONSTRUCTORS
-    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
 
     def _nodus_step(self, step: Step) -> str:
-        """Reconstruct a step node into symbolic NODUS mode text."""
+        """Reconstruct a step node into symbolic NODUS mode text.
+
+        Args:
+            step: The Step node.
+
+        Returns:
+            Nodus mode line.
+        """
         if isinstance(step.body, CommandCall):
             return self._nodus_command(step.body)
         if isinstance(step.body, Comment):
@@ -316,7 +386,14 @@ class Transpiler:
         return ""
 
     def _nodus_command(self, cmd: CommandCall) -> str:
-        """Reconstruct a command call node into symbolic NODUS mode text."""
+        """Reconstruct a command call node into symbolic NODUS mode text.
+
+        Args:
+            cmd: The CommandCall node.
+
+        Returns:
+            Space-delimited nodus line.
+        """
         parts = [f"{cmd.name}({', '.join(cmd.args)})"]
         for mod_name, mod_val in cmd.modifiers.items():
             if mod_val:
