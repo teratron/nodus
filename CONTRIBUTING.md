@@ -14,13 +14,23 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   ├── schema.nodus               ← core vocabulary (shipped with every install)
 │   ├── schema.types.nodus         ← extended type definitions
 │   ├── schema.errors.nodus        ← error code registry
+│   ├── grammar.peg                ← formal PEG grammar
 │   ├── AGENTS.md                  ← agent interpretation protocol
 │   └── cli.nodus                  ← CLI meta-workflow
 │
-├── runtime/                       ← technical core (Python + JS)
-│   ├── interpreter/               ← parser, validator, executor
-│   ├── cli/                       ← command implementation
-│   └── tests/                     ← core system tests
+├── runtime/                       ← Python runtime implementation
+│   ├── constants.py               ← language-defining constants (commands, tones, vars)
+│   ├── settings.py                ← runtime settings
+│   ├── interpreter/               ← lexer, parser, AST, validator, executor, transpiler
+│   └── cli/                       ← nodus CLI command handlers
+│
+├── tests/                         ← test suite (pytest)
+│   └── runtime/
+│       ├── test_lexer.py
+│       ├── test_parser.py
+│       ├── test_validator.py
+│       ├── test_executor.py
+│       └── test_transpiler.py
 │
 ├── templates/                     ← scaffolding templates
 │   ├── workflow.template.nodus
@@ -45,7 +55,9 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   ├── schema.md
 │   └── cli.md
 │
-├── vscode-extension/              ← IDE support
+├── vscode-extension/              ← IDE support (in progress)
+├── pyproject.toml                 ← build config and dependencies
+├── CHANGELOG.md                   ← version history
 ├── README.md                      ← language spec + quick start
 └── CONTRIBUTING.md                ← this file
 ```
@@ -340,19 +352,20 @@ nodus init
     │       + .nodus/.cache/
     │
     └── 5. report
-            ✓ NODUS v0.1 initialized
+            ✓ NODUS initialized
             ✓ Core schema: .nodus/core/schema.nodus
             Next: nodus new workflow <name>
 ```
 
 ### Release roadmap
 
-| Version | Deliverable | Audience |
+| Version | Deliverable | Status |
 | --- | --- | --- |
-| `v0.1` | pip + npm package | developers |
-| `v0.3` | VS Code extension | prompt engineers |
-| `v0.5` | standalone binary + brew/winget | everyone |
-| `v1.0` | nodus-lang.dev + visual installer | business users |
+| `v0.1–v0.3` | Core spec, schema, lint rules | ✅ done |
+| `v0.4` | Python runtime (interpreter + CLI) | ✅ done |
+| `v0.5` | VS Code extension + brew/winget binary | in progress |
+| `v0.6` | npm package + JS runtime shim | planned |
+| `v1.0` | Stable spec + visual installer + nodus-lang.dev | planned |
 
 ---
 
@@ -378,13 +391,20 @@ nodus init
 ## Running Tests
 
 ```bash
+# Workflow-level tests (@test blocks in .nodus files)
 nodus test                          # run all @test blocks
 nodus test --tag=smoke              # smoke tests only
 nodus test workflows/social/        # test a specific folder
+
+# Lint and schema
 nodus validate ./workflows/         # lint all workflows
 nodus schema inspect                # print resolved .nodus/schema/
+
+# Python unit tests (runtime development)
+uv run pytest                       # run all pytest tests
+uv run pytest tests/runtime/test_validator.py  # specific module
 ```
 
 ---
 
-*NODUS v0.1* — "Enough formal to be unambiguous. Enough semantic to preserve intent."
+*NODUS v0.3.5* — "Enough formal to be unambiguous. Enough semantic to preserve intent."

@@ -351,10 +351,36 @@ workflows/            ✅ your workflows
 5. **Schema portability** — one schema file makes any workflow portable across agents and projects
 6. **Two-layer config** — business logic (`config.nodus`) stays separate from infrastructure (`nodus.config.json`)
 
+## Quick Start
+
+```bash
+# Install
+pip install nodus-lang
+
+# Initialize a project
+nodus init
+
+# Create a workflow
+nodus new workflow social/my_workflow
+
+# Validate
+nodus validate workflows/social/my_workflow.nodus
+
+# Run
+nodus run workflows/social/my_workflow.nodus
+
+# Transpile to HUMAN mode
+nodus transpile workflows/social/my_workflow.nodus --to=human
+
+# Run tests
+nodus test
+```
+
 ## Status
 
-🟡 **v0.1 — Draft Specification**
+🟢 **v0.3.5** — Runtime implemented, CLI available
 
+The Python runtime (lexer, parser, validator, executor, transpiler) and CLI are fully implemented.
 This is an evolving specification. Contributions, feedback, and discussion welcome.
 
 ## Roadmap
@@ -362,9 +388,9 @@ This is an evolving specification. Contributions, feedback, and discussion welco
 - [x] v0.1 — Core syntax spec
 - [x] v0.2 — Schema format + macro system + memory commands
 - [x] v0.3 — Lint rules (28 rules across error/warn/info)
-- [ ] v0.4 — Reference interpreter (Python/JS)
-- [ ] v0.5 — VS Code syntax highlighting
-- [ ] v0.6 — Validation tooling (`nodus validate`)
+- [x] v0.4 — Reference interpreter (Python): lexer, parser, validator, executor, transpiler, CLI
+- [ ] v0.5 — VS Code syntax highlighting + standalone binary (brew/winget)
+- [ ] v0.6 — npm package + JS runtime shim
 - [ ] v1.0 — Stable spec + real-world workflow library
 
 ## Origin

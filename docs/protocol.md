@@ -1,6 +1,6 @@
 # NODUS Interpretation Protocol
 
-> Protocol Version: v0.1 | Status: Draft
+> Protocol Version: v0.3 | Status: Draft
 
 This document defines how any AI agent must read, interpret, and execute NODUS files.
 
@@ -51,10 +51,14 @@ Every execution must return a `NODUS:RESULT` object containing:
 - `out`: The final payload.
 - `log`: Execution history.
 - `errors`: List of failures.
+- `flags`: Execution flags (e.g. `NODUS:MAX_REACHED`).
 
 ## 6. Prohibited Actions
 
 - **NEVER** infer missing variables — ask for them.
 - **NEVER** bypass a `!!` rule.
+- **NEVER** execute `@steps` before loading schema and `!!` rules.
 - **NEVER** proceed past an `@err` without handling it.
+- **NEVER** silently ignore an error — always log or escalate.
+- **NEVER** modify `$out` after `LOG($out)` has been called.
 - **NEVER** treat HUMAN and NODUS modes as different logic — they are identical.

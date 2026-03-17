@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.6] - 2026-03-17
+
+### Changed
+
+- Updated `README.md`: added Quick Start section, corrected status to v0.3.5, updated roadmap to reflect Python runtime completion.
+- Updated `CONTRIBUTING.md`: fixed `tests/` directory path (`runtime/tests/` → `tests/runtime/`), added missing files (`pyproject.toml`, `CHANGELOG.md`, `grammar.peg`, `constants.py`, `settings.py`), updated release roadmap, added `uv run pytest` to Running Tests section.
+- Rewrote `docs/cli.md`: describes the actual Python CLI (commands, flags, exit codes, output format, init flow).
+- Rewrote `docs/schema.md`: expanded from 7 to 24 commands, added all 16 reserved variables, added missing analysis flags (`~toxicity`, `~entities`, `~lang`, `~pii`), added Error Codes section.
+- Rewrote `docs/syntax.md`: added `§runtime:`, `@ctx:`, `@err:`, `@macro:`, `@test:`, comment syntax (`;` / `;;`), `!BREAK`/`!SKIP`, `$CFG.*` constants, `~END` closer.
+- Updated `docs/protocol.md`: bumped protocol version to v0.3, added `flags` to Result Contract, added 3 missing Prohibited Actions.
+- Updated `docs/README.md`: corrected project structure references, bumped version footer to v0.3.5.
+
 ## [0.3.5] - 2026-03-17
 
 ### Added
