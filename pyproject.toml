@@ -65,6 +65,12 @@ quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 
+[tool.pyright]
+include = [
+    "runtime", 
+    "tests",
+]
+
 [tool.pytest.ini_options]
 python_classes = ["Test", "Describe"]
 

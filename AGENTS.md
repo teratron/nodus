@@ -20,7 +20,7 @@ Consistency in communication and code is paramount.
 ## 2. Markdown Guidelines
 
 * **Separators**: Avoid horizontal rules (`---`). Use them only in the footer if absolutely necessary.
-* **Links**: No hardcoded absolute links (e.g., `file:///D:/...`). Use relative paths or just backticks for filenames (e.g., `pyproject.toml`).
+* **Links**: No hardcoded absolute links (e.g., `file:///C:/...`). Use relative paths or just backticks for filenames (e.g., `pyproject.toml`).
 
 ## 3. Development Toolchain
 
