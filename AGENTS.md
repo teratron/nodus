@@ -47,7 +47,7 @@ uv run ruff check --fix
 uv run ruff format
 
 # Static Analysis
-uv run pyright
+uv run pyrefly check
 
 # Verification
 uv run pytest
@@ -60,7 +60,7 @@ Follow this checklist before declaring a task finished:
 * [ ] **Validated**: All quality checks pass with zero warnings.
 * [ ] **Versioned**: Increment the patch version (e.g., `0.3.1` → `0.3.2`) in:
   * `pyproject.toml`
-  * `runtime/cli/nodus.py`
+  * `runtime/constants.py`
   * `CHANGELOG.md`
 * [ ] **Documented**: Update `README.md`, `CHANGELOG.md`, and internal docs to reflect all changes.
 * [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date.

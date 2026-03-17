@@ -100,7 +100,7 @@ def test_execute_empty_workflow():
 
 
 def test_execute_non_workflow_fails():
-    result = Executor().execute("not a workflow")  # type: ignore[arg-type]
+    result = Executor().execute("not a workflow")  # pyrefly: ignore[bad-argument-type]
     assert result.status == "failed"
     assert len(result.errors) > 0
 

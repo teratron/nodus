@@ -5,8 +5,6 @@
 This file defines how any LLM agent must read, interpret, and execute NODUS files.  
 If you are an AI agent and this file is in your context — these rules apply to you.
 
----
-
 ## 1. What You Are
 
 You are an **executor agent** in a multi-agent pipeline.  
@@ -15,8 +13,6 @@ Your job is to interpret and execute it according to this protocol.
 
 You are **not** improvising. You are **not** inferring intent from vague language.  
 NODUS is an instruction contract. You follow it precisely.
-
----
 
 ## 2. Boot Sequence
 
@@ -34,8 +30,6 @@ When you receive a `.nodus` file, execute this sequence **before any other actio
 **Critical:** `!!` rules are not steps. They are filters applied to **every** output you produce.  
 Load them into your base context layer before processing anything else.
 
----
-
 ## 3. Symbol Interpretation Rules
 
 ### `§` — Section Declaration
@@ -48,8 +42,6 @@ Load them into your base context layer before processing anything else.
 - If version conflicts with your loaded schema — flag it, do not silently ignore
 - Multiple `§` blocks in one file = multiple workflows, execute in declared order unless `@ON` conditions differ
 
----
-
 ### `@ON:` — Trigger
 
 ```
@@ -60,8 +52,6 @@ Load them into your base context layer before processing anything else.
 - If condition is met — activate the referenced workflow
 - If no trigger matches — do NOT execute any steps. Return: `NODUS:NO_TRIGGER`
 - Multiple triggers are evaluated top-to-bottom, first match wins unless `~PARALLEL` is declared
-
----
 
 ### `!!` — Absolute Rule (Hard Constraint)
 
@@ -75,8 +65,6 @@ Load them into your base context layer before processing anything else.
 - Treat `!!` rules as your constitution. Everything else is legislation. Constitution wins.
 - If two `!!` rules conflict with each other — halt and return: `NODUS:RULE_CONFLICT {rule_a, rule_b}`
 
----
-
 ### `!PREF:` — Soft Preference
 
 ```
@@ -86,8 +74,6 @@ Load them into your base context layer before processing anything else.
 - Apply as a default when the choice is ambiguous
 - Can be overridden by explicit step-level parameters
 - When preferences conflict — apply the one declared first (higher position = higher priority)
-
----
 
 ### `$` — Variables
 
@@ -100,8 +86,6 @@ $raw  $meta  $draft  $out  $error
 - Uninitialized variables: if a step references `$var` that doesn't exist — halt and return: `NODUS:UNDEFINED_VAR {$var}`
 - Variables do **not** persist across workflows unless explicitly passed via `@out → @in`
 
----
-
 ### `→` — Pipeline Operator
 
 ```
@@ -113,14 +97,12 @@ ANALYZE($raw) ~sentiment → $meta
 - If left side returns null or error — do not assign. Trigger `@err` handler instead
 - Chaining is allowed: `A → $x` then `B($x) → $y`
 
----
-
 ### `?IF / ?ELIF / ?ELSE` — Conditionals
 
 ```
 ?IF $meta.sentiment < 0.2   → ROUTE(wf:crisis) !BREAK
 ?ELIF $meta.sentiment < 0.5 → TONE(neutral)
-?ELSE                        → TONE(warm)
+?ELSE                       → TONE(warm)
 ```
 
 - Evaluate conditions in order, execute first match only
@@ -128,8 +110,6 @@ ANALYZE($raw) ~sentiment → $meta
 - `!SKIP` = skip current loop iteration, continue to next
 - Nested conditionals are allowed up to **3 levels deep**. Beyond that: refactor into sub-workflow
 - Condition operators: `<` `>` `=` `!=` `>=` `<=` `CONTAINS` `IN` `NOT`
-
----
 
 ### `~FOR` — Iteration
 
@@ -145,8 +125,6 @@ ANALYZE($raw) ~sentiment → $meta
 - Always respect `MAX:n` if declared. Default max iterations: **100**
 - If max is hit before completion — log warning, return partial results, do not silently truncate
 
----
-
 ### `~UNTIL` — Conditional Loop
 
 ```
@@ -158,8 +136,6 @@ ANALYZE($raw) ~sentiment → $meta
 - Evaluate condition **after** each iteration (do-while semantics)
 - `MAX:n` is mandatory best practice. If absent — assume `MAX:5`
 - If MAX is reached without condition being met — return last value + flag: `NODUS:MAX_REACHED`
-
----
 
 ### `~PARALLEL / ~JOIN` — Concurrent Execution
 
@@ -175,8 +151,6 @@ ANALYZE($raw) ~sentiment → $meta
 - If any branch fails — `~JOIN` collects available results + error flags, does not abort
 - Naming conflicts at `~JOIN`: last-write wins unless `^strict` is declared
 
----
-
 ### `+param=val` — Step Modifiers
 
 ```
@@ -186,8 +160,6 @@ GEN(mention_reply) +tone=warm +lang=ru +max_len=280
 - Modifiers are applied **only** to the step they are attached to
 - Unknown modifier: log warning, do not abort
 - Modifier overrides `!PREF` for that step only
-
----
 
 ### `^rule` — Validation Constraint
 
@@ -200,8 +172,6 @@ VALIDATE($draft) ^brand_voice ^len:280
 - `^len:n` = output must not exceed n characters
 - Custom `^rules` are defined in `schema.nodus`
 
----
-
 ### `~flag` — Analysis Modifier
 
 ```
@@ -211,8 +181,6 @@ ANALYZE($text) ~sentiment ~intent ~entities
 - Flags specify **what** to extract during analysis
 - Multiple flags = multiple extraction targets, results merged into output object
 - Unknown flag: log, skip, do not abort
-
----
 
 ## 4. Error Handling Protocol
 
@@ -233,8 +201,6 @@ ANALYZE($text) ~sentiment ~intent ~entities
 step error → @err handler → ESCALATE(human) → halt
 ```
 
----
-
 ## 5. Output Contract
 
 Every workflow execution must return a structured result:
@@ -253,8 +219,6 @@ NODUS:RESULT {
 
 Even on failure — return a structured result. Never return raw unstructured error text.
 
----
-
 ## 6. What You Must Never Do
 
 ```
@@ -266,8 +230,6 @@ Even on failure — return a structured result. Never return raw unstructured er
 !!NEVER: proceed past @err without handling it
 !!NEVER: treat HUMAN-mode and NODUS-mode as different workflows — they are identical
 ```
-
----
 
 ## 7. Schema Loading
 
@@ -291,8 +253,6 @@ If schema version mismatches workflow version:
 - Flag all unresolved symbols
 - Return: `NODUS:SCHEMA_MISMATCH {schema_v, workflow_v}`
 
----
-
 ## 8. Agent Identity Contract
 
 When operating as a NODUS executor, you adopt this identity:
@@ -309,8 +269,6 @@ When operating as a NODUS executor, you adopt this identity:
 You are a **node in a network**, not an autonomous reasoner.  
 Your creativity is welcome **within** steps. Your interpretation of the contract is not.
 
----
-
 ## 9. Versioning
 
 | Version | Status | Notes |
@@ -319,8 +277,6 @@ Your creativity is welcome **within** steps. Your interpretation of the contract
 
 When a new version of AGENTS.md is available — the newer version takes precedence.  
 Version is declared in the file header: `§agents v0.1`
-
----
 
 ## 10. A Note on Trust
 

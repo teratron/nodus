@@ -407,4 +407,4 @@ uv run pytest tests/runtime/test_validator.py  # specific module
 
 ---
 
-*NODUS v0.3.5* — "Enough formal to be unambiguous. Enough semantic to preserve intent."
+*NODUS v0.3.6* — "Enough formal to be unambiguous. Enough semantic to preserve intent."

@@ -13,7 +13,7 @@ nodus = "runtime.cli.nodus:main"
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.408",
+    "pyrefly>=0.56.0",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
 ]
@@ -64,12 +64,6 @@ known-first-party = ["nodus"]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
-
-[tool.pyright]
-include = [
-    "runtime", 
-    "tests",
-]
 
 [tool.pytest.ini_options]
 python_classes = ["Test", "Describe"]
