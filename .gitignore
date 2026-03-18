@@ -31,3 +31,12 @@ uv.lock
 *.tgz
 temp/
 *tmp/
+
+# Agent skills
+.*/skills/**
+!.*/skills/nodus/
+!.*/skills/nodus/**
+
+# Agent workflows
+.*/workflows/**
+!.*/workflows/nodus.*.*

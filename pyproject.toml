@@ -15,13 +15,14 @@ nodus = "runtime.cli.nodus:main"
 
 [dependency-groups]
 dev = [
-    "pyrefly>=0.57.0",
+    "pyrefly>=0.57.1",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
 ]
 
 [tool.uv]
 package = true
+link-mode = "copy"
 
 [tool.ruff]
 fix = true
