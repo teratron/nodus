@@ -11,9 +11,9 @@ Natural language is verbose and ambiguous. Code is rigid and loses semantic mean
 NODUS is the middle ground — precise enough for machines, readable enough for people.
 
 ```
-[schema.nodus]   →  vocabulary, commands, rules
-[workflow.nodus] →  the actual workflow
-[executor LLM]   →  interprets and executes
+[lang/core/schema.nodus]   →  vocabulary, commands, rules
+[workflow.nodus]           →  the actual workflow
+[executor LLM]             →  interprets and executes
 ```
 
 > *Enough formal to be unambiguous. Enough semantic to preserve intent.*
@@ -82,13 +82,13 @@ nodus init
 nodus new workflow social/my_workflow
 
 # Validate (28 lint rules)
-nodus validate workflows/social/my_workflow.nodus
+nodus validate demo/workflows/beautiful_mention.nodus
 
 # Run
-nodus run workflows/social/my_workflow.nodus
+nodus run demo/workflows/beautiful_mention.nodus
 
 # Convert to human-readable
-nodus transpile workflows/social/my_workflow.nodus --to=human
+nodus transpile demo/workflows/beautiful_mention.nodus --to=human
 
 # Run inline tests
 nodus test

@@ -8,53 +8,57 @@ This document covers repository structure, naming conventions, and contribution 
 ```
 nodus/                             ← github.com/nodus-lang/nodus
 │
-├── core/                          ← language primitives (maintainers only)
-│   ├── schema.nodus               ← core vocabulary (shipped with every install)
-│   ├── schema.types.nodus         ← extended type definitions
-│   ├── schema.errors.nodus        ← error code registry
-│   ├── grammar.peg                ← formal PEG grammar
-│   ├── AGENTS.md                  ← agent interpretation protocol
-│   └── cli.nodus                  ← CLI meta-workflow
+├── lang/                          ← language specification
+│   ├── core/                      ← language primitives (maintainers only)
+│   │   ├── schema.nodus           ← core vocabulary
+│   │   ├── schema.types.nodus     ← extended type definitions
+│   │   ├── schema.errors.nodus    ← error code registry
+│   │   ├── grammar.peg            ← formal PEG grammar
+│   │   ├── AGENTS.md              ← agent interpretation protocol
+│   │   └── cli.nodus              ← CLI meta-workflow
+│   ├── templates/                 ← scaffolding templates
+│   │   ├── workflow.template.nodus
+│   │   └── schema.template.nodus
+│   └── examples/                  ← reference workflows
+│       ├── social/
+│       │   └── beautiful_mention.nodus
+│       └── support/
+│           └── ticket_triage.nodus
 │
 ├── runtime/                       ← Python runtime implementation
-│   ├── constants.py               ← language-defining constants (commands, tones, vars)
+│   ├── constants.py               ← language-defining constants
 │   ├── settings.py                ← runtime settings
 │   ├── interpreter/               ← lexer, parser, AST, validator, executor, transpiler
 │   └── cli/                       ← nodus CLI command handlers
 │
-├── tests/                         ← test suite (pytest)
-│   └── runtime/
-│       ├── test_lexer.py
-│       ├── test_parser.py
-│       ├── test_validator.py
-│       ├── test_executor.py
-│       └── test_transpiler.py
-│
-├── templates/                     ← scaffolding templates
-│   ├── workflow.template.nodus
-│   └── schema.template.nodus
-│
-├── examples/                      ← reference workflows
-│   ├── social/
-│   │   └── beautiful_mention.nodus
-│   └── support/
-│       └── ticket_triage.nodus
-│
 ├── packs/                         ← official installable packs
 │   └── nodus-social/
-│       ├── pack.json
-│       ├── schema.nodus
-│       └── workflows/
 │
-├── docs/
-│   ├── README.md
-│   ├── protocol.md
+├── docs/                          ← documentation
 │   ├── syntax.md
 │   ├── schema.md
-│   └── cli.md
+│   ├── protocol.md
+│   ├── cli.md
+│   └── README.md
 │
-├── vscode-extension/              ← IDE support (in progress)
+├── tests/                         ← runtime test suite (pytest)
+│   └── runtime/
+│
+├── demo/                          ← sample user project
+│   ├── .nodus/
+│   │   ├── core/                  ← copy from lang/core/
+│   │   └── config.json
+│   ├── config.nodus
+│   ├── workflows/
+│   └── context/
+│
+├── extensions/                    ← IDE support
+│   ├── vscode/                    ← VS Code extension
+│   └── jetbrains/                 ← JetBrains IDEs (planned)
+│
 ├── pyproject.toml                 ← build config and dependencies
+├── README.md                      ← quick start
+├── CONTRIBUTING.md                ← this file
 ├── CHANGELOG.md                   ← version history
 ├── README.md                      ← language spec + quick start
 └── CONTRIBUTING.md                ← this file
