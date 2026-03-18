@@ -62,10 +62,19 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   └── context/
 │
 ├── .agents/                       ← AI agent skills and workflows
-│   └── skills/
-│       └── nodus/                 ← NODUS workflow assistant skill
-│           ├── SKILL.md           ← main skill instructions
-│           └── references/        ← syntax, patterns, lint rules
+│   ├── skills/
+│   │   └── nodus/                 ← NODUS workflow assistant skill
+│   │       ├── SKILL.md           ← main skill instructions
+│   │       └── references/        ← syntax, patterns, lint rules
+│   └── workflows/                 ← Slash commands for agents
+│       ├── nodus.compile.md       ← validate → transpile → report
+│       ├── nodus.create.md        ← interactive workflow creation
+│       ├── nodus.explain.md       ← plain-language explanation
+│       ├── nodus.init.md          ← guided project setup
+│       ├── nodus.pack.md          ← interactive pack creation
+│       ├── nodus.run.md           ← pre-flight → execute → report
+│       ├── nodus.test.md          ← run @test blocks → report
+│       └── nodus.validate.md      ← lint check + auto-fix suggestions
 │
 ├── pyproject.toml                 ← build config and dependencies
 ├── README.md                      ← quick start
@@ -394,6 +403,21 @@ The repository includes an AI agent skill at `.agents/skills/nodus/` that enable
 ```
 
 The skill activates automatically when a user asks about NODUS syntax, needs help creating a workflow, encounters a validation error, or wants to set up a new project.
+
+## AI Agent Workflows
+
+The repository provides executable workflows (slash commands) in `.agents/workflows/` that guide an AI assistant through complex multi-step tasks.
+
+- **`/nodus.compile`** — Full cycle: validation → if clean, transpile to HUMAN mode → result summary.
+- **`/nodus.create`** — Interactive wizard: asks for domain, purpose, I/O, and rules → scaffolds the file.
+- **`/nodus.explain`** — Analysis: reads workflow → explains trigger, constraints, and steps in plain language.
+- **`/nodus.init`** — Setup: runs `nodus init` → guides through configuration of `config.json` and `config.nodus`.
+- **`/nodus.pack`** — Packaging: interactive creation of a new pack structure with `pack.json` and schema.
+- **`/nodus.run`** — Execution: pre-flight validation → input data preparation → `nodus run` → structured report.
+- **`/nodus.test`** — Testing: pre-flight validation → `nodus test` → explains failures and suggests fixes.
+- **`/nodus.validate`** — Linting: `nodus validate` → groups issues by severity → provides human-friendly fixes.
+
+These workflows use the `// turbo` annotation for performance, allowing the agent to run terminal commands immediately when the step is clear and safe.
 
 ## User Personas
 
