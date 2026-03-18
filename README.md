@@ -103,6 +103,7 @@ nodus test
 - **LLM-native** — designed for how models parse context, not how humans write code
 - **28 lint rules** — `nodus validate` catches errors before runtime
 - **Python runtime** — lexer, parser, validator, executor, transpiler included
+- **AI Agent Skill** — built-in skill for LLM assistants to guide workflow authoring
 
 ## Documentation
 
@@ -110,6 +111,7 @@ nodus test
 - [Core Schema](docs/schema.md) — commands, variables, flags, validators
 - [Interpretation Protocol](docs/protocol.md) — agent boot sequence and execution rules
 - [CLI Reference](docs/cli.md) — all commands, flags, and exit codes
+- [AI Agent Skill](.agents/skills/nodus/SKILL.md) — LLM assistant guide for workflow authoring
 - [Contributing](CONTRIBUTING.md) — project structure, naming conventions, contribution guide
 
 ## Connecting a Real LLM Provider

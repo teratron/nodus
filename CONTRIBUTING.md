@@ -61,6 +61,12 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   ├── workflows/
 │   └── context/
 │
+├── .agents/                       ← AI agent skills and workflows
+│   └── skills/
+│       └── nodus/                 ← NODUS workflow assistant skill
+│           ├── SKILL.md           ← main skill instructions
+│           └── references/        ← syntax, patterns, lint rules
+│
 ├── pyproject.toml                 ← build config and dependencies
 ├── README.md                      ← quick start
 ├── CONTRIBUTING.md                ← this file
@@ -364,6 +370,30 @@ nodus init
 | **runtime** | Interpreter, validator, CLI implementation | Developers |
 | **user project** | Workflows, brand schema, configs | Prompt Engineers |
 | **ecosystem** | Extension, packs, visual tools | Community |
+
+## AI Agent Skill
+
+The repository includes an AI agent skill at `.agents/skills/nodus/` that enables any LLM-powered coding assistant to help users write, validate, and run NODUS workflows. When the skill is loaded into an agent's context, it provides:
+
+- **Guided workflow creation** — scaffolding from templates with correct section order
+- **Syntax reference** — complete symbol, command, and type lookup (`references/syntax_cheatsheet.md`)
+- **Workflow patterns** — 6 reusable architecture patterns with examples (`references/workflow_patterns.md`)
+- **Lint rule index** — all 28 validation rules with fixes (`references/lint_rules.md`)
+- **CLI command help** — `init`, `validate`, `run`, `transpile`, `test`
+- **Project setup** — step-by-step `nodus init` guidance
+
+### Skill Structure
+
+```
+.agents/skills/nodus/
+├── SKILL.md                      ← main instructions (UX guide)
+└── references/
+    ├── syntax_cheatsheet.md      ← all symbols, commands, types
+    ├── workflow_patterns.md      ← 6 reusable patterns with code
+    └── lint_rules.md             ← E/W/I rules + runtime errors
+```
+
+The skill activates automatically when a user asks about NODUS syntax, needs help creating a workflow, encounters a validation error, or wants to set up a new project.
 
 ## User Personas
 

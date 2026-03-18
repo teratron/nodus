@@ -16,6 +16,9 @@ Welcome to the Documentation for **NODUS** — a compact, symbolic language for 
 - **[CLI & Tooling](cli.md)**  
   User guide for the `nodus` command-line interface and assistant-driven project management.
 
+- **[AI Agent Skill](../.agents/skills/nodus/SKILL.md)**  
+  Built-in skill for LLM assistants: guides workflow creation, syntax lookup, lint debugging, and project setup.
+
 ## Project Structure
 
 - `packages/spec/core/schema.nodus`: Global vocabulary definitions (downloaded on `nodus init`).
@@ -23,6 +26,7 @@ Welcome to the Documentation for **NODUS** — a compact, symbolic language for 
 - `.nodus/config.nodus`: Business logic — global rules, triggers, constants.
 - `.nodus/config.json`: Infrastructure — models, API keys, webhooks.
 - `workflows/`: Individual `.nodus` files defining specialized tasks.
+- `.agents/skills/nodus/`: AI agent skill with syntax cheatsheet, workflow patterns, and lint rules.
 
 ---
 
