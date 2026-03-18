@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-18
+
+### Changed
+
+- **Project Restructure**: Migrated to monorepo `packages/` layout.
+  - `lang/core/` → `packages/spec/core/` (language specification).
+  - `lang/templates/` → `packages/spec/templates/`.
+  - `lang/examples/` → `examples/` (root level).
+  - `runtime/` → `packages/runtime/` (Python runtime).
+  - `extensions/` → `packages/extensions/` (IDE support).
+  - `demo/.nodus/config.nodus` → `demo/config.nodus` (project-level config).
+  - Created `packages/spec/VERSION` for independent spec versioning.
+  - Created junction link `demo/.nodus/core/` → `packages/spec/core/`.
+- Updated `pyproject.toml` paths for new layout (`packages/runtime`).
+- Updated `settings.py` `DEFAULT_SCHEMA_PATH` → `packages/spec/core/schema.nodus`.
+- Updated `README.md`, `CONTRIBUTING.md`, `docs/` with new structure references.
+
+### Removed
+
+- `lang/` directory (contents moved to `packages/spec/` and `examples/`).
+- `sandbox/` directory (empty, unused).
+
 ## [0.3.8] - 2026-03-17
 
 ### Added

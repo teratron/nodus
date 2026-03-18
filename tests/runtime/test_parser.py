@@ -236,9 +236,7 @@ def test_command_call_pipeline_target() -> None:
 
 def test_command_call_modifier() -> None:
     """Verify command modifiers (+) are captured."""
-    src = (
-        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. FETCH($in.url) +cache=false \u2192 $raw\n"
-    )
+    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. FETCH($in.url) +cache=false \u2192 $raw\n"
     ast = parse(src)
     assert isinstance(ast, WorkflowFile)
     body = ast.steps[0].body
@@ -248,9 +246,7 @@ def test_command_call_modifier() -> None:
 
 def test_command_call_validator() -> None:
     """Verify command validators (^) are captured."""
-    src = (
-        "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. VALIDATE($draft) ^brand_voice \u2192 $v\n"
-    )
+    src = "§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. VALIDATE($draft) ^brand_voice \u2192 $v\n"
     ast = parse(src)
     assert isinstance(ast, WorkflowFile)
     body = ast.steps[0].body
@@ -284,7 +280,9 @@ def test_conditional_inline() -> None:
 
 def test_conditional_if_condition() -> None:
     """Verify condition text in ?IF blocks is captured."""
-    src = '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. ?IF $score > 0.8 \u2192 LOG("ok")\n'
+    src = (
+        '§wf:foo v1.0\n§runtime: {}\n@steps:\n  1. ?IF $score > 0.8 \u2192 LOG("ok")\n'
+    )
     ast = parse(src)
     assert isinstance(ast, WorkflowFile)
     cond = ast.steps[0].body

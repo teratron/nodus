@@ -1,6 +1,6 @@
 [project]
 name = "nodus"
-version = "0.3.9"
+version = "0.4.0"
 description = "NODUS — Node Orchestration DSL for Unified Systems"
 authors = [{ name = "Oleg Alexandrov", email = "alexandrovoleg.ru@gmail.com" }]
 license = { text = "MIT License" }
@@ -27,7 +27,7 @@ package = true
 fix = true
 target-version = "py312"
 src = [
-    "runtime",
+    "packages/runtime",
     "tests",
 ]
 exclude = [
@@ -60,7 +60,7 @@ ignore = [
 max-complexity = 30
 
 [tool.ruff.lint.isort]
-known-first-party = ["nodus"]
+known-first-party = ["nodus", "packages"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -69,7 +69,7 @@ line-ending = "lf"
 
 [tool.pyrefly]
 project-includes = [
-    "runtime",
+    "packages/runtime",
     "tests",
 ]
 
@@ -81,4 +81,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["runtime"]
+packages = ["packages/runtime"]

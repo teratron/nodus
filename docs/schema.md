@@ -1,6 +1,6 @@
 # NODUS Core Schema
 
-The schema (`core/schema.nodus`) is the vocabulary contract for all workflows.
+The schema (`packages/spec/core/schema.nodus`) is the vocabulary contract for all workflows.
 It defines the grammar, commands, types, and constraints that an agent can understand.
 
 ## 1. Constitutional Rules (`!!`)

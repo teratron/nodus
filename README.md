@@ -11,7 +11,7 @@ Natural language is verbose and ambiguous. Code is rigid and loses semantic mean
 NODUS is the middle ground — precise enough for machines, readable enough for people.
 
 ```
-[lang/core/schema.nodus]   →  vocabulary, commands, rules
+[packages/spec/core/schema.nodus]   →  vocabulary, commands, rules
 [workflow.nodus]           →  the actual workflow
 [executor LLM]             →  interprets and executes
 ```
@@ -158,7 +158,7 @@ nodus run workflows/my_workflow.nodus
 
 ## Status
 
-🟢 **v0.3.6** — Python runtime and CLI implemented. Evolving specification.
+🟢 **v0.4.0** — Python runtime and CLI implemented. Monorepo structure.
 
 ## Roadmap
 

@@ -464,10 +464,7 @@ class Parser:
                 if self._check(TokenType.EQUALS):
                     self._advance()
                     self._skip_noise()
-                    if (
-                        not self._at_end()
-                        and self._current().type != TokenType.RBRACE
-                    ):
+                    if not self._at_end() and self._current().type != TokenType.RBRACE:
                         f.default = self._current().value
                         f.optional = True
                         self._advance()
@@ -1240,14 +1237,10 @@ class Parser:
                     result[key] = self._parse_brace_block()
                 elif self._check(TokenType.LBRACKET):
                     result[key] = self._parse_bracket_list()
-                elif (
-                    not self._at_end()
-                    and self._current().type
-                    not in (
-                        TokenType.RBRACE,
-                        TokenType.NEWLINE,
-                        TokenType.EOF,
-                    )
+                elif not self._at_end() and self._current().type not in (
+                    TokenType.RBRACE,
+                    TokenType.NEWLINE,
+                    TokenType.EOF,
                 ):
                     result[key] = self._current().value
                     self._advance()
@@ -1394,8 +1387,7 @@ class Parser:
     def _at_end(self) -> bool:
         """Check if the parser has reached the end of the token stream."""
         return (
-            self.pos >= len(self.tokens)
-            or self.tokens[self.pos].type == TokenType.EOF
+            self.pos >= len(self.tokens) or self.tokens[self.pos].type == TokenType.EOF
         )
 
     def _current(self) -> Token:

@@ -18,12 +18,12 @@ Welcome to the Documentation for **NODUS** — a compact, symbolic language for 
 
 ## Project Structure
 
-- `core/schema.nodus`: Global vocabulary definitions (downloaded on `nodus init`).
-- `core/AGENTS.md`: Agent interpretation protocol.
+- `packages/spec/core/schema.nodus`: Global vocabulary definitions (downloaded on `nodus init`).
+- `packages/spec/core/AGENTS.md`: Agent interpretation protocol.
 - `.nodus/config.nodus`: Business logic — global rules, triggers, constants.
 - `.nodus/config.json`: Infrastructure — models, API keys, webhooks.
 - `workflows/`: Individual `.nodus` files defining specialized tasks.
 
 ---
 
-`NODUS v0.3.6` | "Enough formal to be unambiguous. Enough semantic to preserve intent."
+`NODUS v0.4.0` | "Enough formal to be unambiguous. Enough semantic to preserve intent."

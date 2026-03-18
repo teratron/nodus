@@ -7,7 +7,7 @@ from __future__ import annotations
 # ═══════════════════════════════════════════════════════════════════════════
 
 DEFAULT_CONFIG_PATH = ".nodus/config.json"
-DEFAULT_SCHEMA_PATH = "core/schema.nodus"
+DEFAULT_SCHEMA_PATH = "packages/spec/core/schema.nodus"
 
 DEFAULT_CONFIG_DATA = {
     "version": "0.1",

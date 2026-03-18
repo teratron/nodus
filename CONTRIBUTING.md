@@ -8,28 +8,36 @@ This document covers repository structure, naming conventions, and contribution 
 ```
 nodus/                             ← github.com/nodus-lang/nodus
 │
-├── lang/                          ← language specification
-│   ├── core/                      ← language primitives (maintainers only)
-│   │   ├── schema.nodus           ← core vocabulary
-│   │   ├── schema.types.nodus     ← extended type definitions
-│   │   ├── schema.errors.nodus    ← error code registry
-│   │   ├── grammar.peg            ← formal PEG grammar
-│   │   ├── AGENTS.md              ← agent interpretation protocol
-│   │   └── cli.nodus              ← CLI meta-workflow
-│   ├── templates/                 ← scaffolding templates
-│   │   ├── workflow.template.nodus
-│   │   └── schema.template.nodus
-│   └── examples/                  ← reference workflows
-│       ├── social/
-│       │   └── beautiful_mention.nodus
-│       └── support/
-│           └── ticket_triage.nodus
+├── packages/
+│   ├── spec/                      ← LANGUAGE SPECIFICATION (changes slowly)
+│   │   ├── core/                  ← language primitives (maintainers only)
+│   │   │   ├── schema.nodus       ← core vocabulary
+│   │   │   ├── schema.types.nodus ← extended type definitions
+│   │   │   ├── schema.errors.nodus← error code registry
+│   │   │   ├── grammar.peg        ← formal PEG grammar
+│   │   │   ├── AGENTS.md          ← agent interpretation protocol
+│   │   │   └── cli.nodus          ← CLI meta-workflow
+│   │   ├── templates/             ← scaffolding templates
+│   │   │   ├── workflow.template.nodus
+│   │   │   └── schema.template.nodus
+│   │   └── VERSION                ← spec version (separate from runtime)
+│   │
+│   ├── runtime/                   ← PYTHON RUNTIME (changes often)
+│   │   ├── interpreter/           ← lexer, parser, AST, validator, executor, transpiler
+│   │   ├── cli/                   ← nodus CLI command handlers
+│   │   ├── constants.py           ← language-defining constants
+│   │   ├── settings.py            ← runtime settings
+│   │   └── __init__.py
+│   │
+│   └── extensions/                ← IDE support
+│       ├── vscode/                ← VS Code extension
+│       └── jetbrains/             ← JetBrains IDEs (planned)
 │
-├── runtime/                       ← Python runtime implementation
-│   ├── constants.py               ← language-defining constants
-│   ├── settings.py                ← runtime settings
-│   ├── interpreter/               ← lexer, parser, AST, validator, executor, transpiler
-│   └── cli/                       ← nodus CLI command handlers
+├── examples/                      ← canonical language examples
+│   ├── social/
+│   │   └── beautiful_mention.nodus
+│   └── support/
+│       └── ticket_triage.nodus
 │
 ├── packs/                         ← official installable packs
 │   └── nodus-social/
@@ -46,22 +54,17 @@ nodus/                             ← github.com/nodus-lang/nodus
 │
 ├── demo/                          ← sample user project
 │   ├── .nodus/
-│   │   ├── core/                  ← copy from lang/core/
+│   │   ├── core/                  ← junction → packages/spec/core/
+│   │   ├── schema/                ← user schema extensions
 │   │   └── config.json
-│   ├── config.nodus
+│   ├── config.nodus               ← business logic config
 │   ├── workflows/
 │   └── context/
-│
-├── extensions/                    ← IDE support
-│   ├── vscode/                    ← VS Code extension
-│   └── jetbrains/                 ← JetBrains IDEs (planned)
 │
 ├── pyproject.toml                 ← build config and dependencies
 ├── README.md                      ← quick start
 ├── CONTRIBUTING.md                ← this file
-├── CHANGELOG.md                   ← version history
-├── README.md                      ← language spec + quick start
-└── CONTRIBUTING.md                ← this file
+└── CHANGELOG.md                   ← version history
 ```
 
 ## User Project Structure
@@ -387,4 +390,4 @@ uv run pytest tests/runtime/test_validator.py  # specific module
 
 ---
 
-*NODUS v0.3.6* — "Enough formal to be unambiguous. Enough semantic to preserve intent."
+*NODUS v0.4.0* — "Enough formal to be unambiguous. Enough semantic to preserve intent."
