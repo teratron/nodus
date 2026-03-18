@@ -49,10 +49,10 @@ NEW_CONFIG_NODUS_TEMPLATE = """§config:{project} v1.0
 ;;           It defines WHAT the project does — not WHERE it runs.
 ;;           For infrastructure (API keys, models, webhooks) → .nodus/config.json
 
-§runtime: {
+§runtime: {{
   core:    .nodus/core/schema.nodus
   mode:    production
-}
+}}
 
 ;; ─────────────────────────────────────────────
 ;; GLOBAL ABSOLUTE RULES

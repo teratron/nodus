@@ -1,19 +1,21 @@
 [project]
 name = "nodus"
-version = "0.3.8"
+version = "0.3.9"
 description = "NODUS — Node Orchestration DSL for Unified Systems"
 authors = [{ name = "Oleg Alexandrov", email = "alexandrovoleg.ru@gmail.com" }]
 license = { text = "MIT License" }
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "mcp>=1.26.0",
+]
 
 [project.scripts]
 nodus = "runtime.cli.nodus:main"
 
 [dependency-groups]
 dev = [
-    "pyrefly>=0.56.0",
+    "pyrefly>=0.57.0",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
 ]

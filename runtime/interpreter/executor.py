@@ -198,21 +198,38 @@ class ExecutionContext:
         Returns:
             A violation description or None if safe.
         """
-        _ = args  # Unused for now
-        cmd_lower = command.lower()
+        cmd_upper = command.upper()
+        args_lower = [str(a).lower() for a in args]
 
         for rule in self.rules:
-            content_lower = rule.content.lower()
+            content = rule.content.strip()
+            content_upper = content.upper()
+
             if rule.rule_type == "NEVER":
-                if "publish" in content_lower and cmd_lower == "publish":
-                    if "without" in content_lower and "validate" in content_lower:
-                        validated = any(
-                            e.get("command") == "VALIDATE" for e in self.log
-                        )
-                        if not validated:
-                            return f"!!NEVER: {rule.content}"
+                # 1. Simple command name match (e.g., !!NEVER: DELETE)
+                if content_upper == cmd_upper:
+                    return f"!!NEVER: {content}"
+
+                # 2. Command with specific arguments (e.g., !!NEVER: FETCH("http://evil.com"))
+                if cmd_upper in content_upper:
+                    # Check if any of the arguments mentioned in the rule are present in current call
+                    if any(arg in content.lower() for arg in args_lower):
+                        return f"!!NEVER: {content}"
+
+                # 3. Conditional constraints (e.g., !!NEVER: publish WITHOUT validate)
+                if (
+                    cmd_upper == "PUBLISH"
+                    and "WITHOUT" in content_upper
+                    and "VALIDATE" in content_upper
+                ):
+                    validated = any(e.get("command") == "VALIDATE" for e in self.log)
+                    if not validated:
+                        return f"!!NEVER: {content}"
+
             elif rule.rule_type == "ALWAYS":
-                pass  # ALWAYS rules are checked post-execution
+                # ALWAYS rules are mostly checked post-execution or in specific contexts.
+                # Here we can check for MUST PRE-VALIDATE if that's the rule.
+                pass
 
         return None
 
@@ -304,6 +321,8 @@ class Executor:
         self,
         ast: WorkflowFile,
         input_data: dict[str, Any] | None = None,
+        global_rules: list[AbsoluteRule] | None = None,
+        global_preferences: list[Preference] | None = None,
     ) -> NodusResult:
         """Run a workflow execution cycle.
 
@@ -331,8 +350,15 @@ class Executor:
             result.workflow = f"wf:{ast.header.name}"
             result.version = ast.header.version
 
-        ctx.rules = list(ast.rules)
-        ctx.preferences = list(ast.preferences)
+        # Load Global Rules (Agent System Tape)
+        if global_rules:
+            ctx.rules.extend(global_rules)
+        if global_preferences:
+            ctx.preferences.extend(global_preferences)
+
+        # Load Workflow-specific Rules
+        ctx.rules.extend(ast.rules)
+        ctx.preferences.extend(ast.preferences)
 
         if input_data:
             ctx.variables["in"] = input_data
