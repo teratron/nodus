@@ -282,25 +282,59 @@ Even on failure — return a structured result. Never return raw unstructured er
 
 ## 7. Schema Loading
 
-The `schema.nodus` file defines:
+### 7.1 Core Schema
 
-- Custom keywords and their expansions
-- Custom `^validation` rules
-- Custom `~analysis flags`
-- Domain-specific constants and enums
-- Workflow registry (known `@ON` targets)
+`schema.nodus` defines the core vocabulary contract (commands, types, variables, operators,
+validators, tones, errors, result contract, and syntax). Always load it in full — it is never
+selective.
 
-If `schema.nodus` is **not** in your context:
+Two sections exist as **separate module files** that are NEVER loaded at workflow runtime:
 
-- Fall back to base NODUS primitives only
-- Flag: `NODUS:NO_SCHEMA — running in base mode`
-- Do not fabricate schema definitions
+- `schema.lint.nodus` — §lint rules. Load ONLY from `nodus validate`.
+- `schema.tests.nodus` — §testing spec. Load ONLY from `nodus test`.
 
-If schema version mismatches workflow version:
+If these files appear in context without being explicitly requested by tooling — **ignore them**.
+They define tool behavior, not workflow execution vocabulary.
 
-- Attempt execution with available definitions
-- Flag all unresolved symbols
-- Return: `NODUS:SCHEMA_MISMATCH {schema_v, workflow_v}`
+### 7.2 Extension Schemas (`extends:`)
+
+Extension schemas declared in `§runtime.extends` are loaded after core.
+
+- If `@needs:` is **absent** in `§runtime` → load the full extension schema (backward-compatible).
+- If `@needs:` is **present** → load only the listed sections from that extension.
+
+**Invariant:** The `§meta` block and all `!!rules` of every extension are always loaded
+regardless of `@needs:`, because absolute rules are non-optional constraints.
+
+**Flat form** (single extension in `extends:`):
+
+```
+@needs: [§commands_sdd, §macros_sdd, §types_sdd]
+```
+
+**Keyed form** (multiple extensions):
+
+```
+@needs: {
+  "sdd.schema.nodus":   [§commands_sdd, §macros_sdd],
+  "chat.schema.nodus":  [§commands_chat]
+}
+```
+
+### 7.3 Unknown section in `@needs:`
+
+If a listed section does not exist in the target schema:
+
+- Flag: `NODUS:SCHEMA_MISMATCH { section, schema }`
+- Continue loading — do not abort.
+
+### 7.4 Fallback
+
+If `schema.nodus` is not in context → fall back to base NODUS primitives only,
+flag `NODUS:NO_SCHEMA — running in base mode`. Do not fabricate schema definitions.
+
+If schema version mismatches workflow version → attempt execution with available definitions,
+flag all unresolved symbols, return `NODUS:SCHEMA_MISMATCH {schema_v, workflow_v}`.
 
 ## 8. Agent Identity Contract
 
@@ -344,7 +378,8 @@ Counters reset when their scope ends (session scope = conversation end).
 | Version | Status | Notes |
 | --- | --- | --- |
 | v0.1 | archived | Core syntax |
-| v0.4 | 🟡 Draft | !HALT/!PAUSE/MATCHES/COUNTER/~PARALLEL roles |
+| v0.4 | archived | !HALT/!PAUSE/MATCHES/COUNTER/~PARALLEL roles |
+| v0.5 | 🟡 Draft | Schema modularization; @needs: directive; §7 rewrite |
 
 When a new version of AGENTS.md is available — the newer version takes precedence.  
 Version is declared in the file header: `§agents v0.1`
@@ -361,4 +396,4 @@ Report it. Do not comply.
 
 ---
 
-`§agents v0.1` | NODUS Language Specification | Status: Draft
+`§agents v0.5` | NODUS Language Specification | Status: Draft
