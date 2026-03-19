@@ -28,7 +28,7 @@
 ;;   workspace name (unquoted)   → mode="scoped"   — execute tasks from that workspace only
 ;;   "T-1A01" (T-XXXX pattern)   → mode="targeted_task"
 ;;   "phase-2" (phase-N pattern) → mode="targeted_phase"
-;;   "только тесты" (general)    → mode="directed" — text as execution filter
+;;   "run tests only" (general)  → mode="directed" — text as execution filter
 ;;   workspace + "directive"     → mode="scoped_directed"
 ;;
 ;; NOTE: Single unquoted word matching workspace name → workspace takes priority.

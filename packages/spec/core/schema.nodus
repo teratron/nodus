@@ -1,4 +1,4 @@
-§schema:nodus v0.5
+§schema:nodus v0.6
 ;;  NODUS Core Schema
 ;;  This file is the vocabulary contract for all NODUS workflows.
 ;;  Load this file FIRST into any agent context before executing any .nodus workflow.
@@ -10,10 +10,10 @@
 
 §meta {
   name:       "NODUS Core Schema"
-  version:    "0.5"
+  version:    "0.6"
   status:     "draft"
   language:   "nodus"
-  compatible: ["0.1", "0.2", "0.3", "0.4", "0.5"]
+  compatible: ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6"]
   author:     "nodus-lang"
   changelog:  "v0.2 — §macros, §testing (@test), QUERY_KB / REMEMBER / RECALL / FORGET
                v0.3 — §lint rules (E001–E012 errors, W001–W010 warnings, I001–I006 info)
@@ -23,7 +23,10 @@
                       E013 / W011 lint rules; workspace_config / counter_state / git_result types
                v0.5 — §lint extracted to schema.lint.nodus (runtime-free);
                       §testing extracted to schema.tests.nodus (runtime-free);
-                      @needs: directive for selective extension loading"
+                      @needs: directive for selective extension loading
+               v0.6 — ASK / CONFIRM human interaction commands;
+                      dialog_type / dialog_result types;
+                      DIALOG_TIMEOUT / DIALOG_REJECTED errors"
 }
 
 ;; ─────────────────────────────────────────────
@@ -165,12 +168,54 @@
 
   ;; — COMMUNICATION —
   NOTIFY(target:str, msg:str)        → bool
-    ;; Send a notification
+    ;; Send a notification (fire-and-forget; no response expected).
     ;; target: human | channel | webhook
+    ;; +format=str    output format: plain | markdown | json (default: plain)
 
   PUBLISH(content:any) +channel=str  → bool
     ;; Publish content to a channel
     ;; !!NEVER call without prior VALIDATE()
+
+  ;; — HUMAN INTERACTION —
+  ASK(prompt:str)                    → any
+    ;; Block workflow and present a question to the human. Resumes when answered.
+    ;; Unlike NOTIFY, ASK expects and processes a typed response.
+    ;; Unlike !PAUSE, the workflow resumes automatically — no external re-trigger needed.
+    ;;
+    ;; +type=str          response type: str | bool | confirm | choice | multi_choice
+    ;;                    (default: str)
+    ;; +options=list      required when type=choice or type=multi_choice;
+    ;;                    list of selectable values
+    ;; +hint=str          helper text shown below the prompt (optional)
+    ;; +default=any       pre-filled answer; human can accept or override
+    ;; +validate=str      PCRE pattern the answer must match (str type only);
+    ;;                    re-prompts on mismatch
+    ;; +timeout=int       seconds before NODUS:DIALOG_TIMEOUT (0 = no timeout, default: 0)
+    ;;
+    ;; Returns: str (type=str) | bool (type=bool|confirm) | str (type=choice) | list (type=multi_choice)
+    ;;
+    ;; Examples:
+    ;;   ASK("Workspace name?") +type=str +validate="^[a-z_]+" → $ws
+    ;;   ASK("Proceed?") +type=confirm +default=true → $ok
+    ;;   ASK("Select mode:") +type=choice +options=["full","scoped","guided"] → $mode
+
+  CONFIRM(content:any)               → bool
+    ;; Present content to the human and request an approval decision.
+    ;; Shorthand for: NOTIFY(content) → ASK(+type=confirm).
+    ;; Returns true (approved) or false (rejected).
+    ;; Emits NODUS:DIALOG_REJECTED if human selects reject when +strict=true.
+    ;;
+    ;; +msg=str           header message shown above content (optional)
+    ;; +actions=list      custom action labels (default: ["approve", "reject"])
+    ;;                    when set, returns the chosen action label (str) instead of bool
+    ;; +default=str       pre-selected action (default: first in +actions)
+    ;; +strict=bool       if true and human rejects → NODUS:DIALOG_REJECTED (default: false)
+    ;;
+    ;; Examples:
+    ;;   CONFIRM($plan) +msg="Review the plan:" → $ok
+    ;;   ?IF $ok = false: !BREAK
+    ;;
+    ;;   CONFIRM($diff) +actions=["merge","request_changes","close"] → $decision
 
   ;; — MEMORY & KNOWLEDGE —
   QUERY_KB(query:str) +params        → list
@@ -609,5 +654,5 @@
 
 ;; ─────────────────────────────────────────────
 ;; END OF SCHEMA
-;; §schema:nodus v0.5
+;; §schema:nodus v0.6
 ;; ─────────────────────────────────────────────

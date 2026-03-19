@@ -1,4 +1,4 @@
-§schema:types v0.4
+§schema:types v0.6
 ;; NODUS | Extended Type Definitions
 ;; Defines composite types, type constraints, and type aliases
 ;; that extend the primitive types declared in schema.nodus.
@@ -133,6 +133,17 @@
 
   ;; — Date Expression (G013) —
   date_expr     ::  str     ;; e.g. "2024-01-01", "now", "now - 30 days"
+
+  ;; — Human Interaction (v0.6) —
+  dialog_type   ::  enum    ;; str | bool | confirm | choice | multi_choice
+
+  dialog_result {
+    prompt:     str                   ;; the question that was asked
+    type:       dialog_type           ;; response type
+    answer:     any                   ;; typed answer from human
+    cancelled:  bool                  ;; true if human cancelled without answering
+    ts:         ts                    ;; timestamp of response
+  }
 }
 
 ;; ─────────────────────────────────────────────
@@ -163,8 +174,9 @@
   memory_scope    :: [session, user, global]
   runtime_mode    :: [production, development, debug, dry_run]
   intent_type     :: [question, complaint, praise, request, spam, unclear]
+  dialog_type     :: [str, bool, confirm, choice, multi_choice]
 }
 
 ;; ─────────────────────────────────────────────
-;; END §schema:types v0.4
+;; END §schema:types v0.6
 ;; ─────────────────────────────────────────────

@@ -1,4 +1,4 @@
-§schema:errors v0.4
+§schema:errors v0.6
 ;; NODUS | Error Code Registry
 ;; Unified registry with severity, category, and human-readable descriptions.
 ;; Mirrors and extends §errors in schema.nodus.
@@ -194,6 +194,25 @@
     detail:     "The GIT() command requires git to be installed and on PATH."
     resolution: "Install git, add it to PATH, or remove the GIT() call if git is optional."
   }
+
+  ;; — DIALOG ERRORS — (category: dialog)
+
+  NODUS:DIALOG_TIMEOUT {
+    severity:   error
+    category:   dialog
+    message:    "ASK() or CONFIRM() did not receive a response within +timeout seconds."
+    detail:     "Human did not answer within the configured timeout. Workflow cannot continue."
+    resolution: "Increase +timeout, set +timeout=0 to disable, or add ?IF handler for this error."
+  }
+
+  NODUS:DIALOG_REJECTED {
+    severity:   error
+    category:   dialog
+    message:    "CONFIRM() returned reject — human explicitly declined."
+    detail:     "Human selected the reject action on a CONFIRM() call with +strict=true."
+    resolution: "Handle this case with ?IF $decision = false: ... before using +strict=true."
+  }
+
 }
 
 ;; ─────────────────────────────────────────────
@@ -222,8 +241,10 @@
   $ERR.C019 = "NODUS:PAUSED"
   $ERR.C020 = "NODUS:COUNTER_OVERFLOW"
   $ERR.C021 = "NODUS:GIT_UNAVAILABLE"
+  $ERR.C022 = "NODUS:DIALOG_TIMEOUT"
+  $ERR.C023 = "NODUS:DIALOG_REJECTED"
 }
 
 ;; ─────────────────────────────────────────────
-;; END §schema:errors v0.4
+;; END §schema:errors v0.6
 ;; ─────────────────────────────────────────────

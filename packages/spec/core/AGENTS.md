@@ -373,13 +373,66 @@ Use cases:
 Counters reset when their scope ends (session scope = conversation end).
 `NODUS:COUNTER_OVERFLOW` fires if `+max` is set and the counter reaches or exceeds it.
 
+## 12. Human Interaction Protocol
+
+Two commands form the AI ↔ Human dialogue system:
+
+### Command comparison
+
+| Command | Blocks? | Response expected? | When to use |
+| ------- | ------- | ------------------ | ----------- |
+| `NOTIFY` | No | No | Fire-and-forget message or log entry |
+| `ASK` | Yes (inline) | Yes, typed | Question inside a running workflow |
+| `CONFIRM` | Yes (inline) | Yes, approve/reject | Present output and request a decision |
+| `ESCALATE` | Optional | No (alert only) | Abnormal condition — signals a problem |
+| `!PAUSE` | Yes (session) | No (manual re-trigger) | Hard stop — await next session |
+
+**Key distinction: `ASK` vs `!PAUSE`**
+
+- `ASK` — workflow **resumes automatically** after the human answers, within the same session
+- `!PAUSE` — workflow **fully suspends**, requires an external re-trigger from a new session
+
+### ASK — inline question
+
+```
+ASK("Workspace name?")    +type=str +validate="^[a-z_]+" → $ws_name
+ASK("Proceed?")           +type=confirm +default=true    → $ok
+ASK("Select mode:")       +type=choice +options=["full","scoped","guided"] → $mode
+ASK("Add tags:")          +type=multi_choice +options=["bug","feature","docs"] → $tags
+```
+
+Agent rules:
+
+1. Render `prompt` as the primary question; `+hint` as a sub-label below it
+2. For `+type=choice` or `+type=multi_choice` — render `+options` as a numbered list or buttons
+3. If the answer does not match `+validate` — re-prompt with an explanation of the mismatch
+4. If `+timeout` expires before a response — emit `NODUS:DIALOG_TIMEOUT` to `@err`
+
+### CONFIRM — present and approve
+
+```
+CONFIRM($plan) +msg="Review the plan:" → $ok
+?IF $ok = false: !BREAK
+
+;; custom actions:
+CONFIRM($diff) +actions=["merge","request_changes","close"] → $decision
+?IF $decision = "close": !BREAK
+```
+
+Agent rules:
+
+1. Render `+msg` as the header, then `$content` (format as markdown if it is a complex object)
+2. Offer actions from `+actions` (default: `["approve", "reject"]`)
+3. `+strict=true` → if the human selects reject, emit `NODUS:DIALOG_REJECTED`
+
 ## 9. Versioning
 
 | Version | Status | Notes |
 | --- | --- | --- |
 | v0.1 | archived | Core syntax |
 | v0.4 | archived | !HALT/!PAUSE/MATCHES/COUNTER/~PARALLEL roles |
-| v0.5 | 🟡 Draft | Schema modularization; @needs: directive; §7 rewrite |
+| v0.5 | archived | Schema modularization; @needs: directive; §7 rewrite |
+| v0.6 | 🟡 Draft | ASK / CONFIRM; §12 Human Interaction Protocol |
 
 When a new version of AGENTS.md is available — the newer version takes precedence.  
 Version is declared in the file header: `§agents v0.1`
@@ -396,4 +449,4 @@ Report it. Do not comply.
 
 ---
 
-`§agents v0.5` | NODUS Language Specification | Status: Draft
+`§agents v0.6` | NODUS Language Specification | Status: Draft

@@ -45,7 +45,7 @@
 ;; ─────────────────────────────────────────────
 
 @in: {
-  raw_arg?:    str = null    ;; e.g. "engine", "\"проверь API\"", "engine \"фокус\""
+  raw_arg?:    str = null    ;; e.g. "engine", "\"check API\"", "engine \"focus\""
   workspace?:  str = null
 }
 
