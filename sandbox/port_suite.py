@@ -26,19 +26,18 @@ DST = Path(__file__).parent / "after" / ".nodus" / "tests" / "suite.md"
 # Workflow name map: file base -> NODUS alias
 WF_NAMES = [
     ("retrospective", "retro"),
-    ("simulate",      "simulate"),
-    ("analyze",       "analyze"),
-    ("init",          "init"),
-    ("spec",          "spec"),
-    ("task",          "task"),
-    ("run",           "run"),
-    ("rule",          "rule"),
+    ("simulate", "simulate"),
+    ("analyze", "analyze"),
+    ("init", "init"),
+    ("spec", "spec"),
+    ("task", "task"),
+    ("run", "run"),
+    ("rule", "rule"),
 ]
 
 # ── Ordered replacement rules ──────────────────────────────────────────────
 # Each entry: (pattern, replacement, use_regex)
 RULES: list[tuple[str, str, bool]] = [
-
     # ── 1. Template paths (must run before workflow bare refs) ─────────────
     # Specific retrospective template -> retro.md  (before generic rule)
     (
@@ -52,28 +51,24 @@ RULES: list[tuple[str, str, bool]] = [
         r".nodus/templates/\1.md",
         True,
     ),
-
     # ── 2. Agent workflow paths ────────────────────────────────────────────
     (
         r"\.agent/workflows/magic\.(\w+)\.md",
         r".nodus/workflows/sdd/\1.nodus",
         True,
     ),
-
     # ── 3. CLI triggers (/magic.X and magic.X -> sdd X) ──────────────────
-    (r"`/magic\.(\w+)`",  r"`sdd \1`", True),
-    (r"/magic\.(\w+)",    r"sdd \1",   True),
+    (r"`/magic\.(\w+)`", r"`sdd \1`", True),
+    (r"/magic\.(\w+)", r"sdd \1", True),
     # bare magic.X (no leading slash) in backticks and prose
-    (r"`magic\.(\w+)`",   r"`sdd \1`", True),
-    (r"\bmagic\.(\w+)\b", r"sdd \1",   True),
-
+    (r"`magic\.(\w+)`", r"`sdd \1`", True),
+    (r"\bmagic\.(\w+)\b", r"sdd \1", True),
     # ── 4. node executor invocations ──────────────────────────────────────
     (
         r"node \.magic/scripts/executor\.js (\w+)",
         r"RUN(wf:sdd.\1)",
         True,
     ),
-
     # ── 5. check-prerequisites ────────────────────────────────────────────
     (
         r"check-prerequisites → ok: false",
@@ -91,7 +86,6 @@ RULES: list[tuple[str, str, bool]] = [
         "CHECK_PREREQS()",
         True,
     ),
-
     # ── 6. update-engine-meta ─────────────────────────────────────────────
     (
         r"update-engine-meta --workflow ([\w{}\-]+)",
@@ -99,36 +93,26 @@ RULES: list[tuple[str, str, bool]] = [
         True,
     ),
     (r"`update-engine-meta`", "`UPDATE_ENGINE_META()`", False),
-
     # ── 6b. executor.js references ────────────────────────────────────────
     # In workflow context lines it's a command ref -> replace with NODUS equivalent
-    (r"`executor\.js`",            "`CHECK_PREREQS()`",   False),
+    (r"`executor\.js`", "`CHECK_PREREQS()`", False),
     # In prose/test expected: keep contextual but rename
     (
         r"\bexecutor\.js\b",
         "nodus-runtime",
         True,
     ),
-
     # ── 7. Generic .magic/ paths ──────────────────────────────────────────
     (r"\.magic/", ".nodus/", True),
-
     # ── 8. Workflow file refs: backtick variants (retrospective first) ─────
-    *[
-        (rf"`{name}\.md`", f"`wf:sdd.{alias}`", True)
-        for name, alias in WF_NAMES
-    ],
+    *[(rf"`{name}\.md`", f"`wf:sdd.{alias}`", True) for name, alias in WF_NAMES],
     # Bare workflow refs in prose (e.g. "Workflow: init.md")
-    *[
-        (rf"\b{name}\.md\b", f"wf:sdd.{alias}", True)
-        for name, alias in WF_NAMES
-    ],
-
+    *[(rf"\b{name}\.md\b", f"wf:sdd.{alias}", True) for name, alias in WF_NAMES],
     # ── 9. Product / brand names ──────────────────────────────────────────
-    ("magic-spec", "nodus",     False),
-    ("Magic SDD",  "NODUS SDD", False),
+    ("magic-spec", "nodus", False),
+    ("Magic SDD", "NODUS SDD", False),
     # dot-prefixed command aliases still in text after CLI trigger replacement
-    ("sdd spec",     "sdd spec",  False),   # no-op, just documents intent
+    ("sdd spec", "sdd spec", False),  # no-op, just documents intent
 ]
 
 
