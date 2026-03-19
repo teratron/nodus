@@ -1,0 +1,258 @@
+§wf:sdd.rule v1.0
+;; Workflow:  SDD Rule
+;; Purpose:   Manage project conventions across a two-tier rules system.
+;;            Global: .design/RULES.md (§1–6 constitution + §7 cross-workspace conventions)
+;;            Workspace: .design/{workspace}/RULES.md (workspace §7 only; inherits global)
+;; Pack:      sdd
+;; Author:    sdd-pack
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    ../../core/schema.nodus
+  extends: [../schema/sdd.schema.nodus]
+  agents: { executor: claude-sonnet-4 }
+  mode: production
+}
+
+;; ─────────────────────────────────────────────
+;; TRIGGERS
+;; ─────────────────────────────────────────────
+
+@ON: $cmd.action = "add"    → RUN(wf:sdd.rule.add)
+@ON: $cmd.action = "amend"  → RUN(wf:sdd.rule.amend)
+@ON: $cmd.action = "remove" → RUN(wf:sdd.rule.remove)
+@ON: $cmd.action = "list"   → RUN(wf:sdd.rule.list)
+
+;; ─────────────────────────────────────────────
+;; RULES
+;; ─────────────────────────────────────────────
+
+!!NEVER:  modify §1–6 (Universal Constitution) without explicit user target and Major version bump
+!!NEVER:  write to RULES.md without showing proposed diff first (No Silent Writes)
+!!NEVER:  silently duplicate a rule that already exists in global or workspace tier
+!!ALWAYS: load global RULES.md first, then workspace RULES.md if it exists
+!!ALWAYS: route to correct tier (global vs workspace) before writing
+!!ALWAYS: bump version in target RULES.md and update Document History after every write
+!!ALWAYS: call UPDATE_ENGINE_META if engine files modified (C14 — only for .magic/ changes)
+
+!PREF: workspace-tier OVER global-tier   IF rule text contains workspace signal words
+
+;; ─────────────────────────────────────────────
+;; DECLARATIONS
+;; ─────────────────────────────────────────────
+
+@in: {
+  raw_input:   str           ;; full user request: "add rule: ...", "remove C7", etc.
+  workspace?:  str = null
+  flags?:      list = []
+}
+
+@out: $rule_result
+@err: ESCALATE(human) +msg="Rule workflow failed"
+
+;; ─────────────────────────────────────────────
+;; STEPS (shared pre-processing)
+;; ─────────────────────────────────────────────
+
+@steps:
+
+  ;; — STEP 0: Pre-flight —
+  0. RUN(@macro:ENGINE_PREFLIGHT) +flags=$in.flags
+     RUN(@macro:RESOLVE_WORKSPACE) +workspace=$in.workspace → $workspace
+
+  ;; — STEP 1: Parse action from raw input —
+  1. ANALYZE($in.raw_input) ~intent → $cmd
+     ;; Extracts: { action: "add"|"amend"|"remove"|"list", target_id, rule_text, tier_hint }
+
+  ;; — STEP 2: Load both RULES.md tiers —
+  2. READ_FILE(".design/RULES.md")                    → $global_rules
+     READ_FILE(".design/$workspace/RULES.md")         → $ws_rules
+     ;; $ws_rules may be null if workspace RULES.md does not exist yet
+
+  ;; — STEP 3: Tier routing —
+  3. ?IF $cmd.tier_hint CONTAINS "in $workspace" OR
+         $cmd.rule_text CONTAINS "this workspace":
+       $tier = "workspace"
+       $tier_path = ".design/$workspace/RULES.md"
+     ?ELIF $cmd.tier_hint = null:
+       ;; Ambiguous — ask user
+       NOTIFY(human) +msg="Should this rule be global (all workspaces) or scoped to '$workspace' only?"
+       !BREAK
+     ?ELSE:
+       $tier = "global"
+       $tier_path = ".design/RULES.md"
+
+  ;; Route to action sub-workflow
+  ;; (See @ON: triggers above)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.rule.add
+;; ─────────────────────────────────────────────
+
+§wf:sdd.rule.add v1.0
+
+@steps:
+
+  ;; — Guard: Core Amendment Routing —
+  1. ?IF $cmd.target_section IN ["§1","§2","§3","§4","§5","§6"]:
+       NOTIFY(human) +msg="This targets core section $cmd.target_section. Core amendments require explicit approval and trigger a Major version bump. Proceed?"
+       !BREAK     ;; HALT — wait for explicit user confirmation
+
+  ;; — Guard: Duplication Check (both tiers) —
+  2. SCORE($cmd.rule_text) ^approved → $dup_score
+     ;; Semantic overlap check against both $global_rules and $ws_rules
+     ?IF $dup_score > 0.8:
+       NOTIFY(human) +msg="Proposed rule semantically overlaps with an existing convention. Merge, replace, or add separately?"
+       !BREAK
+
+  ;; — Guard: Constitutional Check —
+  3. VALIDATE($cmd.rule_text) ^brand_voice → $constitutional
+     ;; Checks rule does not contradict §1–6 invariants
+     ?IF $constitutional = false:
+       ESCALATE(human) +msg="Proposed rule contradicts §1–6 (Universal Constitution). Cannot add."
+       !BREAK
+
+  ;; — Init workspace RULES.md if needed (workspace tier, file absent) —
+  4. ?IF $tier = "workspace" AND $ws_rules = null:
+       FILL("./templates/workspace-rules.md") +fields={
+         workspace: $workspace,
+         date: $session.ts_start
+       } → $ws_rules_init
+       WRITE($ws_rules_init → $tier_path)
+       NOTIFY(human) +msg="Created workspace RULES.md for '$workspace'."
+
+  ;; — Propose change —
+  5. GEN(report) +ctx={ tier: $tier, rule: $cmd.rule_text, current: $global_rules } → $proposal
+     NOTIFY(human) +msg=$proposal
+     ;; HARD STOP — wait for approval before writing
+
+  ;; — Write on approval —
+  6. APPEND($cmd.rule_text → $tier_path)
+     VERSION_BUMP("minor") +manifests=[$tier_path]
+     NOTIFY(human) +msg="Rule added to $tier_path. Version bumped (minor)."
+
+  ;; — Post-write: impact analysis —
+  7. ?IF FILE_EXISTS(".design/$workspace/TASKS.md"):
+       NOTIFY(human) +msg="TASKS.md 'Based on RULES' version is now stale. Suggested: sdd task update"
+
+  $rule_result = { action: "add", tier: $tier, file: $tier_path }
+  LOG($rule_result)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.rule.remove
+;; ─────────────────────────────────────────────
+
+§wf:sdd.rule.remove v1.0
+
+@steps:
+
+  ;; — Dependency Scan before deletion —
+  1. SCAN_DIR(".nodus/") → $engine_files
+     ~FOR $file IN $engine_files:
+       READ_FILE($file) → $content
+       ?IF $content CONTAINS $cmd.target_id:
+         APPEND({ file: $file, ref: $cmd.target_id } → $dep_refs)
+     ~END
+     SCAN_DIR(".design/") +depth=3 → $spec_files
+     ~FOR $file IN $spec_files:
+       READ_FILE($file) → $content
+       ?IF $content CONTAINS $cmd.target_id:
+         APPEND({ file: $file, ref: $cmd.target_id } → $dep_refs)
+     ~END
+
+  ;; — Propose removal with dependency report —
+  2. GEN(report) +ctx={ target: $cmd.target_id, refs: $dep_refs } → $proposal
+     NOTIFY(human) +msg=$proposal
+     ;; Show: "Convention X referenced by [files]. Removing may break logic."
+     ;; Single confirmation gate — no extra prompts
+
+  ;; — Write on approval —
+  3. ;; Remove the entry from target RULES.md
+     VERSION_BUMP("major") +manifests=[$tier_path]
+     NOTIFY(human) +msg="Convention $cmd.target_id removed. Version bumped (major). Update references manually."
+
+  $rule_result = { action: "remove", target: $cmd.target_id, tier: $tier }
+  LOG($rule_result)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.rule.list
+;; ─────────────────────────────────────────────
+
+§wf:sdd.rule.list v1.0
+
+@steps:
+  1. QUERY_SPECS($global_rules) → $global_entries
+     NOTIFY(human) +msg="=== Global Conventions (.design/RULES.md §7) ==="
+     NOTIFY(human) +msg=$global_entries
+
+     ?IF $ws_rules != null:
+       QUERY_SPECS($ws_rules) → $ws_entries
+       NOTIFY(human) +msg="=== Workspace '$workspace' Conventions ==="
+       NOTIFY(human) +msg=$ws_entries
+
+  $rule_result = { action: "list", workspace: $workspace }
+  LOG($rule_result)
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; ─────────────────────────────────────────────
+
+;; WORKFLOW: sdd.rule
+;; TRIGGER:  sdd rule add|amend|remove|list [rule text or ID]
+;;
+;; TWO-TIER SYSTEM:
+;;   Global   → .design/RULES.md        (§1–6 constitution + §7)
+;;   Workspace → .design/{ws}/RULES.md  (§7 only, inherits global)
+;;
+;; RULES:
+;;   - §1–6 are the Universal Constitution — amend only with explicit user approval
+;;   - Never write without showing proposed diff first
+;;   - No silent duplication — always check both tiers
+;;   - Version: Minor (add/amend), Major (remove), Patch (typos)
+;;
+;; STEPS:
+;;   0. Pre-flight + workspace resolution
+;;   1. Parse action and rule text
+;;   2. Load both RULES.md tiers
+;;   3. Route to correct tier (global vs workspace)
+;;   4. Guards: core amendment, duplication, constitutional
+;;   5. Propose change — wait for approval
+;;   6. Write + version bump + Document History
+;;   7. Notify if TASKS.md requires sync (rules parity)
+;;
+;; OUTPUT: { action, tier, file }
+;; ON ERROR: escalate to human
+
+;; ─────────────────────────────────────────────
+;; TESTS
+;; ─────────────────────────────────────────────
+
+@test:add_global_rule {
+  input: { raw_input: "add rule: always use async/await over callbacks", workspace: null }
+  expected: { status = SUCCESS, out.action = "add", out.tier = "global" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { action: "add", rule_text: "always use async/await over callbacks", tier_hint: null },
+    SCORE: 0.1,
+    VALIDATE: true
+  }
+  tags: [smoke, rule, add]
+}
+
+@test:remove_blocks_on_deps {
+  input: { raw_input: "remove C7", workspace: null }
+  expected: { status = ABORTED, flags CONTAINS "dep_refs" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { action: "remove", target_id: "C7" },
+    SCAN_DIR: [{ name: "run.md", path: ".nodus/run.md", type: "file" }],
+    READ_FILE: "...C7..."
+  }
+  tags: [guard, remove, dependency]
+}
+
+;; ─────────────────────────────────────────────
+;; END §wf:sdd.rule v1.0
+;; ─────────────────────────────────────────────

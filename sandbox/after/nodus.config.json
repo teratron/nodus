@@ -1,0 +1,30 @@
+{
+  "project": "sdd-pack",
+  "version": "1.0.0",
+  "description": "Specification-Driven Development engine as a NODUS pack",
+
+  "schema": {
+    "core":    ".nodus/core/schema.nodus",
+    "extends": [".nodus/schema/sdd.schema.nodus"]
+  },
+
+  "agents": {
+    "executor":     "claude-sonnet-4",
+    "orchestrator": "claude-opus-4"
+  },
+
+  "context": {
+    "rules": ".design/{workspace}/RULES.md",
+    "index": ".design/{workspace}/INDEX.md",
+    "plan":  ".design/{workspace}/PLAN.md",
+    "tasks": ".design/{workspace}/TASKS.md"
+  },
+
+  "channels": {
+    "human": { "format": "markdown", "max_len": null }
+  },
+
+  "workflows": {
+    "dir": "./workflows/sdd/"
+  }
+}

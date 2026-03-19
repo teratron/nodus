@@ -89,7 +89,7 @@
   $CFG.QUALITY_REFINE   = 3       ;; max refinement iterations
 
   ;; Channel limits (mirrors §channels in schema, override here per project)
-  $CFG.MAX_LEN_TWITTER  = 280
+  $CFG.MAX_LEN_TWITTER   = 280
   $CFG.MAX_LEN_INSTAGRAM = 2200
   $CFG.MAX_LEN_LINKEDIN  = 3000
   $CFG.MAX_LEN_SMS       = 160
@@ -155,7 +155,7 @@
 ;;   - Infrastructure bindings
 ;;
 ;; LOAD ORDER (executor boot sequence):
-;;   1. .nodus/config.json  → resolve environment
+;;   1. .nodus/config.json → resolve environment
 ;;   2. config.nodus       → load business rules and constants
 ;;   3. workflow.nodus     → execute specific workflow
 

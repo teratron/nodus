@@ -1,0 +1,248 @@
+§wf:sdd.retro v1.0
+;; Workflow:  SDD Retrospective
+;; Purpose:   Feedback loop for SDD engine health.
+;;            L1 (Snapshot): silent, fast — auto-triggered after each phase.
+;;            L2 (Full): deep analysis — triggered after plan completion or manually.
+;; Pack:      sdd
+;; Author:    sdd-pack
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    ../../core/schema.nodus
+  extends: [../schema/sdd.schema.nodus]
+  agents: { executor: claude-sonnet-4 }
+  mode: production
+}
+
+;; ─────────────────────────────────────────────
+;; TRIGGERS
+;; ─────────────────────────────────────────────
+
+@ON: $in.level = "L1"  → RUN(wf:sdd.retro.snapshot)
+@ON: $in.level = "L2"  → RUN(wf:sdd.retro.full)
+@ON: $in.level = null  → RUN(wf:sdd.retro.full)   ;; default: full
+
+;; ─────────────────────────────────────────────
+;; RULES
+;; ─────────────────────────────────────────────
+
+!!NEVER:  modify specs, plans, or tasks — RETRO is read-only
+!!NEVER:  write speculative claims — all findings must reference specific files
+!!ALWAYS: write results ONLY to RETROSPECTIVE.md
+!!ALWAYS: recommendations must be concrete and actionable (no abstract advice)
+!!ALWAYS: call UPDATE_ENGINE_META if any .nodus engine files were modified (C14)
+
+!PREF: silent OVER verbose   IF $in.level = "L1"
+
+;; ─────────────────────────────────────────────
+;; DECLARATIONS
+;; ─────────────────────────────────────────────
+
+@in: {
+  level?:      str = null    ;; L1 | L2 (default: L2 if called manually)
+  workspace?:  str = null
+  phase?:      str = null    ;; required for L1: which phase just completed
+}
+
+@out: $retro_result
+@err: ESCALATE(human) +msg="Retrospective failed"
+
+;; ─────────────────────────────────────────────
+;; STEPS (shared — runs before level-specific sub-wf)
+;; ─────────────────────────────────────────────
+
+@steps:
+
+  0. RUN(@macro:ENGINE_PREFLIGHT) +flags=[]
+     RUN(@macro:RESOLVE_WORKSPACE) +workspace=$in.workspace → $workspace
+
+  ;; — Collect shared data from .design/ artifacts —
+  1. ~PARALLEL:
+       PARSE_INDEX(".design/$workspace/INDEX.md")       → $index
+       READ_FILE(".design/$workspace/TASKS.md")         → $tasks_raw
+       READ_FILE(".design/$workspace/PLAN.md")          → $plan_raw
+       READ_FILE(".design/$workspace/RULES.md")         → $rules_raw
+     ~JOIN
+
+  2. ANALYZE($index)     ~entities                   → $spec_counts
+     ;; spec_counts: { Draft:int, RFC:int, Stable:int, Deprecated:int, total:int }
+     ANALYZE($tasks_raw) ~entities                   → $task_counts
+     ;; task_counts: { Done:int, Blocked:int, Cancelled:int, total:int, by_phase:obj }
+
+;; Route to sub-workflow based on level
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.retro.snapshot (L1)
+;; ─────────────────────────────────────────────
+
+§wf:sdd.retro.snapshot v1.0
+
+@steps:
+
+  ;; — Calculate signal —
+  1. ?IF $task_counts.Blocked / $task_counts.total < 0.1 AND
+         $spec_counts.orphans = 0 AND $spec_counts.phantoms = 0:
+       $signal = "green"
+     ?ELIF $task_counts.Blocked / $task_counts.total <= 0.2 OR
+           $spec_counts.drift_items <= 2:
+       $signal = "yellow"
+     ?ELSE:
+       $signal = "red"
+
+  ;; — Compose snapshot row —
+  2. GEN(report)
+       +ctx={
+         date:       $session.ts_start,
+         phase:      $in.phase,
+         specs:      "$spec_counts.Draft/$spec_counts.RFC/$spec_counts.Stable",
+         tasks:      "$task_counts.Done/$task_counts.Blocked/$task_counts.Cancelled",
+         rules:      $rules_raw.convention_count,
+         signal:     $signal
+       }
+       +format=markdown → $snapshot_row
+
+  ;; — Append to RETROSPECTIVE.md —
+  3. ?IF NOT FILE_EXISTS(".design/$workspace/RETROSPECTIVE.md"):
+       FILL("./templates/retro.md") +fields={ workspace: $workspace } → $retro_init
+       WRITE($retro_init → ".design/$workspace/RETROSPECTIVE.md")
+
+     APPEND($snapshot_row → ".design/$workspace/RETROSPECTIVE.md")
+
+  ;; — Archival C8: move phase file to archives/ —
+  4. ?IF $in.phase != null:
+       ARCHIVE(
+         ".design/$workspace/tasks/$in.phase.md",
+         ".design/$workspace/archives/tasks/$in.phase.md"
+       )
+       ;; Update link in TASKS.md to relative archive path
+       NOTIFY(human) +msg="[Auto-Retro L1] Phase $in.phase archived. Signal: $signal"
+
+  $retro_result = { level: "L1", phase: $in.phase, signal: $signal }
+  LOG($retro_result)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.retro.full (L2)
+;; ─────────────────────────────────────────────
+
+§wf:sdd.retro.full v1.0
+
+@steps:
+
+  ;; — Deep analysis —
+  1. ANALYZE($tasks_raw) ~entities → $efficiency
+     ;; efficiency: { revisions_to_stable:float, avg_blocked_per_phase:float }
+
+  2. ANALYZE($tasks_raw) ~topics → $friction
+     ;; friction: recurrent blocking reasons from phase notes
+
+  ;; — Deep Registry Audit —
+  3. SCAN_DIR(".design/$workspace/specifications/") → $spec_files
+     COMPARE($spec_files, $index.specs) → $registry_drift
+     ;; registry_drift: { orphans:list, phantoms:list, shadow_logic:list }
+
+     ~FOR $spec IN $index.specs:
+       PARSE_MD_HEADER($spec.file) → $hdr
+       ?IF $hdr.status != $spec.status OR $hdr.version != $spec.version:
+         APPEND({ file: $spec.file, issue: "header_drift" } → $integrity_issues)
+     ~END
+
+  ;; — Signal calculation —
+  4. ?IF $task_counts.Blocked / $task_counts.total < 0.1 AND
+         $registry_drift.orphans = [] AND
+         $registry_drift.shadow_logic = []:
+       $signal = "green"
+     ?ELIF $task_counts.Blocked / $task_counts.total <= 0.2 OR
+           $registry_drift.orphans.count <= 2:
+       $signal = "yellow"
+     ?ELSE:
+       $signal = "red"
+
+  ;; — Build observations and recommendations —
+  5. GEN(report)
+       +ctx={
+         signal:     $signal,
+         efficiency: $efficiency,
+         friction:   $friction,
+         drift:      $registry_drift,
+         integrity:  $integrity_issues
+       }
+       +format=markdown
+       +style=structured → $analysis_report
+
+  ;; — DORA metrics (manual input required) —
+  6. NOTIFY(human) +msg="L2 Retro: Please provide DORA metrics (Deployment Frequency, Change Failure Rate) if available."
+
+  ;; — Write to RETROSPECTIVE.md —
+  7. ?IF NOT FILE_EXISTS(".design/$workspace/RETROSPECTIVE.md"):
+       FILL("./templates/retro.md") +fields={ workspace: $workspace } → $retro_init
+       WRITE($retro_init → ".design/$workspace/RETROSPECTIVE.md")
+
+     APPEND($analysis_report → ".design/$workspace/RETROSPECTIVE.md")
+     NOTIFY(human) +msg="[Auto-Retro L2] Full retrospective written. Signal: $signal"
+
+  $retro_result = { level: "L2", signal: $signal, report: $analysis_report }
+  LOG($retro_result)
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; ─────────────────────────────────────────────
+
+;; WORKFLOW: sdd.retro
+;; TRIGGER:
+;;   L1 — Auto-called by sdd.run after every phase completion
+;;   L2 — Auto-called after full plan completion, or manually
+;;
+;; RULES:
+;;   - Read-only: never modifies specs, plans, or tasks
+;;   - Write only to RETROSPECTIVE.md
+;;   - All findings must reference specific files (no speculation)
+;;
+;; L1 STEPS:
+;;   1. Collect INDEX.md, TASKS.md metrics
+;;   2. Calculate signal (green/yellow/red)
+;;   3. Append snapshot row to RETROSPECTIVE.md
+;;   4. Archive phase file to archives/tasks/ (C8)
+;;
+;; L2 STEPS:
+;;   1–2. Analyze efficiency and friction patterns
+;;   3.   Deep registry audit: shadow logic, header drift, orphans/phantoms
+;;   4.   Signal calculation
+;;   5.   Generate observations + recommendations report
+;;   6.   Request DORA metrics from user
+;;   7.   Write full report to RETROSPECTIVE.md
+;;
+;; OUTPUT: { level, signal, [phase for L1] }
+;; ON ERROR: escalate to human
+
+;; ─────────────────────────────────────────────
+;; TESTS
+;; ─────────────────────────────────────────────
+
+@test:l1_snapshot_green {
+  input:    { level: "L1", workspace: null, phase: "phase-1" }
+  expected: { status = SUCCESS, out.signal = "green" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    PARSE_INDEX: { specs: [], version: "1.0" },
+    ANALYZE: { Draft: 0, RFC: 0, Stable: 4, Done: 8, Blocked: 0, Cancelled: 0, total: 8 },
+    FILE_EXISTS: true,
+    ARCHIVE: true
+  }
+  tags: [smoke, retro, l1]
+}
+
+@test:l2_full_yellow_signal {
+  input:    { level: "L2", workspace: null, phase: null }
+  expected: { status = SUCCESS, out.signal = "yellow" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { Blocked: 2, total: 10, orphans: ["spec-x.md"] }
+  }
+  tags: [smoke, retro, l2]
+}
+
+;; ─────────────────────────────────────────────
+;; END §wf:sdd.retro v1.0
+;; ─────────────────────────────────────────────
