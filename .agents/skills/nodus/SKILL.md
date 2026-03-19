@@ -9,26 +9,22 @@ Help users write, validate, and run NODUS workflows — the symbolic DSL for AI 
 
 ## When This Skill Activates
 
-- User wants to **create** a new `.nodus` workflow
+- User wants to **create** a new `.nodus` workflow → use `/nodus.create`
+- User wants to **explain** or understand a `.nodus` file → use `/nodus.explain`
+- User wants to **compile** (validate + transpile) a workflow → use `/nodus.compile`
 - User asks about **NODUS syntax** or symbols (`§`, `!!`, `@ON:`, `→`, etc.)
-- User needs help **debugging** a validation error (E001–E012, W001–W003, I001–I003)
-- User wants to **run**, **transpile**, or **test** a workflow via CLI
-- User wants to **set up** a NODUS project (`nodus init`)
-- User wants to **create a pack** (shareable workflow bundle)
+- User needs help **debugging** a validation error (E001–E012, W001–W003, I001–I003) → use `/nodus.validate`
+- User wants to **run** or **test** a workflow via CLI → use `/nodus.run` or `/nodus.test`
+- User wants to **set up** a NODUS project → use `/nodus.init`
+- User wants to **create a pack** (shareable workflow bundle) → use `/nodus.pack`
 
 ## 1. Creating a New Workflow
 
-Follow this sequence:
+For an interactive guided flow, use `/nodus.create`. It asks the right questions and scaffolds the file for you.
 
-1. **Ask** the user: what does the workflow do? what triggers it? what are the inputs/outputs?
-2. **Scaffold** from the template at `packages/spec/templates/workflow.template.nodus`
-3. **Fill in** the sections in required order (see below)
-4. **Validate** with `nodus validate <file>`
-5. **Test** with `nodus test <file>`
+If you need to create a file manually, every `.nodus` file must follow this structure, top to bottom:
 
 ### Required Section Order
-
-Every `.nodus` file must follow this structure, top to bottom:
 
 ```nodus
 §wf:name v1.0               ;; 1. Header — name matches filename (E012)
@@ -52,6 +48,36 @@ Every `.nodus` file must follow this structure, top to bottom:
 - Filenames use `snake_case`
 - Pack names use `kebab-case`: `nodus-social`
 - Constants use `$CFG.SCREAMING_SNAKE_CASE`
+
+### Production-Ready Example
+
+```nodus
+§wf:quick_reply v1.0
+§runtime: { core: .nodus/core/schema.nodus, mode: production }
+
+@ON: new_message
+@in: { text: str, tone: str = "neutral" }
+@out: $reply
+@err: ESCALATE(human)
+
+!!NEVER: publish WITHOUT validate
+
+@steps:
+  1. ANALYZE($in.text) ~sentiment ~intent → $meta
+  2. GEN(reply) +tone=$in.tone → $draft
+  3. VALIDATE($draft) ^no_toxic ^len:280
+  4. LOG($draft)
+@out: $draft
+
+;; HUMAN MODE
+;; When a new message arrives, analyze its sentiment and intent,
+;; generate a reply in the requested tone, validate it, then return it.
+
+@test: smoke
+  @input: { text: "Hello!", tone: "warm" }
+  @expect: $out != null
+  +tag=smoke
+```
 
 ## 2. Symbol Quick Reference
 
@@ -80,27 +106,6 @@ Load `references/workflow_patterns.md` for detailed examples:
 - **Parallel Analyze → Merge → Decide** (multi-signal routing)
 - **For-Each → Process → Collect** (batch processing)
 
-### Minimal Workflow Example
-
-```nodus
-§wf:quick_reply v1.0
-§runtime: { core: .nodus/core/schema.nodus, mode: production }
-
-@ON: new_message
-@in: { text: str }
-@out: $reply
-@err: ESCALATE(human)
-
-!!NEVER: publish WITHOUT validate
-
-@steps:
-  1. ANALYZE($in.text) ~sentiment ~intent → $meta
-  2. GEN(reply) +tone=neutral → $draft
-  3. VALIDATE($draft) ^no_toxic ^len:280
-  4. LOG($draft)
-@out: $draft
-```
-
 ## 4. Debugging Lint Errors
 
 When a user gets a validation error, check `references/lint_rules.md` for the full list. Most common:
@@ -127,7 +132,7 @@ nodus init                              # Set up .nodus/ in current project
 nodus new workflow <domain/name>        # Scaffold from template
 nodus validate <path>                   # Lint (28 rules, exit code 1 on error)
 nodus run <file> [--dry]                # Execute workflow (--dry = no side effects)
-nodus transpile <file> --to=human       # Convert to human-readable
+nodus transpile <file> --mode human     # Convert to human-readable
 nodus test [file] [--tag=smoke]         # Run @test blocks
 nodus schema inspect                    # Print resolved schema
 ```
@@ -136,13 +141,14 @@ Exit codes: `0` = success, `1` = validation errors, `2` = parse error, `3` = exe
 
 ## 6. Project Setup Guide
 
-When a user asks to set up NODUS:
+When a user asks to set up NODUS, use `/nodus.init` for a guided flow. The init command creates all required directories automatically.
 
-1. Run `nodus init` — creates `.nodus/` folder with core schema
+Manual equivalent:
+
+1. Run `nodus init` — creates `.nodus/` folder with core schema, `workflows/`, and context directories
 2. Edit `.nodus/config.json` — set model, schema paths, logging
-3. Create `workflows/` directory (name is convention, not requirement)
-4. Scaffold first workflow: `nodus new workflow social/my_first`
-5. Validate: `nodus validate workflows/social/my_first.nodus`
+3. Scaffold first workflow: `nodus new workflow social/my_first`
+4. Validate: `nodus validate workflows/social/my_first.nodus`
 
 ### User Project Structure
 
@@ -162,7 +168,7 @@ my-project/
 
 ## 7. Creating a Pack
 
-A pack is a shareable bundle of workflows + schema for a domain.
+A pack is a shareable bundle of workflows + schema for a domain. Use `/nodus.pack` for a guided flow.
 
 ```
 packs/nodus-<domain>/
@@ -177,8 +183,16 @@ Required `pack.json` fields: `name`, `version`, `description`, `author`, `nodus`
 
 ## 8. Connecting a Real LLM
 
-By default the runtime uses `StubProvider` (mock responses). To use a real model:
+By default the runtime uses `StubProvider` (mock responses). To connect a real model:
+
+**Via CLI / config.json:**
 
 1. Set `ANTHROPIC_API_KEY` in environment
-2. Pass `AnthropicProvider` to `Executor` in Python, or configure in `.nodus/config.json`
+2. In `.nodus/config.json` set `"provider": "anthropic"` and `"model": "claude-sonnet-4-6"`
 3. Run workflow: `nodus run workflows/my_workflow.nodus`
+
+**Via Python SDK** (for custom integrations):
+
+1. Set `ANTHROPIC_API_KEY` in environment
+2. Pass `AnthropicProvider` to `Executor` in your Python code
+3. Run workflow programmatically

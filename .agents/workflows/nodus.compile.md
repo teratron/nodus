@@ -8,7 +8,11 @@ Run the full compilation pipeline for a NODUS workflow file.
 
 ## Steps
 
-1. **Identify the target file.** If the user has a `.nodus` file open, use it. Otherwise ask which file to compile.
+// turbo
+
+1. **Check CLI availability** — run `nodus --version`. If the command is not found, stop and tell the user: "The `nodus` CLI is not installed. Run `pip install nodus` and try again."
+
+2. **Identify the target file.** If the user has a `.nodus` file open, use it. Otherwise ask which file to compile.
 
 2. **Read the file** and check it exists and has `.nodus` extension.
 

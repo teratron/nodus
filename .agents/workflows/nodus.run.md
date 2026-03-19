@@ -8,34 +8,50 @@ Execute a NODUS workflow with full pre-flight checks and result reporting.
 
 ## Steps
 
-1. **Identify the target file.** If user has a `.nodus` file open, use it. Otherwise ask.
+// turbo
+
+1. **Check CLI availability** — run `nodus --version`. If the command is not found, stop and tell the user: "The `nodus` CLI is not installed. Run `pip install nodus` and try again."
+
+2. **Identify the target file.** If user has a `.nodus` file open, use it. Otherwise ask.
+
+3. **Ask upfront: dry run?** — "Do you want a dry run (no side effects, no publishes)?" If yes, use `--dry` flag in step 5.
 
 // turbo
-2. **Pre-flight validation** — run `nodus validate <file>`. If errors exist, report and stop. Offer `/nodus.validate` to fix.
+4. **Pre-flight validation** — run `nodus validate <file>`. If errors exist, report and stop. Offer `/nodus.validate` to fix.
 
-3. **Prepare input data.** Read the `@in:` contract from the file:
-   - List required fields with types
-   - List optional fields with defaults
-   - Ask the user for values for required fields
-   - Use `--dry` flag if the user wants a dry run (no side effects)
+5. **Prepare input data.** Read the `@in:` contract from the file and present two sections:
+
+   **Required fields** — ask the user for each value:
+
+   ```
+   text (str): ?
+   user_id (str): ?
+   ```
+
+   **Optional fields** — show defaults, ask only if user wants to override:
+
+   ```
+   tone (str) = "neutral" — override? (press Enter to keep)
+   max_len (int) = 280 — override? (press Enter to keep)
+   ```
 
 // turbo
-4. **Execute** — run `nodus run <file> [key=val ...]` with the prepared input.
+6. **Execute** — run `nodus run <file> [key=val ...] [--dry]` with the prepared input.
 
-5. **Parse the `NODUS:RESULT` output** and present:
+7. **Parse the `NODUS:RESULT` output** and present:
    - **Status:** SUCCESS ✅ / PARTIAL ⚠️ / FAILED ❌ / ABORTED 🛑
    - **Output (`$out`):** formatted and readable
    - **Execution log:** step-by-step trace (last 10 entries)
    - **Errors:** if any, with explanations
 
-6. **For failures**, diagnose:
+8. **For failures**, diagnose:
    - Which step failed and why
    - Was a `!!` rule violated?
    - Did a `~UNTIL` loop hit `MAX:n`?
    - Was a variable undefined?
    - Suggest a fix
 
-7. **Offer next actions:**
+9. **Offer next actions:**
    - "Run again with different input?"
    - "View in HUMAN mode?" → `nodus transpile <file> --mode human`
    - "Run tests?" → `/nodus.test`
