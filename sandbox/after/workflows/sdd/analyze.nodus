@@ -80,10 +80,12 @@
          NOTIFY(human) +msg="Project has >500 files. Recommend Focused or Quick scan. How to proceed? (full / focused / cancel)"
          !BREAK
        ?ELIF $file_count > 50:
-         NOTIFY(human) +msg="Project has $file_count files. Full or Focused scan?"
-         ;; Wait for user direction before proceeding
+         NOTIFY(human) +msg="Project has $file_count files. Full or Focused scan? (full / focused / cancel)"
+         AWAIT(human) → $scan_choice
+         ?IF $scan_choice = "cancel": !BREAK
+         ?IF $scan_choice = "focused": SET($cmd.mode = "focused")
 
-  ;; Route to sub-workflow
+  ;; @ON triggers above fire reactively on $cmd.mode — routing is handled there
 
 ;; ─────────────────────────────────────────────
 ;; SUB-WORKFLOW: sdd.analyze.mode_c (Project Ventilation)
