@@ -1,4 +1,4 @@
-§schema:errors v0.3
+§schema:errors v0.4
 ;; NODUS | Error Code Registry
 ;; Unified registry with severity, category, and human-readable descriptions.
 ;; Mirrors and extends §errors in schema.nodus.
@@ -166,6 +166,34 @@
     detail:     "Test execution completed but assertions were not satisfied."
     resolution: "Review test expectations and workflow logic."
   }
+
+  ;; — CONTROL FLOW — (category: control)
+
+  NODUS:PAUSED {
+    severity:   info
+    category:   control
+    message:    "Workflow paused — awaiting human re-trigger."
+    detail:     "A !PAUSE instruction suspended the workflow. It will not auto-resume."
+    resolution: "Re-trigger the workflow explicitly to continue from the paused point."
+  }
+
+  ;; — RUNTIME (continued) —
+
+  NODUS:COUNTER_OVERFLOW {
+    severity:   error
+    category:   runtime
+    message:    "Counter '$key' exceeded MAX:$max."
+    detail:     "COUNTER() was called with a max limit that has now been reached."
+    resolution: "Reset the counter with COUNTER(key) +increment=-$max, or increase the max."
+  }
+
+  NODUS:GIT_UNAVAILABLE {
+    severity:   error
+    category:   runtime
+    message:    "GIT() command failed — git is not available in this environment."
+    detail:     "The GIT() command requires git to be installed and on PATH."
+    resolution: "Install git, add it to PATH, or remove the GIT() call if git is optional."
+  }
 }
 
 ;; ─────────────────────────────────────────────
@@ -191,8 +219,11 @@
   $ERR.C016 = "NODUS:TEST_FAILED"
   $ERR.C017 = "NODUS:CONFIDENCE_LOW"
   $ERR.C018 = "NODUS:UNDEFINED_MACRO"
+  $ERR.C019 = "NODUS:PAUSED"
+  $ERR.C020 = "NODUS:COUNTER_OVERFLOW"
+  $ERR.C021 = "NODUS:GIT_UNAVAILABLE"
 }
 
 ;; ─────────────────────────────────────────────
-;; END §schema:errors v0.3
+;; END §schema:errors v0.4
 ;; ─────────────────────────────────────────────

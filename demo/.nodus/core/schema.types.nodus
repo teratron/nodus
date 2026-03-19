@@ -1,4 +1,4 @@
-§schema:types v0.3
+§schema:types v0.4
 ;; NODUS | Extended Type Definitions
 ;; Defines composite types, type constraints, and type aliases
 ;; that extend the primitive types declared in schema.nodus.
@@ -102,6 +102,34 @@
     actual:    any
     passed:    bool
   }
+
+  ;; — Workspace Configuration (G014) —
+  workspace_cfg {
+    name:      str         ;; workspace identifier
+    path:      str         ;; relative path to workspace root
+    scope:     list        ;; list of scoped directory paths
+    default:   bool        ;; true if this is the default workspace
+  }
+
+  workspace_config {
+    workspaces: list       ;; list[workspace_cfg]
+    default:    str|null   ;; name of the default workspace (null = no default)
+  }
+
+  ;; — Counter State (G007) —
+  counter_state {
+    key:       str
+    value:     int
+    scope:     str         ;; session | user | global
+    max:       int|null    ;; overflow limit (null = unlimited)
+  }
+
+  ;; — Git Result (G018) —
+  git_result {
+    subcommand: str
+    output:     list       ;; structured lines/entries from git output
+    raw:        str        ;; raw stdout for custom parsing
+  }
 }
 
 ;; ─────────────────────────────────────────────
@@ -125,7 +153,7 @@
 ;; ─────────────────────────────────────────────
 
 §enums {
-  result_status   :: [SUCCESS, PARTIAL, FAILED, ABORTED]
+  result_status   :: [SUCCESS, PARTIAL, FAILED, ABORTED, PAUSED]
   test_status     :: [PASS, FAIL, SKIP, ERROR]
   user_tier       :: [standard, vip, enterprise]
   output_format   :: [plain, markdown, html, json]
@@ -135,5 +163,5 @@
 }
 
 ;; ─────────────────────────────────────────────
-;; END §schema:types v0.3
+;; END §schema:types v0.4
 ;; ─────────────────────────────────────────────

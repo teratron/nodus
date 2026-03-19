@@ -10,13 +10,17 @@
 
 §meta {
   name:       "NODUS Core Schema"
-  version:    "0.3"
+  version:    "0.4"
   status:     "draft"
   language:   "nodus"
-  compatible: ["0.1", "0.2", "0.3"]
+  compatible: ["0.1", "0.2", "0.3", "0.4"]
   author:     "nodus-lang"
   changelog:  "v0.2 — §macros, §testing (@test), QUERY_KB / REMEMBER / RECALL / FORGET
-               v0.3 — §lint rules (E001–E012 errors, W001–W010 warnings, I001–I006 info)"
+               v0.3 — §lint rules (E001–E012 errors, W001–W010 warnings, I001–I006 info)
+               v0.4 — READ_FILE / SCAN_DIR / ENV / DATE / COUNTER / GIT commands;
+                      MOVE / COPY / TRANSPILE / HASH in §commands_system;
+                      MATCHES operator; !HALT / !PAUSE control keywords;
+                      E013 / W011 lint rules; workspace_config / counter_state / git_result types"
 }
 
 ;; ─────────────────────────────────────────────
@@ -210,6 +214,43 @@
     ;; Params are passed into the macro as $in
     ;; Returns the last assigned variable in the macro body
 
+  ;; — FILE SYSTEM —
+  READ_FILE(path:str)                → str|null
+    ;; Read a local file. Resolves relative to project root.
+    ;; Returns null if the file does not exist (never errors).
+    ;; Distinct from FETCH(): READ_FILE is for local paths only.
+    ;; FETCH() is for remote URLs and named sources.
+
+  SCAN_DIR(path:str) +depth=int      → list
+    ;; List files and directories under path.
+    ;; +depth: recursion depth (default: 2, max: 5)
+    ;; Returns list of { name:str, path:str, type:"file"|"dir", size:int }
+    ;; Scope-limited: never traverses above project root.
+
+  ENV(key:str)                       → str|null
+    ;; Read an environment variable by name.
+    ;; Returns null if not set — never errors.
+
+  DATE(format?:str)                  → str
+    ;; Return current date/time as a formatted string.
+    ;; format: ISO8601 (default) | "YYYY-MM-DD" | "HH:MM" | any strftime pattern
+    ;; Use for: document headers, changelog entries, timestamps.
+
+  COUNTER(key:str) +increment=int    → int
+    ;; Increment a named counter in $memory and return the new value.
+    ;; +increment: amount to add (default: 1; negative values allowed for decrement)
+    ;; Counter initialises at 0 on first call.
+    ;; +scope=session|user|global (default: session)
+    ;; +max=int: if counter exceeds max → NODUS:COUNTER_OVERFLOW
+    ;; Use for: "trigger every N invocations", rate limiting, progress tracking.
+
+  GIT(subcommand:str) +args=list     → any
+    ;; Execute a read-only git query against the project repository.
+    ;; Allowed subcommands: log | status | diff | show | ls-files | shortlog
+    ;; !!NEVER run destructive git operations (commit, push, reset, checkout, etc.)
+    ;; Returns structured output (list or obj depending on subcommand).
+    ;; Errors with NODUS:GIT_UNAVAILABLE if git is not available in environment.
+
 }
 
 ;; ─────────────────────────────────────────────
@@ -259,6 +300,27 @@
   EXECUTE_TEST(test:obj) +mock=obj          → obj
     ;; Run a single @test block with mocked commands
     ;; Returns NODUS:TEST_RESULT
+
+  ;; — FILE MUTATION —
+  MOVE(from:str, to:str)                    → bool
+    ;; Move (rename) a file or directory.
+    ;; !!NEVER call without prior user confirmation outside automated archival flows.
+
+  COPY(from:str, to:str)                    → bool
+    ;; Copy a file to a destination path. Destination directory must exist.
+
+  ;; — TRANSFORMATION —
+  TRANSPILE(input:str) +from=str +to=str    → str
+    ;; Convert content between formats.
+    ;; from/to: nodus | human | markdown | json | yaml
+    ;; Primary use: convert NODUS machine format ↔ HUMAN MODE comment format.
+
+  ;; — HASHING —
+  HASH(value:any, algo?:str)                → str
+    ;; Compute a hash of a value or file contents.
+    ;; algo: sha256 (default) | sha1 | md5
+    ;; Use for: checksum verification, integrity checks, deduplication.
+    ;; If value is a str path that exists on disk — hashes the file contents.
 }
 
 ;; ─────────────────────────────────────────────
@@ -355,6 +417,11 @@
   AND         ::  both conditions true
   OR          ::  either condition true
   |           ::  shorthand OR (used in MAX:n | condition)
+  MATCHES     ::  value matches a regular expression pattern (string)
+                  ;; Example: $in.arg MATCHES "^T-[A-Z0-9]+"
+                  ;; Pattern is a standard PCRE regex string.
+                  ;; Case-sensitive by default. Use "(?i)" prefix for case-insensitive.
+                  ;; The runtime evaluates this deterministically — not via LLM inference.
 }
 
 ;; ─────────────────────────────────────────────
@@ -527,6 +594,19 @@
   !BREAK          ::  stop current workflow
   !SKIP           ::  skip current iteration
   !OVERRIDE       ::  explicitly override a !PREF (cannot override !!)
+  !HALT           ::  fatal stop — sets status=FAILED; requires ESCALATE() before use
+                      ;; Distinct from !BREAK: !BREAK = controlled exit (status=ABORTED).
+                      ;; !HALT = unrecoverable error. Orchestrators must NOT auto-resume.
+                      ;; Use for: integrity failures, circular dependencies, fatal pre-flight errors.
+  !PAUSE          ::  suspend workflow; require explicit human re-trigger to resume
+                      ;; Status becomes PAUSED. Orchestrators must NOT auto-resume.
+                      ;; Distinct from WAIT() (time-based) and !BREAK (terminates workflow).
+                      ;; Use for: mandatory approval gates where human input is required.
+                      ;;
+                      ;; Control keyword comparison:
+                      ;;   !BREAK  → status=ABORTED  — orchestrator may resume
+                      ;;   !HALT   → status=FAILED   — no auto-resume; fatal error
+                      ;;   !PAUSE  → status=PAUSED   — no auto-resume; awaiting human
   $               ::  variable prefix
   →               ::  pipeline / assignment operator
   ?IF             ::  conditional branch
@@ -630,6 +710,12 @@
     message: "Workflow name 'name' does not match filename 'filename.nodus'."
     fix:     "Rename file to 'name.nodus' or update §wf declaration."
 
+  E013 :: error
+    rule:    workflow version must be in schema compatible list
+    check:   version string in §wf header is present in schema §meta.compatible array
+    message: "Workflow version '$version' not in schema compatible list $compatible."
+    fix:     "Update §meta.compatible to include '$version', or align the workflow version to a compatible release."
+
   ;; ── WARNINGS — execute but unsafe ─────────
 
   W001 :: warn
@@ -691,6 +777,12 @@
     check:   all files listed in extends: [ ] exist on disk
     message: "Schema extension not found: '$path'. Agent will skip it silently."
     fix:     "Create the file or remove it from extends list."
+
+  W011 :: warn
+    rule:    ~PARALLEL branches should each have independent error handling
+    check:   every branch inside a ~PARALLEL block contains at least one ?IF error check or @err reference
+    message: "~PARALLEL branch $n has no error handling. A branch failure may go undetected until ~JOIN."
+    fix:     "Add '?IF $branch_result = null: ESCALATE(human) !BREAK' or similar inside each ~PARALLEL branch."
 
   ;; ── INFO — style suggestions ───────────────
 

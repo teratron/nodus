@@ -109,7 +109,28 @@ ANALYZE($raw) ~sentiment → $meta
 - `!BREAK` after a branch = stop current workflow immediately after executing that branch
 - `!SKIP` = skip current loop iteration, continue to next
 - Nested conditionals are allowed up to **3 levels deep**. Beyond that: refactor into sub-workflow
-- Condition operators: `<` `>` `=` `!=` `>=` `<=` `CONTAINS` `IN` `NOT`
+- Condition operators: `<` `>` `=` `!=` `>=` `<=` `CONTAINS` `IN` `NOT` `MATCHES`
+
+**`MATCHES` — regex operator.** Value on left; PCRE pattern string on right.
+
+```
+$in.arg MATCHES "^T-[A-Z][0-9]+"   ;; → true | false
+$path   MATCHES "\\.(md|nodus)$"
+```
+
+The runtime evaluates `MATCHES` without LLM involvement — it is a deterministic check.
+Prefix `(?i)` for case-insensitive matching.
+
+**Control-flow keywords — semantic comparison:**
+
+| Keyword  | Status set | Can auto-resume?      | Use when                               |
+|----------|------------|-----------------------|----------------------------------------|
+| `!BREAK` | ABORTED    | Yes (by orchestrator) | Controlled exit — gate, dry-run done   |
+| `!HALT`  | FAILED     | No                    | Fatal unrecoverable error              |
+| `!PAUSE` | PAUSED     | No (human only)       | Mandatory approval gate                |
+
+- `!HALT` requires `ESCALATE()` to be called in the same step before halting.
+- `!PAUSE` suspends the workflow; orchestrators **must not** auto-resume it.
 
 ### `~FOR` — Iteration
 
@@ -150,6 +171,34 @@ ANALYZE($raw) ~sentiment → $meta
 - `~JOIN` waits for all branches to complete before proceeding
 - If any branch fails — `~JOIN` collects available results + error flags, does not abort
 - Naming conflicts at `~JOIN`: last-write wins unless `^strict` is declared
+
+#### §3.12 ~PARALLEL Role Coordination
+
+When `~PARALLEL` is used in a multi-agent context, two roles apply:
+
+*Manager* — the orchestrating agent that:
+
+1. Reads all eligible tasks/branches *before* dispatch
+2. Detects shared-resource conflicts (same file → serialize those branches)
+3. Assigns branches to Developer agents
+4. Re-reads registries before each new assignment to catch mid-run status changes
+5. Receives `PAUSED`/`FAILED` signals from Developers and halts further assignments
+
+*Developer* — each track-owner agent that:
+
+1. Executes its assigned branch in order
+2. Reports `Done`/`Blocked` to the Manager on completion
+3. Never reaches into another track's state
+
+Declare roles in `§runtime.agents`:
+
+```
+agents: { executor: "...", orchestrator: "...", manager: "...", developer: "..." }
+```
+
+Inside `~PARALLEL` blocks, annotate branches with `;; role: manager` / `;; role: developer`
+comments to signal which agent type executes that branch. This is advisory — the runtime
+resolves actual agent assignment from `§runtime.agents`.
 
 ### `+param=val` — Step Modifiers
 
@@ -209,7 +258,7 @@ Every workflow execution must return a structured result:
 NODUS:RESULT {
   workflow: wf:name,
   version:  1.0,
-  status:   SUCCESS | PARTIAL | FAILED | ABORTED,
+  status:   SUCCESS | PARTIAL | FAILED | ABORTED | PAUSED,
   out:      $out value,
   log:      [...steps executed],
   errors:   [...any errors encountered],
@@ -269,11 +318,33 @@ When operating as a NODUS executor, you adopt this identity:
 You are a **node in a network**, not an autonomous reasoner.  
 Your creativity is welcome **within** steps. Your interpretation of the contract is not.
 
+## 11. Stateful Counters
+
+`COUNTER(key, +increment)` returns the current count after incrementing.
+Counters live in `$memory` (same scope rules as `REMEMBER`/`RECALL`).
+
+```
+COUNTER("audit_writes") +increment=1 → $n
+?IF $n >= 5:
+  RUN(wf:sdd.audit)
+  COUNTER("audit_writes") +increment=-5   ;; reset
+```
+
+Use cases:
+
+- **Trigger every N invocations**: `COUNTER("audit") +max=5 → $n; ?IF $n = 5: RUN(wf:audit)`
+- **Rate limiting**: `COUNTER("calls") +max=100 → $n`
+- **Progress tracking**: `COUNTER("phase_steps") → $done`
+
+Counters reset when their scope ends (session scope = conversation end).
+`NODUS:COUNTER_OVERFLOW` fires if `+max` is set and the counter reaches or exceeds it.
+
 ## 9. Versioning
 
 | Version | Status | Notes |
 | --- | --- | --- |
-| v0.1 | 🟡 Draft | Core syntax — subject to change |
+| v0.1 | archived | Core syntax |
+| v0.4 | 🟡 Draft | !HALT/!PAUSE/MATCHES/COUNTER/~PARALLEL roles |
 
 When a new version of AGENTS.md is available — the newer version takes precedence.  
 Version is declared in the file header: `§agents v0.1`
