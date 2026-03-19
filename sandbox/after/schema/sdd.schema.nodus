@@ -15,6 +15,7 @@
   version:    "1.0"
   status:     "draft"
   extends:    "schema.nodus"
+  core_min:   "0.4"            ;; requires core v0.4+ (READ_FILE, SCAN_DIR, ENV, MATCHES, etc.)
   pack:       "sdd"
   author:     "sdd-pack"
 }
@@ -111,9 +112,9 @@
 ;; ─────────────────────────────────────────────
 
 §operators_sdd {
-  MATCHES   ::  value matches regex pattern string
+  ;; MATCHES operator — now defined in schema.nodus §operators (v0.4+).
+  ;; Use MATCHES directly in SDD workflows without any local declaration.
   ;; Example: $in.arg MATCHES "^T-[A-Z0-9]+"
-  ;; NOTE: Proposed addition to core schema.nodus §operators — see GAPS.md G005
 }
 
 ;; ─────────────────────────────────────────────
@@ -154,12 +155,7 @@
     status:    str         ;; "created" | "skipped"
   }
 
-  workspace_cfg {
-    name:      str
-    path:      str
-    scope:     list        ;; scoped directory paths
-    default:   bool
-  }
+  ;; workspace_cfg — now defined in core schema.types.nodus (v0.4+)
 
   task_entry {
     id:        str         ;; T-{phase}{track}{seq}, e.g. T-1A01

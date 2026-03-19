@@ -4,8 +4,78 @@
 ;; Pack:             {{pack}}
 ;; Author:           {{author}}
 ;; Updated:          {{date}}
+;; Extends:          schema.nodus (core v0.4+)
 
-;; Defines custom keywords, rules, and validators for the local project.
+;; ─────────────────────────────────────────────
+;; CUSTOM COMMANDS
+;; Add domain-specific commands here.
+;; These are injected alongside §commands at load time.
+;; ─────────────────────────────────────────────
 
-§macros:
-  MY_MACRO → GEN(text) +tone=friendly
+§commands_{{name}} {
+  MY_COMMAND(input:str) +option=str   → obj
+    ;; Description of what this command does.
+    ;; +option: description of the option (default: "value")
+    ;; Returns an obj with shape: { field_a: str, field_b: bool }
+}
+
+;; ─────────────────────────────────────────────
+;; CUSTOM TYPES
+;; Composite types used by this schema's commands or workflows.
+;; ─────────────────────────────────────────────
+
+§types_{{name}} {
+  my_type {
+    field_a:   str
+    field_b:   int
+    field_c:   bool
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; CUSTOM VALIDATORS
+;; ^rules usable in VALIDATE() calls within workflows
+;; that load this schema extension.
+;; ─────────────────────────────────────────────
+
+§validators_{{name}} {
+  ^my_rule   ::  description of what this rule checks
+               ;; Used as: VALIDATE($value) ^my_rule → $ok
+}
+
+;; ─────────────────────────────────────────────
+;; CUSTOM ERROR CODES
+;; Namespaced to avoid collision with core NODUS: codes.
+;; ─────────────────────────────────────────────
+
+§errors_{{name}} {
+  {{NAME}}:MY_ERROR   ::  short description of when this error fires
+}
+
+;; ─────────────────────────────────────────────
+;; CUSTOM OPERATORS
+;; Add only if core §operators are insufficient.
+;; Prefer using core MATCHES / CONTAINS / IN before adding custom operators.
+;; ─────────────────────────────────────────────
+
+;; §operators_{{name}} {
+;;   MY_OP   ::  description of operator semantics
+;; }
+
+;; ─────────────────────────────────────────────
+;; CUSTOM MACROS
+;; Reusable command chains. Invoked with RUN(@macro:MY_MACRO).
+;; $in is populated from the +param=value modifiers on the RUN() call.
+;; ─────────────────────────────────────────────
+
+§macros_{{name}} {
+  @macro:MY_MACRO {
+    ;; Reusable command chain. $in = params from caller.
+    ANALYZE($in.content) ~sentiment → $meta
+    GEN(reply) +ctx=$meta → $draft
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; END §schema:{{name}} v1.0
+;; ─────────────────────────────────────────────
