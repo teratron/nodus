@@ -1,0 +1,23 @@
+§schema:my_nodus_project v1.0
+;; Project-level schema extension for my-nodus-project.
+;; Imports core types and defines project-specific commands and types.
+
+§extends: .nodus/core/schema.nodus
+
+;; ── Project Commands ──────────────────────────────────────────────────────
+
+§commands: {
+  ;; Add project-specific commands here.
+  ;; Example:
+  ;;   SEND_EMAIL($to, $subject, $body) → $result
+  ;;   POST_SOCIAL($platform, $content) → $result
+}
+
+;; ── Project Types ─────────────────────────────────────────────────────────
+
+§types: {
+  ;; Add project-specific types here.
+  ;; Example:
+  ;;   Channel: enum["twitter", "instagram", "linkedin", "email", "slack"]
+  ;;   Tone:    enum["casual", "formal", "warm", "neutral"]
+}

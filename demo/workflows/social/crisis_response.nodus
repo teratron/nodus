@@ -1,0 +1,75 @@
+§wf:crisis_response v1.0
+;; Workflow:  Crisis Response
+;; Purpose:   Detect reputational crisis signals, escalate to contacts,
+;;            draft a holding statement, and gate publish on human approval.
+;; Pack:      (none — project workflow)
+;; Author:    my-nodus-project
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    .nodus/core/schema.nodus
+  extends: [.nodus/schema/brand_voice.nodus, .nodus/schema/validators.nodus]
+  agents: {
+    executor:     claude-sonnet-4
+    orchestrator: claude-opus-4
+  }
+  mode: production
+}
+
+@ON: $trigger.name = "crisis" → RUN(wf:crisis_response)
+
+!!NEVER:  publish crisis response without human approval
+!!NEVER:  mention specific user names in public statements
+!!ALWAYS: ESCALATE(human) before any external publish
+!!ALWAYS: LOG($out)
+
+@ctx: [
+  .nodus/context/escalation_contacts.json,
+  .nodus/context/approved_phrases.json,
+  .nodus/context/blocked_phrases.json
+]
+
+@in: {
+  signal:    str              ;; description of the crisis event
+  severity:  enum["low", "medium", "high", "critical"] = "medium"
+  channels?: list = ["internal_review"]
+}
+
+@out: $crisis_result
+@err: ESCALATE(human) +msg="Crisis response workflow failed — manual intervention required"
+
+@steps:
+
+  1. ANALYZE($in.signal) ~sentiment ~urgency ~topics → $assessment
+
+  2. NOTIFY($ctx.escalation_contacts.primary) +msg=$assessment +severity=$in.severity
+     ?IF $in.severity = "critical":
+       NOTIFY($ctx.escalation_contacts.executive) +msg=$assessment
+
+  3. GEN(report) +ctx=$assessment +format=markdown +tone="formal" → $draft
+     VALIDATE($draft) ^brand_voice ^blocked_phrases → $valid
+
+  4. ESCALATE(human) +msg="Crisis draft ready for review. Approve to publish?"
+     ;; Hard stop — wait for approval
+
+  5. PUBLISH($draft, "internal_review") → $pub_result
+
+  $crisis_result = { severity: $in.severity, assessment: $assessment, published: $pub_result }
+  LOG($crisis_result)
+
+;; HUMAN MODE
+;; TRIGGER: crisis event or manual call
+;; Always gates on human approval before any external publish.
+;; Escalates to executive contacts on critical severity.
+
+@test:critical_escalates_executive {
+  input:    { signal: "Viral negative post", severity: "critical" }
+  expected: { status = ABORTED }
+  mock: {
+    ANALYZE: { sentiment: "negative", urgency: "high" },
+    GEN: "We are aware and investigating.",
+    VALIDATE: { ok: true },
+    ESCALATE: "PENDING_APPROVAL"
+  }
+  tags: [smoke, crisis, guard]
+}

@@ -1,0 +1,17 @@
+{
+  "_nodus": "Blocked phrases that must never appear in published content. Enforced by validators.",
+  "competitors": [
+    "unlike CompetitorX",
+    "better than CompetitorY"
+  ],
+  "legal_risk": [
+    "guaranteed results",
+    "100% success",
+    "best in the world"
+  ],
+  "tone_violations": [
+    "you must",
+    "obviously",
+    "as everyone knows"
+  ]
+}

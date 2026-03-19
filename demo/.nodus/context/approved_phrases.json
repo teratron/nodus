@@ -1,0 +1,18 @@
+{
+  "_nodus": "Pre-approved phrases for content generation. Used by brand_voice validators.",
+  "greetings": [
+    "Thanks for reaching out",
+    "We appreciate your support",
+    "Great to hear from you"
+  ],
+  "sign_offs": [
+    "— The Team",
+    "With appreciation",
+    "Stay connected"
+  ],
+  "cta": [
+    "Learn more",
+    "Get started",
+    "See how it works"
+  ]
+}

@@ -1,0 +1,64 @@
+§wf:ticket_triage v1.0
+;; Workflow:  Support Ticket Triage
+;; Purpose:   Classify incoming support requests by severity and topic,
+;;            route to the appropriate team, and generate an auto-reply.
+;; Pack:      (none — project workflow)
+;; Author:    my-nodus-project
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    .nodus/core/schema.nodus
+  extends: [.nodus/schema/brand_voice.nodus, .nodus/schema/validators.nodus]
+  agents: {
+    executor: claude-sonnet-4
+  }
+  mode: production
+}
+
+@ON: $trigger.name = "support_request" → RUN(wf:ticket_triage)
+
+!!NEVER:  send auto-reply without VALIDATE
+!!ALWAYS: LOG($out)
+
+@in: {
+  ticket_id:  str
+  subject:    str
+  body:       str
+  user_email: str
+}
+
+@out: $triage_result
+@err: ESCALATE(human) +msg="Ticket triage failed for $in.ticket_id"
+
+@steps:
+
+  1. ANALYZE($in.body, $in.subject) ~intent ~sentiment ~topics → $classification
+     ;; classification: { category, severity, team, needs_human: bool }
+
+  2. ?IF $classification.severity = "critical" OR $classification.needs_human:
+       ESCALATE(human) +msg="Ticket $in.ticket_id requires immediate attention"
+       !BREAK
+
+  3. GEN(report) +ctx=$classification +format=markdown → $auto_reply
+     VALIDATE($auto_reply) ^content_length ^brand_voice → $valid
+
+  4. PUBLISH($auto_reply, "email") +to=$in.user_email → $sent
+
+  $triage_result = { ticket_id: $in.ticket_id, category: $classification.category, sent: $sent }
+  LOG($triage_result)
+
+;; HUMAN MODE
+;; TRIGGER: support_request event
+;; Classifies ticket and sends auto-reply. Critical tickets always escalate.
+
+@test:normal_ticket_auto_reply {
+  input:    { ticket_id: "T-001", subject: "Billing question", body: "When is my invoice due?", user_email: "user@example.com" }
+  expected: { status = SUCCESS, out.category = "billing" }
+  mock: {
+    ANALYZE: { category: "billing", severity: "low", needs_human: false },
+    GEN: "Hi, your invoice is due on the 1st of each month.",
+    VALIDATE: { ok: true },
+    PUBLISH: { ok: true }
+  }
+  tags: [smoke, triage]
+}

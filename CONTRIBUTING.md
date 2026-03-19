@@ -102,7 +102,6 @@ my-project/                        ← any existing project
 │   ├── context/                   ← static context files loaded via @ctx
 │   │   ├── brand_voice.md
 │   │   └── tone_guidelines.md
-│   ├── config.nodus               ← business logic: rules, triggers, constants
 │   ├── config.json                ← infrastructure: models, API keys, webhooks
 │   └── .cache/                    ← generated at runtime (gitignore)
 │       └── nodus.lock
@@ -112,6 +111,7 @@ my-project/                        ← any existing project
 │   ├── social/
 │   └── support/
 │
+├── config.nodus                   ← business logic: rules, triggers, constants
 ├── logs/                          ← execution logs (NODUS:RESULT objects)
 └── tests/                         ← workflow test cases (.test.json)
 ```
@@ -347,8 +347,8 @@ nodus init
     │       .cache/           ← empty, generated at runtime
     │
     ├── 3. scaffold config files
-    │       config.json       ← interactive wizard or defaults
-    │       config.nodus      ← base !! rules
+    │       .nodus/config.json ← interactive wizard or defaults
+    │       config.nodus       ← base !! rules (at project root)
     │
     ├── 4. update .gitignore
     │       + .nodus/core/

@@ -14,9 +14,9 @@
 §runtime: {
   core:    .nodus/core/schema.nodus
   extends: [
-    ./schema/schema.nodus,
-    ./schema/brand_voice.nodus,
-    ./schema/validators.nodus
+    .nodus/schema/schema.nodus,
+    .nodus/schema/brand_voice.nodus,
+    .nodus/schema/validators.nodus
   ]
   agents: {
     executor:     claude-sonnet-4
@@ -108,15 +108,15 @@
 ;; ─────────────────────────────────────────────
 ;; GLOBAL CONTEXT DECLARATIONS
 ;; Context files available to all workflows via @ctx[key].
-;; Keys must match entries in nodus.config.json → context.
+;; Keys must match entries in .nodus/config.json → context.
 ;; ─────────────────────────────────────────────
 
 §context {
-  brand_voice:         ./context/brand_voice.md
-  tone_guidelines:     ./context/tone_guidelines.md
-  escalation_contacts: ./context/escalation_contacts.json
-  approved_phrases:    ./context/approved_phrases.json
-  blocked_phrases:     ./context/blocked_phrases.json
+  brand_voice:         .nodus/context/brand_voice.md
+  tone_guidelines:     .nodus/context/tone_guidelines.md
+  escalation_contacts: .nodus/context/escalation_contacts.json
+  approved_phrases:    .nodus/context/approved_phrases.json
+  blocked_phrases:     .nodus/context/blocked_phrases.json
 }
 
 ;; ─────────────────────────────────────────────

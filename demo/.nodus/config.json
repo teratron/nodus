@@ -113,11 +113,11 @@
     }
   },
   "context": {
-    "brand_voice": "./context/brand_voice.md",
-    "tone_guidelines": "./context/tone_guidelines.md",
-    "escalation_contacts": "./context/escalation_contacts.json",
-    "approved_phrases": "./context/approved_phrases.json",
-    "blocked_phrases": "./context/blocked_phrases.json"
+    "brand_voice": ".nodus/context/brand_voice.md",
+    "tone_guidelines": ".nodus/context/tone_guidelines.md",
+    "escalation_contacts": ".nodus/context/escalation_contacts.json",
+    "approved_phrases": ".nodus/context/approved_phrases.json",
+    "blocked_phrases": ".nodus/context/blocked_phrases.json"
   },
   "packs": [
     {

@@ -1,0 +1,21 @@
+§schema:validators v1.0
+;; Custom validation rules for content workflows.
+
+§extends: .nodus/schema/schema.nodus
+
+§validators: {
+  ;; Content length per channel (enforced before PUBLISH)
+  content_length: {
+    twitter:   { max: 280 }
+    instagram: { max: 2200 }
+    linkedin:  { max: 3000 }
+    email:     { max: null }
+    slack:     { max: null }
+  }
+
+  ;; Required fields before any PUBLISH call
+  publish_guard: {
+    require: [$content, $channel, $tone]
+    before:  PUBLISH
+  }
+}

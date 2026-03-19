@@ -1,0 +1,18 @@
+{
+  "_nodus": "Escalation contact list. Referenced via @ctx in crisis-response workflows.",
+  "primary": {
+    "name": "Head of Communications",
+    "email": "comms@example.com",
+    "slack": "@comms-lead"
+  },
+  "legal": {
+    "name": "Legal Team",
+    "email": "legal@example.com",
+    "slack": "@legal"
+  },
+  "executive": {
+    "name": "CEO",
+    "email": "ceo@example.com",
+    "notify_threshold": "critical"
+  }
+}

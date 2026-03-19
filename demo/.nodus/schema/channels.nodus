@@ -1,0 +1,19 @@
+§schema:channels v1.0
+;; Channel type definitions and routing rules.
+
+§extends: .nodus/schema/schema.nodus
+
+§types: {
+  Channel: enum["twitter", "instagram", "linkedin", "email", "slack", "internal_review"]
+
+  ChannelConfig: {
+    max_len:  int | null
+    format:   enum["plain", "html", "markdown"]
+    tone:     enum["casual", "formal", "warm", "neutral"]
+  }
+}
+
+§commands: {
+  ;; Route content to the appropriate channel adapter
+  ROUTE_CHANNEL($channel: Channel, $content: str) → $delivery_result
+}

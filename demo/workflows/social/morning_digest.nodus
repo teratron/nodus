@@ -1,0 +1,61 @@
+§wf:morning_digest v1.0
+;; Workflow:  Morning Digest
+;; Purpose:   Compile overnight mentions, engagement metrics, and top stories
+;;            into a daily digest posted to Slack and the internal review channel.
+;; Pack:      (none — project workflow)
+;; Author:    my-nodus-project
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    .nodus/core/schema.nodus
+  extends: [.nodus/schema/brand_voice.nodus, .nodus/schema/channels.nodus]
+  agents: {
+    executor: claude-sonnet-4
+  }
+  mode: production
+}
+
+@ON: $trigger.name = "morning_schedule" → RUN(wf:morning_digest)
+
+!!NEVER:  publish without VALIDATE
+!!ALWAYS: LOG($out)
+
+@in: {
+  date?:     str = null   ;; defaults to today
+  channels?: list = ["slack", "internal_review"]
+}
+
+@out: $digest_result
+@err: ESCALATE(human) +msg="Morning digest failed"
+
+@steps:
+
+  1. FETCH($in.date ?? TODAY()) ~metrics ~mentions → $overnight_data
+
+  2. GEN(report) +ctx=$overnight_data +format=markdown → $digest
+     VALIDATE($digest) ^content_length ^brand_voice → $valid
+
+  3. ~FOR $ch IN $in.channels:
+       PUBLISH($digest, $ch) → $pub_result
+       APPEND($pub_result → $results)
+     ~END
+
+  $digest_result = { date: $in.date, channels: $in.channels, results: $results }
+  LOG($digest_result)
+
+;; HUMAN MODE
+;; TRIGGER: morning_schedule (cron or manual)
+;; Compiles overnight data into a digest and posts to Slack + internal review.
+;; Skips channels with failed auth — does not halt.
+
+@test:happy_path {
+  input:    { date: "2026-03-19", channels: ["slack"] }
+  expected: { status = SUCCESS, out.results[0].channel = "slack" }
+  mock: {
+    FETCH: { mentions: 12, top_story: "Example mention" },
+    GEN:   "## Morning Digest — 2026-03-19\n12 mentions overnight.",
+    VALIDATE: { ok: true },
+    PUBLISH: { ok: true, channel: "slack" }
+  }
+  tags: [smoke, digest]
+}

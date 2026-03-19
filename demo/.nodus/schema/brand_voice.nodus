@@ -1,0 +1,17 @@
+§schema:brand_voice v1.0
+;; Brand voice schema extension.
+;; Defines tone constants and validation rules for content generation.
+
+§extends: .nodus/schema/schema.nodus
+
+§constants: {
+  $BRAND.TONE_DEFAULT    = "warm"
+  $BRAND.TONE_ENTERPRISE = "formal"
+  $BRAND.MAX_HASHTAGS    = 5
+  $BRAND.SIGN_OFF        = "— The Team"
+}
+
+!!NEVER:  use ALL_CAPS in customer-facing content
+!!NEVER:  mention competitor names directly
+!!ALWAYS: end public posts with $BRAND.SIGN_OFF IF $channel = linkedin
+!PREF:    brevity OVER completeness IF $channel = twitter

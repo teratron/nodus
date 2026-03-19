@@ -1,0 +1,60 @@
+§wf:order_confirm v1.0
+;; Workflow:  Order Confirmation
+;; Purpose:   Send a branded order confirmation email and optional Slack
+;;            notification to the internal fulfillment channel.
+;; Pack:      (none — project workflow)
+;; Author:    my-nodus-project
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    .nodus/core/schema.nodus
+  extends: [.nodus/schema/brand_voice.nodus, .nodus/schema/validators.nodus]
+  agents: {
+    executor: claude-sonnet-4
+  }
+  mode: production
+}
+
+@ON: $trigger.name = "new_order" → RUN(wf:order_confirm)
+
+!!NEVER:  publish without VALIDATE
+!!ALWAYS: LOG($out)
+
+@in: {
+  order_id:    str
+  customer:    { name: str, email: str }
+  items:       list
+  total:       str
+  estimated:   str
+}
+
+@out: $confirm_result
+@err: ESCALATE(human) +msg="Order confirmation failed for $in.order_id"
+
+@steps:
+
+  1. GEN(report) +ctx=$in +format=html +tone="warm" → $email_body
+     VALIDATE($email_body) ^content_length ^brand_voice → $valid
+
+  2. PUBLISH($email_body, "email") +to=$in.customer.email
+                                   +subject="Your order $in.order_id is confirmed" → $sent_email
+
+  3. NOTIFY("slack") +msg="New order $in.order_id — $in.total — $in.customer.name"
+
+  $confirm_result = { order_id: $in.order_id, email_sent: $sent_email.ok }
+  LOG($confirm_result)
+
+;; HUMAN MODE
+;; TRIGGER: new_order event
+;; Sends branded HTML confirmation email and posts to Slack fulfillment channel.
+
+@test:sends_confirmation_email {
+  input:    { order_id: "ORD-999", customer: { name: "Alice", email: "alice@example.com" }, items: ["Widget"], total: "$49.00", estimated: "3-5 days" }
+  expected: { status = SUCCESS, out.email_sent = true }
+  mock: {
+    GEN: "<p>Hi Alice, your order ORD-999 is confirmed.</p>",
+    VALIDATE: { ok: true },
+    PUBLISH: { ok: true }
+  }
+  tags: [smoke, ecommerce]
+}
