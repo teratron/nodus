@@ -1,4 +1,4 @@
-§schema:errors v0.6
+§schema:errors v0.7
 ;; NODUS | Error Code Registry
 ;; Unified registry with severity, category, and human-readable descriptions.
 ;; Mirrors and extends §errors in schema.nodus.
@@ -213,6 +213,16 @@
     resolution: "Handle this case with ?IF $decision = false: ... before using +strict=true."
   }
 
+  ;; — CONTROL FLOW (continued) —
+
+  NODUS:SWITCH_NO_MATCH {
+    severity:   warn
+    category:   control
+    message:    "?SWITCH value did not match any arm and no * wildcard declared."
+    detail:     "The ?SWITCH block was skipped entirely. If this is unintentional, add a * arm."
+    resolution: "Add a * → ESCALATE(human) or * → ... fallback arm to ?SWITCH."
+  }
+
 }
 
 ;; ─────────────────────────────────────────────
@@ -243,8 +253,9 @@
   $ERR.C021 = "NODUS:GIT_UNAVAILABLE"
   $ERR.C022 = "NODUS:DIALOG_TIMEOUT"
   $ERR.C023 = "NODUS:DIALOG_REJECTED"
+  $ERR.C024 = "NODUS:SWITCH_NO_MATCH"
 }
 
 ;; ─────────────────────────────────────────────
-;; END §schema:errors v0.6
+;; END §schema:errors v0.7
 ;; ─────────────────────────────────────────────

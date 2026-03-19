@@ -65,10 +65,31 @@ Fundamental constraints that apply to all agents and interactions:
 
 | Command | Example | Description |
 | :--- | :--- | :--- |
-| `LOG(value)` | `LOG($out)` | Commit to audit trail (locks value). |
+| `LOG(value)` | `LOG($out)` | Commit to audit trail (locks `$out`). |
 | `TONE(value)` | `TONE(warm)` | Set the response tone for subsequent steps. |
-| `WAIT(condition)` | `WAIT(5s)` | Pause execution. |
-| `DEBUG(value)` | `DEBUG($meta)` | Output debug info (non-production). |
+| `WAIT(duration)` | `WAIT(5) +unit=s` | Pause execution. unit: ms \| s \| min. |
+| `DEBUG(value)` | `DEBUG($meta)` | Output debug info (non-production only). |
+| `COUNTER(key)` | `COUNTER("hits") +increment=1 → $n` | Increment a named counter; returns new value. |
+
+### File System Commands
+
+| Command | Example | Description |
+| :--- | :--- | :--- |
+| `READ_FILE(path)` | `READ_FILE(".design/INDEX.md") → $content` | Read a local file; returns null if absent. |
+| `SCAN_DIR(path)` | `SCAN_DIR(".") +depth=2 → $files` | List files/dirs; returns `{name, path, type, size}[]`. |
+| `ENV(key)` | `ENV("API_KEY") → $key` | Read an environment variable; returns null if unset. |
+| `DATE(format?)` | `DATE("YYYY-MM-DD") → $today` | Current date/time. Default: ISO 8601. |
+| `GIT(subcommand)` | `GIT("log") +args=["--oneline","-10"] → $log` | Read-only git query (log/status/diff/show). |
+
+### Human Interaction Commands
+
+| Command | Example | Description |
+| :--- | :--- | :--- |
+| `ASK(prompt)` | `ASK("Proceed?") +type=confirm → $ok` | Block and ask the human a question. Resumes on answer. |
+| `CONFIRM(content)` | `CONFIRM($plan) +msg="Review:" → $ok` | Present content and request approval decision. |
+
+`ASK` types: `str` \| `bool` \| `confirm` \| `choice` \| `multi_choice`.
+`CONFIRM` returns `bool` by default; returns the chosen label string when `+actions` is set.
 
 ## 3. Reserved Variables
 
@@ -123,11 +144,58 @@ Valid values for `TONE()`, `GEN() +tone=`, and `!PREF: tone =`:
 
 `warm`, `neutral`, `formal`, `casual`, `urgent`, `empathetic`, `brand`
 
+## 6. Operators
+
+### Condition Operators
+
+`=` `!=` `<` `>` `<=` `>=` `CONTAINS` `IN` `NOT` `AND` `OR`
+
+### `MATCHES` — Regex
+
+```nodus
+$in.arg MATCHES "^T-[A-Z0-9]+"   ;; → true | false
+$path   MATCHES "(?i)\\.(md|nodus)$"
+```
+
+Evaluated deterministically by the runtime — not via LLM. PCRE syntax. Use `(?i)` prefix for case-insensitive.
+
+### `?.` — Optional Chaining
+
+Short-circuits to `null` if any segment is null. Does not trigger `NODUS:UNDEFINED_VAR`.
+
+```nodus
+$user?.preferences?.theme
+ANALYZE($ws_config?.workspaces) → $scope
+```
+
+### `WHERE / FIRST / LAST` — Collection Expressions
+
+```nodus
+$items WHERE $it.active = true          → $active
+FIRST($log WHERE $it.level = "error")  → $first_error
+LAST($collection)                       → $tail
+```
+
+`$it` is the implicit iteration variable inside `WHERE` conditions.
+
 ## 7. Error Codes
 
-| Code | Trigger |
-| :--- | :--- |
-| `NODUS:RULE_VIOLATION` | A `!!` absolute rule was violated. |
-| `NODUS:PARSE_ERROR` | Workflow file failed to parse. |
-| `NODUS:MAX_REACHED` | `~UNTIL` loop hit `MAX:n` limit. |
-| `NODUS:EXECUTION_FAILED` | A step failed at runtime. |
+| Code | Category | Trigger |
+| :--- | :--- | :--- |
+| `NODUS:RULE_VIOLATION` | runtime | A `!!` absolute rule was violated. |
+| `NODUS:RULE_CONFLICT` | runtime | Two `!!` rules contradict each other. |
+| `NODUS:PARSE_ERROR` | parse | Workflow file failed to parse. |
+| `NODUS:NO_SCHEMA` | parse | `schema.nodus` not found — base mode. |
+| `NODUS:SCHEMA_MISMATCH` | parse | Schema version ≠ workflow version. |
+| `NODUS:NO_TRIGGER` | runtime | No `@ON` condition matched the input. |
+| `NODUS:UNDEFINED_VAR` | runtime | Referenced `$var` has no value. |
+| `NODUS:UNDEFINED_CMD` | runtime | Unknown command encountered. |
+| `NODUS:MAX_REACHED` | runtime | `~UNTIL` or `~FOR` hit `MAX:n` limit. |
+| `NODUS:ROUTE_NOT_FOUND` | routing | `ROUTE(wf:name)` target does not exist. |
+| `NODUS:VALIDATION_FAILED` | validation | `VALIDATE()` returned false. |
+| `NODUS:UNHANDLED_ERROR` | runtime | Error with no `@err` handler. |
+| `NODUS:SWITCH_NO_MATCH` | control | `?SWITCH` had no matching arm and no `*` wildcard. |
+| `NODUS:PAUSED` | control | `!PAUSE` suspended the workflow. |
+| `NODUS:COUNTER_OVERFLOW` | runtime | `COUNTER()` reached `+max` limit. |
+| `NODUS:DIALOG_TIMEOUT` | dialog | `ASK()` or `CONFIRM()` timed out. |
+| `NODUS:DIALOG_REJECTED` | dialog | `CONFIRM()` rejected with `+strict=true`. |

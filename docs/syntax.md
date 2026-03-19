@@ -127,7 +127,7 @@ ANALYZE($raw) ~sentiment ~intent → $meta
 
 ### `?IF / ?ELIF / ?ELSE` — Conditionals
 
-Supports operators: `<`, `>`, `=`, `!=`, `CONTAINS`, `IN`, `NOT`.
+Supports operators: `<`, `>`, `=`, `!=`, `>=`, `<=`, `CONTAINS`, `IN`, `NOT`, `AND`, `OR`, `MATCHES`.
 
 ```nodus
 ?IF $sentiment < 0 → TONE(empathetic)
@@ -135,10 +135,33 @@ Supports operators: `<`, `>`, `=`, `!=`, `CONTAINS`, `IN`, `NOT`.
 ?ELSE → TONE(warm)
 ```
 
-### `!BREAK` / `!SKIP` — Execution Control
+Nested conditionals are allowed up to 3 levels deep. Beyond that, extract into a sub-workflow.
 
-- `!BREAK` — stop execution of the current workflow immediately.
-- `!SKIP` — skip the current loop iteration and continue.
+### `?SWITCH` — Multi-Branch Dispatch
+
+Cleaner alternative to `?IF / ?ELIF` chains when branching on a single scalar value.
+
+```nodus
+?SWITCH $cmd.mode:
+  "ventilate" → RUN(wf:mode_c)
+  "delta"     → RUN(wf:mode_b)
+  "focused"   → RUN(wf:mode_d)
+  *           → ESCALATE(human) +msg="Unknown mode: $cmd.mode"
+```
+
+- Arms are evaluated top-to-bottom; first match wins, no fallthrough.
+- `*` is the wildcard (default) arm — optional but strongly recommended (lint W012).
+- If no arm matches and `*` is absent — emits `NODUS:SWITCH_NO_MATCH` (warn), continues.
+- For multi-step arms: use `ROUTE(wf:name)`.
+
+### `!BREAK` / `!SKIP` / `!HALT` / `!PAUSE` — Execution Control
+
+| Keyword | Status set | Can auto-resume? | Use when |
+| :--- | :--- | :--- | :--- |
+| `!BREAK` | ABORTED | Yes (orchestrator) | Controlled exit — gate done, dry-run done |
+| `!SKIP` | — | — | Skip current loop iteration |
+| `!HALT` | FAILED | No | Fatal unrecoverable error |
+| `!PAUSE` | PAUSED | No (human only) | Mandatory approval gate |
 
 ```nodus
 ?IF $meta.sentiment < 0.2 → ROUTE(wf:crisis) !BREAK
@@ -146,7 +169,17 @@ Supports operators: `<`, `>`, `=`, `!=`, `CONTAINS`, `IN`, `NOT`.
     ?IF $item.skip = true → !SKIP
     PROCESS($item) → $result
 ~END
+
+;; fatal stop — requires ESCALATE() in same step
+ESCALATE(human) +msg="Integrity check failed"
+!HALT
+
+;; hard stop awaiting human re-trigger
+!PAUSE
 ```
+
+`!HALT` requires `ESCALATE()` to be called in the same step.
+`!PAUSE` suspends the workflow; orchestrators **must not** auto-resume it.
 
 ### `~FOR / ~UNTIL` — Loops
 
@@ -163,6 +196,34 @@ All loops must be closed with `~END`. `~UNTIL` requires `MAX:n`.
 ~END
 ```
 
+### `~MAP` — Collection Transform
+
+Single-line transform: applies one command to every item and collects results.
+
+```nodus
+~MAP $specs:     SCORE($it) ^confidence    → $scores
+~MAP $dirs:      ANALYZE($it) ~topics      → $topic_lists
+```
+
+- `$it` is the implicit current item.
+- If collection is empty — result is `[]`, never errors.
+- For multi-step transforms per item, use `~FOR / APPEND` instead.
+
+### `~RETRY:n` — Step-Level Retry
+
+Re-executes a step up to `n` times on failure before propagating the error.
+
+```nodus
+FETCH($url) ~RETRY:3 → $raw
+FETCH($url) ~RETRY:3 +backoff=2 → $raw
+GEN(report) ~RETRY:2 +retry_on=null → $draft
+```
+
+- `n` is mandatory — `~RETRY` without `:n` is lint error E014. Maximum: 10.
+- Default retry condition: `error`. Use `+retry_on=null` or `+retry_on=both` as needed.
+- `+backoff=int`: seconds to wait between attempts (default: 0).
+- After `n` retries without success — step fails, triggers `@err` normally.
+
 ### `~PARALLEL / ~JOIN` — Concurrency
 
 Executes branches concurrently. `~JOIN` collects all outputs into a single object.
@@ -175,7 +236,7 @@ Executes branches concurrently. `~JOIN` collects all outputs into a single objec
 ~JOIN → $meta
 ```
 
-## 4. Variables & Constants
+## 4. Variables, Constants & Expressions
 
 ### `$` — Variables
 
@@ -184,6 +245,50 @@ Variables are assigned via `→` and scoped to the workflow. See [schema.md](sch
 ```nodus
 $raw, $meta, $out, $error, $draft
 ```
+
+### `$.` — Optional Chaining
+
+Short-circuits to `null` if any segment in the path is `null` or undefined.
+Does **not** trigger `NODUS:UNDEFINED_VAR`.
+
+```nodus
+ANALYZE($ws_config?.workspaces) → $scope
+?IF $user?.preferences?.theme = "dark":
+NOTIFY(human) +msg="Agent: $session?.agent_id"
+```
+
+Combine with `??` null coalescing: `$user?.tier ?? "free"`
+
+### `WHERE / FIRST / LAST` — Collection Expressions
+
+Inline filtering and access without a `~FOR` block.
+
+```nodus
+;; filter — returns a new list; $it is the implicit item variable
+$delta.covered WHERE $it.drift_score > 0.3 → $sync_candidates
+$log WHERE $it.level = "error"             → $errors
+
+;; access — returns a single item or null
+FIRST($items WHERE $it.active = true) → $first_active
+LAST($log WHERE $it.level = "error")  → $last_error
+FIRST($collection) → $head
+```
+
+Returns `[]` (WHERE) or `null` (FIRST/LAST) when nothing matches — never errors.
+For complex multi-step filtering, use `~FOR` instead.
+
+### String Interpolation
+
+`$var` and `$obj.field` are expanded inside string literals before the step executes.
+
+```nodus
+NOTIFY(human) +msg="Found $gaps.count issues in $workspace"
+ASK("Review $spec.name version $spec.version?") → $ok
+```
+
+- Resolved by the runtime — not by LLM.
+- Works in: `+msg`, `+hint`, `NOTIFY()`, `ASK()`, `CONFIRM()`, `GEN()` string params.
+- Escape with `\$` to suppress: `"cost: \$5"` → outputs `"cost: $5"`.
 
 ### `$CFG.*` — Global Constants
 
@@ -207,12 +312,10 @@ Declared in the `§runtime:` block. Resolved once when the agent boots.
 
 ```nodus
 §runtime: {
-  core:    .nodus/core/schema.nodus          ;; required — base vocabulary
-  extends: [
-    .nodus/schema/brand_voice.nodus          ;; project schema extensions
-    .nodus/extensions/nodus-social@1.0/schema.nodus  ;; installed pack schema
-  ]
-  agents:  { executor: claude-sonnet-4 }
+  core:    .nodus/core/schema.nodus
+  extends: [.nodus/schema/sdd.schema.nodus]
+  @needs:  [§commands_sdd, §macros_sdd, §types_sdd]
+  agents:  { executor: claude-sonnet-4, orchestrator: claude-opus-4 }
   mode:    production
 }
 ```
@@ -220,9 +323,29 @@ Declared in the `§runtime:` block. Resolved once when the agent boots.
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `core:` | path | Path to `schema.nodus`. Must resolve or execution halts (E011). |
-| `extends:` | path[] | Additional schema files loaded in order. Missing files raise W011. |
+| `extends:` | path[] | Additional schema files loaded in order. Missing files raise W010. |
+| `@needs:` | section[] | Selective loading from `extends:` schemas. Omit to load everything. |
 | `agents:` | obj | Model bindings for executor and orchestrator roles. |
 | `mode:` | enum | `production` \| `development` \| `debug` \| `dry_run` |
+
+### `@needs:` — Selective Extension Loading
+
+Declares which sections of an `extends:` schema to load. Reduces schema context per execution.
+
+```nodus
+;; flat form — single extension
+@needs: [§commands_sdd, §macros_sdd, §types_sdd]
+
+;; keyed form — multiple extensions
+@needs: {
+  "sdd.schema.nodus":  [§commands_sdd, §macros_sdd],
+  "chat.schema.nodus": [§commands_chat]
+}
+```
+
+- Omit `@needs:` to load the full extension schema (backward-compatible default).
+- `§meta` and all `!!rules` of every extension are **always** loaded regardless.
+- Unknown section → `NODUS:SCHEMA_MISMATCH` warning, loading continues.
 
 ### Context File Loading `@ctx:`
 
@@ -335,21 +458,31 @@ ANALYZE($raw) ~sentiment ~urgency ~entities
 | `@err:` | Error handler | catch |
 | `@test:` | Inline test block | unit test |
 | `@macro:` | Reusable command chain definition | function def |
+| `@needs:` | Selective extension section loading | selective import |
 | `!!` | Absolute rule — inviolable | hard constraint |
 | `!PREF:` | Soft preference — default behavior | weight / default |
-| `!BREAK` | Stop current workflow | break |
+| `!BREAK` | Controlled exit — status=ABORTED | break |
 | `!SKIP` | Skip current loop iteration | continue |
+| `!HALT` | Fatal stop — status=FAILED; requires ESCALATE() | panic |
+| `!PAUSE` | Suspend workflow — status=PAUSED; human re-trigger only | suspend |
 | `$` | Variable | variable |
 | `$CFG.*` | Global project constant (from config.nodus) | const |
 | `→` | Pipeline / assignment | pipe / = |
+| `?.` | Optional chaining — null-safe path access | `?.` (JS/Kotlin) |
 | `?IF` `?ELIF` `?ELSE` | Conditionals | if / else |
+| `?SWITCH` | Multi-branch dispatch on a scalar value | switch / match |
+| `WHERE` | Inline collection filter (implicit `$it`) | `.filter()` |
+| `FIRST` `LAST` | First / last item, optional `WHERE` filter | `.first()` |
 | `~FOR` | Loop over collection | for loop |
 | `~UNTIL` | Loop until condition (requires `MAX:n`) | while loop |
+| `~MAP` | Single-line collection transform (implicit `$it`) | `.map()` |
+| `~RETRY:n` | Step-level retry on failure | retry decorator |
 | `~PARALLEL` `~JOIN` | Concurrent branches | async / await |
 | `~END` | Close a block | `}` |
 | `+param=val` | Named argument modifier | kwarg |
 | `^rule` | Validation constraint | assert |
 | `~flag` | Analysis extractor | flag |
+| `"$var"` | String interpolation in literals | f-string |
 | `wf:name` | Workflow reference (`ROUTE` / `EXECUTE` / `@ON`) | module ref |
 | `@macro:name` | Macro call reference (`RUN`) | function call |
 | `;` `;;` | Comment | `//` |

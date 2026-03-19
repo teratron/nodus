@@ -1,4 +1,4 @@
-§schema:nodus v0.6
+§schema:nodus v0.7
 ;;  NODUS Core Schema
 ;;  This file is the vocabulary contract for all NODUS workflows.
 ;;  Load this file FIRST into any agent context before executing any .nodus workflow.
@@ -10,10 +10,10 @@
 
 §meta {
   name:       "NODUS Core Schema"
-  version:    "0.6"
+  version:    "0.7"
   status:     "draft"
   language:   "nodus"
-  compatible: ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6"]
+  compatible: ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7"]
   author:     "nodus-lang"
   changelog:  "v0.2 — §macros, §testing (@test), QUERY_KB / REMEMBER / RECALL / FORGET
                v0.3 — §lint rules (E001–E012 errors, W001–W010 warnings, I001–I006 info)
@@ -26,7 +26,11 @@
                       @needs: directive for selective extension loading
                v0.6 — ASK / CONFIRM human interaction commands;
                       dialog_type / dialog_result types;
-                      DIALOG_TIMEOUT / DIALOG_REJECTED errors"
+                      DIALOG_TIMEOUT / DIALOG_REJECTED errors
+               v0.7 — ?SWITCH multi-branch dispatch; ~RETRY step-level retry;
+                      ?. optional chaining; WHERE / FIRST / LAST collection expressions;
+                      ~MAP collection transform; string interpolation ($var in strings);
+                      SWITCH_NO_MATCH error; W012 / E014 lint rules"
 }
 
 ;; ─────────────────────────────────────────────
@@ -465,6 +469,7 @@
   NODUS:KB_UNAVAILABLE      ::  QUERY_KB() index not reachable or not configured
   NODUS:MEMORY_FAILED       ::  REMEMBER() or RECALL() storage operation failed
   NODUS:TEST_FAILED         ::  one or more @test assertions did not pass
+  NODUS:SWITCH_NO_MATCH     ::  ?SWITCH value did not match any arm and no * wildcard declared
 }
 
 ;; ─────────────────────────────────────────────
@@ -489,6 +494,25 @@
                   ;; Pattern is a standard PCRE regex string.
                   ;; Case-sensitive by default. Use "(?i)" prefix for case-insensitive.
                   ;; The runtime evaluates this deterministically — not via LLM inference.
+  ?.          ::  optional chaining — short-circuits to null if any segment is null/undefined
+                  ;; Does NOT trigger NODUS:UNDEFINED_VAR — null is a valid result.
+                  ;; Example: $ws_config?.workspaces?.count
+                  ;; Example: ANALYZE($user?.preferences?.context) → $meta
+                  ;; Works in conditions: ?IF $obj?.score > 0.5:
+                  ;; Chain as deep as needed: $a?.b?.c?.d
+  WHERE       ::  inline collection filter — returns a new list of matching items
+                  ;; Implicit iteration variable: $it
+                  ;; Example: $specs WHERE $it.drift_score > 0.3 → $drifted
+                  ;; Example: $log WHERE $it.level = "error" → $errors
+                  ;; Returns empty list if no items match — never errors.
+                  ;; For complex multi-step filtering, use ~FOR instead.
+  FIRST       ::  return first item in a collection, optionally filtered
+                  ;; Example: FIRST($items) → $head
+                  ;; Example: FIRST($items WHERE $it.active = true) → $first_active
+                  ;; Returns null if collection is empty or no item matches — never errors.
+  LAST        ::  return last item in a collection, optionally filtered
+                  ;; Example: LAST($log WHERE $it.level = "error") → $last_error
+                  ;; Returns null if collection is empty or no item matches — never errors.
 }
 
 ;; ─────────────────────────────────────────────
@@ -644,6 +668,38 @@
                       ;; Omit @needs: → load full extension schema (backward-compatible).
                       ;; §meta and !!rules of every extension are ALWAYS loaded regardless.
                       ;; Lives inside §runtime block, after extends:.
+  ?SWITCH         ::  multi-branch dispatch on a single value — cleaner than ?IF/?ELIF chains
+                      ;; ?SWITCH $var:
+                      ;;   value_a → ACTION_A
+                      ;;   value_b → ACTION_B
+                      ;;   *       → FALLBACK_ACTION
+                      ;; Each arm executes exactly once. No fallthrough.
+                      ;; * is the wildcard (default) arm — optional but recommended.
+                      ;; If no arm matches and * is absent → NODUS:SWITCH_NO_MATCH (warn), continue.
+                      ;; Arms are evaluated top-to-bottom; first match wins.
+                      ;; Supports any scalar type: str, int, bool.
+                      ;; Multi-step arm: wrap in a sub-workflow and use ROUTE().
+  ~RETRY:n        ::  step-level retry modifier — re-executes the step up to n times on failure
+                      ;; FETCH($url) ~RETRY:3 → $raw
+                      ;; FETCH($url) ~RETRY:3 +backoff=2 → $raw
+                      ;; Retries on: error or null output (default: error only; use +retry_on=null|both)
+                      ;; +backoff=int: seconds between attempts (default: 0)
+                      ;; After n retries without success → step fails, triggers @err normally.
+                      ;; n is mandatory. ~RETRY without :n is a lint error (E014).
+                      ;; Max n: 10. Use ~UNTIL for quality-based loops.
+  ~MAP            ::  single-line collection transform — applies an expression to every item
+                      ;; ~MAP $collection: COMMAND($it) → $out
+                      ;; $it is the implicit current item.
+                      ;; Returns a list of transformed values assigned to $out.
+                      ;; For multi-step transforms, use ~FOR / APPEND instead.
+                      ;; If $collection is empty → $out = [] (never errors).
+                      ;; Example: ~MAP $specs: SCORE($it) ^confidence → $scores
+  "$var"          ::  string interpolation — $var and $obj.field expand inside string literals
+                      ;; Example: +msg="Found $gaps.count issues in $workspace"
+                      ;; Example: ASK("Review $spec.name version $spec.version?") → $ok
+                      ;; Escape with \$ to suppress: "literal \$var"
+                      ;; Works in: +msg, +hint, NOTIFY(), ASK(), GEN() +ctx params.
+                      ;; Interpolation is resolved before the step executes — not by LLM.
 }
 
 ;; ─────────────────────────────────────────────
@@ -654,5 +710,5 @@
 
 ;; ─────────────────────────────────────────────
 ;; END OF SCHEMA
-;; §schema:nodus v0.6
+;; §schema:nodus v0.7
 ;; ─────────────────────────────────────────────

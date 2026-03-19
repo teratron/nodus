@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-19
+
+### Added
+
+- **Syntactic Sugar (v0.7)**: Quality-of-life constructs for cleaner, more expressive workflows.
+  - `?SWITCH` — multi-branch dispatch on a single value (replaces repetitive `?IF/?ELIF` chains).
+  - `~RETRY:n` — step-level retry modifier with optional `+backoff` and `+retry_on` params.
+  - `?.` — optional chaining: short-circuits to `null` if any path segment is absent.
+  - `WHERE` — inline collection filter using implicit `$it` variable.
+  - `FIRST` / `LAST` — access first or last item in a collection, with optional `WHERE` filter.
+  - `~MAP` — single-line collection transform (one command applied to every item).
+  - String interpolation — `$var` and `$obj.field` expand inside string literals.
+- **Error**: `NODUS:SWITCH_NO_MATCH` — emitted when `?SWITCH` has no matching arm and no `*` wildcard.
+- **Lint**: `E014` — `~RETRY` without explicit `:n` count; `W012` — `?SWITCH` without `*` wildcard.
+
+### Changed
+
+- `schema.nodus` → v0.7; `schema.errors.nodus` → v0.7; `schema.lint.nodus` → v0.7.
+- `AGENTS.md` → v0.7 with §3 sections for all new constructs.
+
+---
+
+## [0.6.0] - 2026-03-19
+
+### Added
+
+- **Human Interaction Protocol**: AI ↔ Human dialogue primitives.
+  - `ASK(prompt)` — inline blocking question; workflow resumes automatically after response.
+  - `CONFIRM(content)` — present content and request approval; supports custom action labels.
+  - `dialog_type` enum: `str | bool | confirm | choice | multi_choice`.
+  - `dialog_result` type.
+  - `NODUS:DIALOG_TIMEOUT` (C022) — ASK/CONFIRM timeout error.
+  - `NODUS:DIALOG_REJECTED` (C023) — CONFIRM with `+strict=true` rejected.
+- `AGENTS.md` §12 Human Interaction Protocol.
+
+### Changed
+
+- `schema.nodus` → v0.6; `schema.types.nodus` → v0.6; `schema.errors.nodus` → v0.6.
+
+---
+
+## [0.5.0] - 2026-03-19
+
+### Added
+
+- **Schema Modularization**: Non-runtime sections extracted from `schema.nodus`.
+  - `schema.lint.nodus` — §lint rules; load only from `nodus validate`. Never at runtime.
+  - `schema.tests.nodus` — §testing spec; load only from `nodus test`. Never at runtime.
+  - `@needs:` directive — selective section loading from `extends:` schemas.
+    - Flat form: `@needs: [§commands_sdd, §macros_sdd]`
+    - Keyed form: `@needs: { "sdd.schema.nodus": [...] }`
+  - `"modules"` key in `nodus.config.json` — tooling discovery for lint/test modules.
+- **AGENTS.md** §7 rewritten: §7.1–§7.4 covering core, extensions, `@needs:`, fallback.
+- **Token efficiency**: `schema.nodus` reduced from 852 → 613 lines (−29% per execution).
+
+### Changed
+
+- `schema.nodus` → v0.5 (§lint and §testing removed; `@needs:` added to §syntax).
+- All 8 SDD pack workflows updated with `@needs:` in `§runtime`.
+- `workflow.template.nodus` — `@needs:` commented example added.
+
+---
+
 ## [0.4.1] - 2026-03-19
 
 ### Added

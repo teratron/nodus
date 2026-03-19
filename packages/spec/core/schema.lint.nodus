@@ -1,4 +1,4 @@
-§schema:nodus.lint v0.5
+§schema:nodus.lint v0.7
 ;;  NODUS Core — Lint Rules Module
 ;;  Contains §lint: rule definitions for the `nodus validate` tool.
 ;;
@@ -99,6 +99,12 @@
     message: "Workflow version '$version' not in schema compatible list $compatible."
     fix:     "Update §meta.compatible to include '$version', or align the workflow version to a compatible release."
 
+  E014 :: error
+    rule:    ~RETRY must specify a retry count
+    check:   every ~RETRY modifier is written as ~RETRY:n where n ≥ 1
+    message: "~RETRY without count. Use ~RETRY:n (e.g. ~RETRY:3)."
+    fix:     "Replace ~RETRY with ~RETRY:n. Maximum n is 10."
+
   ;; ── WARNINGS — execute but unsafe ─────────
 
   W001 :: warn
@@ -167,6 +173,12 @@
     message: "~PARALLEL branch $n has no error handling. A branch failure may go undetected until ~JOIN."
     fix:     "Add '?IF $branch_result = null: ESCALATE(human) !BREAK' or similar inside each ~PARALLEL branch."
 
+  W012 :: warn
+    rule:    ?SWITCH blocks should include a * wildcard arm
+    check:   every ?SWITCH block contains an arm with * as the match value
+    message: "?SWITCH missing * wildcard. Unmatched values will emit NODUS:SWITCH_NO_MATCH and continue silently."
+    fix:     "Add '* → ESCALATE(human)' or '* → NOTIFY(human)' as the last arm."
+
   ;; ── INFO — style suggestions ───────────────
 
   I001 :: info
@@ -208,5 +220,5 @@
 }
 
 ;; ─────────────────────────────────────────────
-;; END §schema:nodus.lint v0.5
+;; END §schema:nodus.lint v0.7
 ;; ─────────────────────────────────────────────

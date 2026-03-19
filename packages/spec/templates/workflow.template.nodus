@@ -79,12 +79,19 @@
      ?IF $meta.toxicity > 0.7   → ESCALATE(human) !BREAK
 
   ;; — CONDITIONAL ROUTING —
+  ;; Option A: ?IF / ?ELIF chain
   4. ?IF [condition_a]:
        ROUTE(wf:other_workflow) !BREAK
      ?ELIF [condition_b]:
        TONE(empathetic)
      ?ELSE:
        TONE(neutral)
+
+  ;; Option B: ?SWITCH (cleaner when branching on a single value)
+  ;; ?SWITCH $in.mode:
+  ;;   "fast"    → TONE(urgent)
+  ;;   "careful" → TONE(formal)
+  ;;   *         → TONE(neutral)
 
   ;; — GENERATE —
   5. GEN(reply)
@@ -100,6 +107,9 @@
   ;;   REFINE($draft) +target=clarity → $draft
   ;;   SCORE($draft) ^brand_voice     → $quality
   ;; ~END
+
+  ;; — FETCH WITH RETRY (optional) —
+  ;; FETCH($in.required_url) ~RETRY:3 +backoff=2 → $raw
 
   ;; — VALIDATE —
   6. VALIDATE($draft) ^brand_voice ^no_toxic ^no_pii → $validated
