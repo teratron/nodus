@@ -130,6 +130,9 @@
     output:     list       ;; structured lines/entries from git output
     raw:        str        ;; raw stdout for custom parsing
   }
+
+  ;; — Date Expression (G013) —
+  date_expr     ::  str     ;; e.g. "2024-01-01", "now", "now - 30 days"
 }
 
 ;; ─────────────────────────────────────────────

@@ -1,4 +1,4 @@
-§schema:nodus v0.3
+§schema:nodus v0.4
 ;;  NODUS Core Schema
 ;;  This file is the vocabulary contract for all NODUS workflows.
 ;;  Load this file FIRST into any agent context before executing any .nodus workflow.
@@ -321,6 +321,25 @@
     ;; algo: sha256 (default) | sha1 | md5
     ;; Use for: checksum verification, integrity checks, deduplication.
     ;; If value is a str path that exists on disk — hashes the file contents.
+
+  ;; — STRUCTURED PARSING (G012) —
+  PARSE_MD_HEADER(path:str)                 → obj
+    ;; Extract YAML-like header from a Markdown file as a structured object.
+    ;; Returns null if no header is found or file does not exist.
+  
+  PARSE_INDEX(path:str)                      → list
+    ;; Parse a Markdown table (e.g. INDEX.md) into a list of objects.
+    ;; Assumes the first row is headers. Returns list of { field: value }.
+
+  ;; — PROJECT MANAGEMENT (G010) —
+  VERSION_BUMP(type:str) +manifests=list     → str
+    ;; Semantic version bump (major|minor|patch).
+    ;; +manifests: list of files to update (e.g. ["pyproject.toml", "package.json"]).
+    ;; Returns the new version string.
+
+  GENERATE_DOC(template:str) +out=str        → bool
+    ;; Generate documentation (e.g. CONTEXT.md) using a template.
+    ;; Template is a named doc template or a file path.
 }
 
 ;; ─────────────────────────────────────────────
@@ -582,6 +601,8 @@
   §               ::  section / file declaration
   ;;              ::  comment (never executed)
   @ON:            ::  event trigger
+                      ;; Supports optional priority: @ON(priority=1): ...
+                      ;; Lower numbers = higher priority. Default is declaration order.
   @in:            ::  input declaration
   @out:           ::  output declaration
   @ctx:           ::  context loader

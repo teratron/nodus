@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SYSTEM COMMANDS & KEYWORDS
@@ -44,6 +44,21 @@ KNOWN_COMMANDS = {
     "EXTRACT",
     "FILTER",
     "EXECUTE_TEST",
+    "READ_FILE",
+    "SCAN_DIR",
+    "ENV",
+    "DATE",
+    "COUNTER",
+    "GIT",
+    "QUERY_GIT",
+    "MOVE",
+    "COPY",
+    "TRANSPILE",
+    "HASH",
+    "PARSE_MD_HEADER",
+    "PARSE_INDEX",
+    "VERSION_BUMP",
+    "GENERATE_DOC",
 }
 
 VALID_TONES = {

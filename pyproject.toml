@@ -1,6 +1,6 @@
 [project]
 name = "nodus"
-version = "0.4.0"
+version = "0.4.1"
 description = "NODUS — Node Orchestration DSL for Unified Systems"
 authors = [{ name = "Oleg Alexandrov", email = "alexandrovoleg.ru@gmail.com" }]
 license = { text = "MIT License" }

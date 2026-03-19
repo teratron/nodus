@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-03-18
+## [0.4.1] - 2026-03-19
+
+### Added
+
+- **NODUS Core Enhancements (v0.4)**: Addressed language gaps identified during complex workflow translation.
+  - New Core Commands: `READ_FILE`, `SCAN_DIR`, `ENV`, `DATE`, `COUNTER`, `GIT`, `QUERY_GIT`.
+  - New System Commands: `MOVE`, `COPY`, `TRANSPILE`, `HASH`, `PARSE_MD_HEADER`, `PARSE_INDEX`, `VERSION_BUMP`, `GENERATE_DOC`.
+  - Operator: `MATCHES` (deterministic regex pattern matching).
+  - Keywords: `!HALT` (fatal stop), `!PAUSE` (approval-gate suspend).
+  - Types: `date_expr`, `workspace_config`, `workspace_cfg`, `counter_state`, `git_result`.
+  - Lint Rules: `E013` (version compatibility), `W011` (parallel branch error isolation).
+- **Triggers**: Added optional `priority` parameter to `@ON` triggers.
+
+### Changed
+
+- Updated `schema.nodus`, `schema.types.nodus`, and `schema.errors.nodus` to version 0.4.
+- Synchronized `KNOWN_COMMANDS` in `constants.py` with the updated core schema.
 
 ### Changed
 
