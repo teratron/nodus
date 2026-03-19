@@ -5,7 +5,11 @@
 
   "schema": {
     "core":    ".nodus/core/schema.nodus",
-    "extends": [".nodus/schema/sdd.schema.nodus"]
+    "extends": [".nodus/schema/sdd.schema.nodus"],
+    "modules": {
+      "lint":    ".nodus/core/schema.lint.nodus",
+      "testing": ".nodus/core/schema.tests.nodus"
+    }
   },
 
   "agents": {

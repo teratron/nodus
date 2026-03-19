@@ -10,6 +10,7 @@
 §runtime: {
   core:    ../../core/schema.nodus
   extends: [../schema/sdd.schema.nodus]
+  @needs:  [§commands_sdd, §macros_sdd, §types_sdd]
   agents: {
     executor:     claude-sonnet-4
     orchestrator: claude-opus-4

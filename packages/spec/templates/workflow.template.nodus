@@ -17,6 +17,10 @@
 §runtime: {
   core:    .nodus/core/schema.nodus
   extends: []
+  ;; @needs: [§commands_sdd, §macros_sdd, §types_sdd]
+  ;; List only the sections from extends: that this workflow actually uses.
+  ;; Omit to load the full extension schema (safe default).
+  ;; §meta and !!rules of any extension are always loaded regardless of @needs:.
   agents: {
     executor:     claude-sonnet-4
     orchestrator: claude-opus-4
