@@ -40,3 +40,6 @@ temp/
 # Agent workflows
 .*/workflows/**
 !.*/workflows/nodus.*.*
+
+# Sandbox
+#sandbox/
