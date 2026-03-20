@@ -10,6 +10,10 @@ dependencies = [
     "mcp>=1.26.0",
 ]
 
+[project.urls]
+homepage = "https://teratron.github.io/nodus"
+repository = "https://github.com/teratron/nodus"
+
 [project.scripts]
 nodus = "runtime.cli.nodus:main"
 
@@ -75,7 +79,10 @@ project-includes = [
 ]
 
 [tool.pytest.ini_options]
-python_classes = ["Test", "Describe"]
+python_classes = [
+    "Test",
+    "Describe",
+]
 
 [build-system]
 requires = ["hatchling"]
