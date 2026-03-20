@@ -33,7 +33,7 @@ nodus/                             ← github.com/nodus-lang/nodus
 │       ├── vscode/                ← VS Code extension
 │       └── jetbrains/             ← JetBrains IDEs (planned)
 │
-├── examples/                      ← canonical language examples
+├── examples/                      ← canonical language examples (minimal, educational)
 │   ├── social/
 │   │   └── beautiful_mention.nodus
 │   └── support/
@@ -52,7 +52,7 @@ nodus/                             ← github.com/nodus-lang/nodus
 ├── tests/                         ← runtime test suite (pytest)
 │   └── runtime/
 │
-├── demo/                          ← sample user project
+├── demo/                          ← sample user project (production-ready example)
 │   ├── .nodus/
 │   │   ├── core/                  ← junction → packages/spec/core/
 │   │   ├── schema/                ← user schema extensions
@@ -66,7 +66,7 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   │   └── nodus/                 ← NODUS workflow assistant skill
 │   │       ├── SKILL.md           ← main skill instructions
 │   │       └── references/        ← syntax, patterns, lint rules
-│   └── workflows/                 ← Slash commands for agents
+│   └── workflows/                 ← slash commands for AI assistants
 │       ├── nodus.compile.md       ← validate → transpile → report
 │       ├── nodus.create.md        ← interactive workflow creation
 │       ├── nodus.explain.md       ← plain-language explanation
@@ -89,8 +89,8 @@ When a user runs `nodus init` in their project, NODUS creates a single hidden fo
 ```
 my-project/                        ← any existing project
 │
-├── .nodus/                        ← all NODUS infrastructure
-│   ├── core/                      ← language core (nodus init, don't edit)
+├── .nodus/                        ← all NODUS infrastructure (created by nodus init)
+│   ├── core/                      ← language core (don't edit)
 │   │   ├── schema.nodus
 │   │   ├── AGENTS.md
 │   │   └── cli.nodus
@@ -116,11 +116,73 @@ my-project/                        ← any existing project
 └── tests/                         ← workflow test cases (.test.json)
 ```
 
-The `workflows/` folder is a **convention, not a requirement**.  
-It can be named and placed anywhere — `agents/`, `prompts/`, `ai/`, inside `src/`.  
-NODUS locates workflows via `.nodus/config.json`, not by folder name.
+### Workflow folder is a convention, not a requirement
 
-### `config.json` example (User Project)
+The folder containing user workflows can be **named and placed anywhere** in the project.
+NODUS locates workflows via path references in `.nodus/config.json` — not by folder name.
+
+```
+"triggers": {
+  "new_order": "./automation/orders/confirm.nodus",
+  "new_review": "./agents/reply_to_review.nodus",
+  "daily_report": "./src/ai/morning_digest.nodus"
+}
+```
+
+All of these are valid. The user decides the structure; NODUS follows.
+
+### What user workflows are
+
+User workflows are `.nodus` files that the user writes themselves to automate
+their own business logic. They are the primary deliverable — everything else
+(`.nodus/core/`, `config.json`, schema files) exists to support them.
+
+```
+workflows/
+├── social/
+│   └── reply_to_review.nodus     ← responds to Instagram reviews automatically
+├── support/
+│   └── ticket_triage.nodus       ← classifies and routes incoming tickets
+└── ecommerce/
+    └── order_confirm.nodus        ← sends order confirmation emails
+```
+
+These files reference the language primitives from `.nodus/core/` but contain
+the user's own business rules, tone preferences, and routing logic.
+
+### .agents/ — AI assistant interface (optional)
+
+Projects that use AI coding assistants (Claude, Cursor, Copilot) can add
+an `.agents/` folder to give the assistant context about NODUS:
+
+```
+my-project/
+└── .agents/
+    ├── skills/
+    │   └── nodus/                 ← teaches the assistant NODUS syntax
+    │       ├── SKILL.md
+    │       └── references/
+    └── workflows/                 ← slash commands for the assistant
+        ├── nodus.run.md           ← /nodus.run → runs any user workflow
+        ├── nodus.create.md        ← /nodus.create → scaffolds a new workflow
+        └── nodus.validate.md      ← /nodus.validate → lints with explanations
+```
+
+The commands in `.agents/workflows/` are **not wrappers** around user workflows.
+They are generic bridges: `/nodus.run` accepts a workflow path as an argument
+and runs it. A project-specific command only makes sense when the AI needs to
+do something before or after the NODUS runtime — asking the user a question,
+checking an external service, or orchestrating multiple steps.
+
+```
+.agents/workflows/
+├── nodus.run.md          ← generic: "run any workflow"     (always useful)
+└── publish_release.md    ← specific: verify changelog →    (project-specific
+                               bump version →                orchestration,
+                               run workflows/publish.nodus   not just a wrapper)
+```
+
+### config.json example (User Project)
 
 ```json
 {
@@ -136,6 +198,11 @@ NODUS locates workflows via `.nodus/config.json`, not by folder name.
       "context_files": [".nodus/core/AGENTS.md"]
     }
   },
+  "triggers": {
+    "new_review":   "./workflows/social/reply_to_review.nodus",
+    "new_ticket":   "./workflows/support/ticket_triage.nodus",
+    "new_order":    "./workflows/ecommerce/order_confirm.nodus"
+  },
   "logging": { "enabled": true, "output": "./logs" }
 }
 ```
@@ -145,9 +212,9 @@ NODUS locates workflows via `.nodus/config.json`, not by folder name.
 ### Files
 
 ```
-workflows/social/beautiful_mention.nodus   ← snake_case, domain subfolder
-.nodus/schema/brand_voice.nodus            ← snake_case
-packs/nodus-social/                        ← kebab-case for pack names
+workflows/social/reply_to_review.nodus   ← snake_case, domain subfolder
+.nodus/schema/brand_voice.nodus          ← snake_case
+packs/nodus-social/                      ← kebab-case for pack names
 ```
 
 ### Workflow names
@@ -155,11 +222,11 @@ packs/nodus-social/                        ← kebab-case for pack names
 The `§wf:` name must match the filename exactly (enforced by lint rule E012):
 
 ```
-§wf:beautiful_mention v1.0
+§wf:reply_to_review v1.0
 ```
 
-File: `beautiful_mention.nodus` ✅  
-File: `BeautifulMention.nodus` ❌
+File: `reply_to_review.nodus` ✅  
+File: `ReplyToReview.nodus` ❌
 
 ### Version format
 
@@ -406,7 +473,9 @@ The skill activates automatically when a user asks about NODUS syntax, needs hel
 
 ## AI Agent Workflows
 
-The repository provides executable workflows (slash commands) in `.agents/workflows/` that guide an AI assistant through complex multi-step tasks.
+The repository provides slash commands in `.agents/workflows/` that guide an AI assistant through complex multi-step tasks. These are not wrappers around user workflows — they are generic operations the assistant performs on behalf of the user.
+
+A project-specific command in `.agents/workflows/` makes sense only when the AI needs to orchestrate something beyond what `nodus run` alone can do: asking the user questions, verifying external state, or combining multiple steps into a single guided flow.
 
 - **`/nodus.compile`** — Full cycle: validation → if clean, transpile to HUMAN mode → result summary.
 - **`/nodus.create`** — Interactive wizard: asks for domain, purpose, I/O, and rules → scaffolds the file.
@@ -416,8 +485,6 @@ The repository provides executable workflows (slash commands) in `.agents/workfl
 - **`/nodus.run`** — Execution: pre-flight validation → input data preparation → `nodus run` → structured report.
 - **`/nodus.test`** — Testing: pre-flight validation → `nodus test` → explains failures and suggests fixes.
 - **`/nodus.validate`** — Linting: `nodus validate` → groups issues by severity → provides human-friendly fixes.
-
-These workflows use the `// turbo` annotation for performance, allowing the agent to run terminal commands immediately when the step is clear and safe.
 
 ## User Personas
 

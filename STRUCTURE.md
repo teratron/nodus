@@ -5,57 +5,89 @@
 [Magic Spec](https://github.com/teratron/magic-spec)
 
 ```
-magic-spec/  
-├── .agents/
-│   ├── rules/
+magic-spec/
+│
+├── .agents/                   ← AI-интерфейс (единая точка входа для ИИ)
+│   ├── rules/                 ← правила генерации (markdown.md и т.д.)
 │   ├── skills/
-│   └── workflows/
+│   │   └── nodus/             ← NODUS skill для AI-ассистентов
+│   │       ├── SKILL.md
+│   │       └── references/
+│   └── workflows/             ← slash-команды
+│       ├── magic.*.md         ← команды Magic Spec
+│       └── nodus.*.md         ← команды NODUS
 │
-├── .magic/              ← ядро Magic Spec
+├── .magic/                    ← движок Magic Spec (не редактировать)
 │
-└── .nodus/              ← ядро Nodus
-```
-
-Или
-
-```
-magic-spec/  
-├── .agents/
-│   ├── rules/
-│   ├── skills/
-│   └── workflows/
+├── .nodus/                    ← NODUS infrastructure (не редактировать)
+│   ├── core/
+│   ├── schema/
+│   └── config.json
 │
-└── .magic/              ← ядро Magic Spec
-    └── .nodus/          ← ядро Nodus
+├── .design/                   ← SDD-артефакты Magic Spec
+│   ├── INDEX.md
+│   ├── RULES.md
+│   └── specifications/
+│
+├── packages/                  ← код продукта
+│   ├── spec/
+│   ├── runtime/
+│   └── extensions/
+│
+├── workflows/                 ← NODUS-воркфлоу для автоматизации Magic Spec
+│   └── internal/
+│       ├── publish.nodus
+│       └── version_bump.nodus
+│
+└── docs/
 ```
 
 ## User Project Structure with Magic Spec
 
 ```
 my-project/
-├── .agents/
+│
+├── .agents/                       ← AI-интерфейс
 │   ├── rules/
 │   ├── skills/
+│   │   ├── nodus/                 ← устанавливает nodus init
+│   │   └── project-specific/      ← пользователь добавляет свои
 │   └── workflows/
+│       ├── magic.*.md             ← устанавливает magic init
+│       └── nodus.*.md             ← устанавливает nodus init
 │
-├── .magic/              ← ядро Magic Spec
+├── .magic/                        ← Magic Spec engine (nodus init не трогает)
 │
-├── .nodus/              ← ядро Nodus
+├── .nodus/                        ← all NODUS infrastructure (created by nodus init)
+│   ├── core/                      ← language core (don't edit)
+│   │   ├── schema.nodus
+│   │   ├── AGENTS.md
+│   │   └── cli.nodus
+│   ├── extensions/                ← installed packs (nodus install, don't edit)
+│   │   └── nodus-social@1.0/
+│   ├── schema/                    ← user schema extensions
+│   │   ├── brand_voice.nodus
+│   │   └── validators.nodus
+│   ├── context/                   ← static context files loaded via @ctx
+│   │   ├── brand_voice.md
+│   │   └── tone_guidelines.md
+│   ├── config.json                ← infrastructure: models, API keys, webhooks
+│   └── .cache/                    ← generated at runtime (gitignore)
+│       └── nodus.lock
 │
-└── .design/             ← то что генерирует Magic Spec
-```
-
-Или
-
-```
-magic-spec/  
-├── .agents/
-│   ├── rules/
-│   ├── skills/
-│   └── workflows/
+├── .design/                       ← SDD-артефакты проекта сгенерированные Magic Spec
+│   ├── INDEX.md
+│   ├── RULES.md
+│   └── specifications/
 │
-└── .magic/              ← ядро Magic Spec
-│   └── .nodus/          ← ядро Nodus
+├── workflows/                     ← user workflows (name and location is flexible)
+│   ├── _shared/                   ← reusable sub-workflows
+│   ├── social/
+│   └── support/
 │
-└── .design/             ← то что генерирует Magic Spec
+├── src/                           ← код проекта (обычная структура)
+│
+├── config.nodus                   ← business logic: rules, triggers, constants
+├── logs/                          ← execution logs (NODUS:RESULT objects)
+└── tests/                         ← workflow test cases (.test.json)
 ```
