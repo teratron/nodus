@@ -2,9 +2,6 @@
 .idea/
 .vscode/
 
-# Claude
-.claude/settings.json
-
 # Python build / env
 __pycache__/
 .*_cache/
@@ -37,9 +34,12 @@ temp/
 !.*/workflows/nodus.*.*
 
 # Agent skills
-.*/skills/**
-!.*/skills/nodus/
-!.*/skills/nodus/**
+#.*/skills/**
+#!.*/skills/nodus/
+#!.*/skills/nodus/**
+
+# Claude
+.claude/settings.json
 # We only track the symlinks themselves in .claude
 !.claude/workflows
 !.claude/skills
