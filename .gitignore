@@ -40,8 +40,10 @@ temp/
 .*/skills/**
 !.*/skills/nodus/
 !.*/skills/nodus/**
-!.claude/workflows/
-!.claude/workflows/nodus.*
+# We only track the symlinks themselves in .claude
+!.claude/workflows
+!.claude/skills
+!.claude/rules
 
 # Sandbox
 #sandbox/
