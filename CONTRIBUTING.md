@@ -11,70 +11,41 @@ nodus/                             ← github.com/nodus-lang/nodus
 ├── packages/
 │   ├── spec/                      ← LANGUAGE SPECIFICATION (changes slowly)
 │   │   ├── core/                  ← language primitives (maintainers only)
-│   │   │   ├── schema.nodus       ← core vocabulary
-│   │   │   ├── schema.types.nodus ← extended type definitions
-│   │   │   ├── schema.errors.nodus← error code registry
-│   │   │   ├── grammar.peg        ← formal PEG grammar
-│   │   │   ├── AGENTS.md          ← agent interpretation protocol
-│   │   │   └── cli.nodus          ← CLI meta-workflow
-│   │   ├── templates/             ← scaffolding templates
-│   │   │   ├── workflow.template.nodus
-│   │   │   └── schema.template.nodus
-│   │   └── VERSION                ← spec version (separate from runtime)
+│   │   │   ├── schema.nodus
+│   │   │   └── ...
+│   │   └── ...
 │   │
 │   ├── runtime/                   ← PYTHON RUNTIME (changes often)
-│   │   ├── interpreter/           ← lexer, parser, AST, validator, executor, transpiler
-│   │   ├── cli/                   ← nodus CLI command handlers
-│   │   ├── constants.py           ← language-defining constants
-│   │   ├── settings.py            ← runtime settings
-│   │   └── __init__.py
+│   │
+│   ├── workflows/                 ← NODUS CORE WORKFLOWS (canonical source)
+│   │   ├── nodus.compile.md
+│   │   ├── nodus.create.md
+│   │   ├── nodus.explain.md
+│   │   ├── nodus.init.md
+│   │   ├── nodus.pack.md
+│   │   ├── nodus.run.md
+│   │   ├── nodus.test.md
+│   │   └── nodus.validate.md
+│   │
+│   ├── skills/                    ← NODUS CORE SKILLS (canonical source)
+│   │   └── nodus/                 ← syntax, patterns, lint rules
+│   │
+│   ├── rules/                     ← NODUS CORE RULES
 │   │
 │   └── extensions/                ← IDE support
-│       ├── vscode/                ← VS Code extension
-│       └── jetbrains/             ← JetBrains IDEs (planned)
 │
-├── examples/                      ← canonical language examples (minimal, educational)
-│   ├── social/
-│   │   └── beautiful_mention.nodus
-│   └── support/
-│       └── ticket_triage.nodus
-│
-├── packs/                         ← official installable packs
-│   └── nodus-social/
-│
-├── docs/                          ← documentation
-│   ├── syntax.md
-│   ├── schema.md
-│   ├── protocol.md
-│   ├── cli.md
-│   └── README.md
-│
-├── tests/                         ← runtime test suite (pytest)
-│   └── runtime/
-│
-├── demo/                          ← sample user project (production-ready example)
-│   ├── .nodus/
-│   │   ├── core/                  ← junction → packages/spec/core/
-│   │   ├── schema/                ← user schema extensions
-│   │   └── config.json
-│   ├── config.nodus               ← business logic config
-│   ├── workflows/
-│   └── context/
-│
-├── .agents/                       ← AI agent skills and workflows
+├── .agents/                       ← AI agent skills and workflows (orchestration)
 │   ├── skills/
-│   │   └── nodus/                 ← NODUS workflow assistant skill
-│   │       ├── SKILL.md           ← main skill instructions
-│   │       └── references/        ← syntax, patterns, lint rules
-│   └── workflows/                 ← slash commands for AI assistants
-│       ├── nodus.compile.md       ← validate → transpile → report
-│       ├── nodus.create.md        ← interactive workflow creation
-│       ├── nodus.explain.md       ← plain-language explanation
-│       ├── nodus.init.md          ← guided project setup
-│       ├── nodus.pack.md          ← interactive pack creation
-│       ├── nodus.run.md           ← pre-flight → execute → report
-│       ├── nodus.test.md          ← run @test blocks → report
-│       └── nodus.validate.md      ← lint check + auto-fix suggestions
+│   │   ├── nodus/                 ← junction → packages/skills/nodus/
+│   │   └── ...                    ← generic skills (brainstorming, etc.)
+│   └── workflows/
+│       ├── nodus.*.md             ← symlinks → packages/workflows/nodus.*.md
+│       └── nodus.dev.init.md      ← dev-only: setup symlinks (Windows/Linux)
+│
+├── .claude/                       ← Claude Desktop specific config
+│   ├── workflows/                 ← junction → .agents/workflows/
+│   ├── skills/                    ← junction → .agents/skills/
+│   └── rules/                     ← junction → .agents/rules/
 │
 ├── pyproject.toml                 ← build config and dependencies
 ├── README.md                      ← quick start
@@ -159,13 +130,13 @@ an `.agents/` folder to give the assistant context about NODUS:
 my-project/
 └── .agents/
     ├── skills/
-    │   └── nodus/                 ← teaches the assistant NODUS syntax
+    │   └── nodus/                 ← junction → packages/skills/nodus/
     │       ├── SKILL.md
     │       └── references/
-    └── workflows/                 ← slash commands for the assistant
-        ├── nodus.run.md           ← /nodus.run → runs any user workflow
-        ├── nodus.create.md        ← /nodus.create → scaffolds a new workflow
-        └── nodus.validate.md      ← /nodus.validate → lints with explanations
+    └── workflows/
+        ├── nodus.run.md           ← link → packages/workflows/nodus.run.md
+        ├── nodus.create.md        ← link → packages/workflows/nodus.create.md
+        └── nodus.validate.md      ← link → packages/workflows/nodus.validate.md
 ```
 
 The commands in `.agents/workflows/` are **not wrappers** around user workflows.

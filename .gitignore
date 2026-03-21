@@ -29,21 +29,17 @@ uv.lock
 temp/
 *tmp/
 
-# Agent workflows
-.*/workflows/**
-!.*/workflows/nodus.*.*
-
-# Agent skills
-#.*/skills/**
-#!.*/skills/nodus/
-#!.*/skills/nodus/**
-
 # Claude
 .claude/settings.json
-# We only track the symlinks themselves in .claude
+# We track the symlinks themselves in .claude and .agents
 !.claude/workflows
 !.claude/skills
 !.claude/rules
+!.claude/commands
+!.agents/workflows
+!.agents/skills/nodus
+!demo/.nodus/core
+!sandbox/my-project/.nodus/core
 
 # Sandbox
 #sandbox/
