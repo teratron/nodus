@@ -1,1 +1,1 @@
-../../packages/workflows/nodus.validate.md
+../../packages/agents/workflows/nodus.validate.md

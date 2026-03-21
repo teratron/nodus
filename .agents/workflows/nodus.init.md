@@ -1,1 +1,1 @@
-../../packages/workflows/nodus.init.md
+../../packages/agents/workflows/nodus.init.md

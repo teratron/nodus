@@ -1,1 +1,1 @@
-../../packages/workflows/nodus.explain.md
+../../packages/agents/workflows/nodus.explain.md

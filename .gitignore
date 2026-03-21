@@ -40,6 +40,9 @@ temp/
 !.agents/skills/nodus
 !demo/.nodus/core
 !sandbox/my-project/.nodus/core
+!sandbox/my-project/.agents/skills/nodus
+!sandbox/my-project/.agents/workflows
+!sandbox/my-project/.agents/rules
 
 # Sandbox
 #sandbox/

@@ -17,29 +17,28 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   │
 │   ├── runtime/                   ← PYTHON RUNTIME (changes often)
 │   │
-│   ├── workflows/                 ← NODUS CORE WORKFLOWS (canonical source)
-│   │   ├── nodus.compile.md
-│   │   ├── nodus.create.md
-│   │   ├── nodus.explain.md
-│   │   ├── nodus.init.md
-│   │   ├── nodus.pack.md
-│   │   ├── nodus.run.md
-│   │   ├── nodus.test.md
-│   │   └── nodus.validate.md
-│   │
-│   ├── skills/                    ← NODUS CORE SKILLS (canonical source)
-│   │   └── nodus/                 ← syntax, patterns, lint rules
-│   │
-│   ├── rules/                     ← NODUS CORE RULES
+│   ├── agents/                    ← AI AGENT INTERFACE (canonical source)
+│   │   ├── workflows/             ← slash-commands
+│   │   │   ├── nodus.compile.md
+│   │   │   ├── nodus.create.md
+│   │   │   ├── nodus.explain.md
+│   │   │   ├── nodus.init.md
+│   │   │   ├── nodus.pack.md
+│   │   │   ├── nodus.run.md
+│   │   │   ├── nodus.test.md
+│   │   │   └── nodus.validate.md
+│   │   ├── skills/                ← syntax, patterns, lint rules
+│   │   │   └── nodus/
+│   │   └── rules/                 ← agent behavior rules
 │   │
 │   └── extensions/                ← IDE support
 │
 ├── .agents/                       ← AI agent skills and workflows (orchestration)
 │   ├── skills/
-│   │   ├── nodus/                 ← junction → packages/skills/nodus/
+│   │   └── nodus/                 ← junction → packages/agents/skills/nodus/
 │   │   └── ...                    ← generic skills (brainstorming, etc.)
 │   └── workflows/
-│       ├── nodus.*.md             ← symlinks → packages/workflows/nodus.*.md
+│       ├── nodus.*.md             ← symlinks → packages/agents/workflows/nodus.*.md
 │       └── nodus.dev.init.md      ← dev-only: setup symlinks (Windows/Linux)
 │
 ├── .claude/                       ← Claude Desktop specific config
@@ -130,13 +129,13 @@ an `.agents/` folder to give the assistant context about NODUS:
 my-project/
 └── .agents/
     ├── skills/
-    │   └── nodus/                 ← junction → packages/skills/nodus/
+    │   └── nodus/                 ← junction → packages/agents/skills/nodus/
     │       ├── SKILL.md
     │       └── references/
     └── workflows/
-        ├── nodus.run.md           ← link → packages/workflows/nodus.run.md
-        ├── nodus.create.md        ← link → packages/workflows/nodus.create.md
-        └── nodus.validate.md      ← link → packages/workflows/nodus.validate.md
+        ├── nodus.run.md           ← link → packages/agents/workflows/nodus.run.md
+        ├── nodus.create.md        ← link → packages/agents/workflows/nodus.create.md
+        └── nodus.validate.md      ← link → packages/agents/workflows/nodus.validate.md
 ```
 
 The commands in `.agents/workflows/` are **not wrappers** around user workflows.

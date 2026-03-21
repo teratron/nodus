@@ -1,1 +1,1 @@
-../../packages/workflows/nodus.test.md
+../../packages/agents/workflows/nodus.test.md

@@ -1,1 +1,1 @@
-../../packages/workflows/nodus.compile.md
+../../packages/agents/workflows/nodus.compile.md
