@@ -64,6 +64,7 @@ Follow this checklist before declaring a task finished:
   * `CHANGELOG.md`
 * [ ] **Documented**: Update `README.md`, `CHANGELOG.md`, and internal docs to reflect all changes.
 * [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date.
+* [ ] **Preserved**: Verify that structural documents (like diagrams) haven't lost data.
 
 ## 5. Python Coding Style
 
@@ -96,3 +97,19 @@ Use consistent Unicode-based separators to improve code readablity:
     ```
 
 * Avoid standard standard PEP8 horizontal lines or excessive whitespace. Use Unicode box characters to create a clean, modern look.
+
+## 6. File Interaction Protocol
+
+To prevent accidental data loss or corruption in large documents, the agent MUST follow this protocol:
+
+### 6.1 Pre-read Requirement
+
+* **Mandatory**: Always call `view_file` on the target file BEFORE making any edits.
+* **Scope**: Read the entire file if it's within tool limits (800 lines) to ensure full context.
+* **Anti-Pattern**: DO NOT rely on cached or partial information from previous steps.
+
+### 6.2 Post-verify Requirement
+
+* **Verification**: Immediately after an edit, use `view_file` or `run_command` (grep/dir) to verify the result.
+* **Integrity**: Check that surrounding code or documentation blocks (like diagrams) were NOT affected by the edit.
+* **Recovery**: If data was lost, restore it immediately before proceeding.

@@ -8,7 +8,7 @@ This document covers repository structure, naming conventions, and contribution 
 ```
 nodus/                             ← github.com/nodus-lang/nodus
 │
-├── packages/
+├── packages/                      ← project core components
 │   ├── spec/                      ← LANGUAGE SPECIFICATION (changes slowly)
 │   │   ├── core/                  ← language primitives (maintainers only)
 │   │   │   ├── schema.nodus
@@ -19,30 +19,30 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   │
 │   ├── agents/                    ← AI AGENT INTERFACE (canonical source)
 │   │   ├── workflows/             ← slash-commands
-│   │   │   ├── nodus.compile.md
-│   │   │   ├── nodus.create.md
-│   │   │   ├── nodus.explain.md
-│   │   │   ├── nodus.init.md
-│   │   │   ├── nodus.pack.md
-│   │   │   ├── nodus.run.md
-│   │   │   ├── nodus.test.md
-│   │   │   └── nodus.validate.md
+│   │   │   ├── nodus.*.md
+│   │   │   └── ...
 │   │   ├── skills/                ← syntax, patterns, lint rules
 │   │   │   └── nodus/
 │   │   └── rules/                 ← agent behavior rules
 │   │
 │   └── extensions/                ← IDE support
 │
+├── installer/                     ← build and packaging scripts
+├── packs/                         ← default pack ecosystem
+├── demo/                          ← showcase project
+├── docs/                          ← documentation
+├── examples/                      ← workflow snippets
+│
 ├── .agents/                       ← AI agent skills and workflows (orchestration)
 │   ├── skills/
-│   │   └── nodus/                 ← junction → packages/agents/skills/nodus/
+│   │   ├── nodus/                 ← junction → packages/agents/skills/nodus/
 │   │   └── ...                    ← generic skills (brainstorming, etc.)
 │   └── workflows/
 │       ├── nodus.*.md             ← symlinks → packages/agents/workflows/nodus.*.md
-│       └── nodus.dev.init.md      ← dev-only: setup symlinks (Windows/Linux)
+│       └── nodus.dev.init.md      ← file: setup symlinks (Windows/Linux)
 │
 ├── .claude/                       ← Claude Desktop specific config
-│   ├── workflows/                 ← junction → .agents/workflows/
+│   ├── commands/                  ← junction → .agents/workflows/
 │   ├── skills/                    ← junction → .agents/skills/
 │   └── rules/                     ← junction → .agents/rules/
 │
