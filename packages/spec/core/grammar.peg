@@ -1,0 +1,363 @@
+# ─────────────────────────────────────────────
+# NODUS PEG Grammar v0.3
+# Formal specification of the NODUS language syntax.
+# Notation: PEG (Parsing Expression Grammar)
+#
+# Legend:
+#   <-    ordered choice (first match wins)
+#   /     alternative
+#   *     zero or more
+#   +     one or more
+#   ?     optional
+#   !     not predicate
+#   &     and predicate
+#   [..]  character class
+#   '..'  literal string
+#   (..)  grouping
+#   #     comment
+# ─────────────────────────────────────────────
+
+# ═══════════════════════════════════════════════
+# 1. TOP-LEVEL FILE STRUCTURE
+# ═══════════════════════════════════════════════
+
+NodusFile       <- Spacing (WorkflowFile / SchemaFile / ConfigFile) EOF
+
+WorkflowFile    <- WorkflowHeader Comment*
+                   RuntimeBlock Comment*
+                   Declaration*
+                   StepsBlock?
+                   HumanModeBlock?
+                   TestBlock*
+                   Comment*
+
+SchemaFile      <- SchemaHeader Comment*
+                   SchemaSection*
+
+ConfigFile      <- ConfigHeader Comment*
+                   RuntimeBlock Comment*
+                   Declaration*
+                   NamedBlock*
+
+# ═══════════════════════════════════════════════
+# 2. HEADERS
+# ═══════════════════════════════════════════════
+
+WorkflowHeader  <- '§wf:' Identifier Spacing Version NL
+SchemaHeader    <- '§schema:' Identifier Spacing Version NL
+ConfigHeader    <- '§config:' Identifier Spacing Version NL
+
+Version         <- 'v' Digit+ '.' Digit+
+
+# ═══════════════════════════════════════════════
+# 3. RUNTIME BLOCK
+# ═══════════════════════════════════════════════
+
+RuntimeBlock    <- '§runtime:' Spacing '{' NL
+                   RuntimeEntry*
+                   Spacing '}' NL
+
+RuntimeEntry    <- Spacing Identifier ':' Spacing RuntimeValue CommentInline? NL
+
+RuntimeValue    <- ArrayLiteral
+                 / ObjectLiteral
+                 / StringLiteral
+                 / Identifier
+
+# ═══════════════════════════════════════════════
+# 4. DECLARATIONS
+# ═══════════════════════════════════════════════
+
+Declaration     <- Trigger
+                 / AbsoluteRule
+                 / Preference
+                 / InputDecl
+                 / OutputDecl
+                 / ContextDecl
+                 / ErrorDecl
+                 / Comment
+
+# --- Triggers ---
+Trigger         <- '@ON:' Spacing TriggerCondition Spacing '→' Spacing TriggerAction NL
+
+TriggerCondition <- Expression
+                  / Identifier
+
+TriggerAction   <- 'RUN' '(' WfRef ')' ControlFlag*
+                 / CommandCall
+
+# --- Absolute Rules ---
+AbsoluteRule    <- '!!' RuleType ':' Spacing RuleBody NL
+
+RuleType        <- 'NEVER' / 'ALWAYS'
+
+RuleBody        <- (!NL .)+
+
+# --- Preferences ---
+Preference      <- '!PREF:' Spacing PrefExpr Spacing 'OVER' Spacing PrefExpr
+                   (Spacing 'IF' Spacing Condition)? NL
+
+PrefExpr        <- Identifier (Spacing '=' Spacing Value)?
+
+# --- Input Declaration ---
+InputDecl       <- '@in:' Spacing '{' NL? FieldDeclList '}' NL
+
+FieldDeclList   <- (Spacing FieldDecl CommentInline? (','? NL)?)*
+
+FieldDecl       <- Identifier '?'? (':' Spacing TypeRef)? (Spacing '=' Spacing Value)?
+
+TypeRef         <- Identifier ('|' Identifier)*
+
+# --- Output Declaration ---
+OutputDecl      <- '@out:' Spacing (Variable / CommandCall) NL
+
+# --- Context Declaration ---
+ContextDecl     <- '@ctx:' Spacing '[' IdentifierList ']' NL
+
+IdentifierList  <- Identifier (',' Spacing Identifier)*
+
+# --- Error Declaration ---
+ErrorDecl       <- '@err:' Spacing CommandCall NL
+
+# ═══════════════════════════════════════════════
+# 5. STEPS BLOCK
+# ═══════════════════════════════════════════════
+
+StepsBlock      <- '@steps:' NL Step+
+
+Step            <- Spacing StepNumber '.' Spacing StepBody NL SubStep*
+
+StepNumber      <- Digit+
+
+StepBody        <- CommandCall Pipeline?
+                 / ConditionalChain
+                 / LoopBlock
+                 / ParallelBlock
+                 / Comment
+
+SubStep         <- Spacing !StepNumber StepBody NL
+
+Pipeline        <- Spacing '→' Spacing Variable
+
+# ═══════════════════════════════════════════════
+# 6. COMMANDS
+# ═══════════════════════════════════════════════
+
+CommandCall     <- CommandName '(' ArgList ')' Modifier* Validator* Flag* Pipeline?
+
+CommandName     <- [A-Z] [A-Z_]+ &'('
+                 / 'RUN'
+
+ArgList         <- (Arg (',' Spacing Arg)*)?
+
+Arg             <- Variable / WfRef / MacroRef / Value / Expression
+
+Modifier        <- Spacing '+' Identifier ('=' ModifierValue)?
+
+ModifierValue   <- Variable
+                 / ObjectLiteral
+                 / ArrayLiteral
+                 / StringLiteral
+                 / NumberLiteral
+                 / Identifier
+
+Validator       <- Spacing '^' Identifier (':' ValidatorParam)?
+
+ValidatorParam  <- NumberLiteral
+                 / Identifier
+                 / IndexExpr
+
+Flag            <- Spacing '~' Identifier
+
+# ═══════════════════════════════════════════════
+# 7. CONTROL FLOW
+# ═══════════════════════════════════════════════
+
+ConditionalChain <- IfClause ElifClause* ElseClause?
+
+# Inline form:  ?IF condition → action !BREAK
+# Block form:   ?IF condition:
+#                   body
+IfClause        <- '?IF' Spacing Condition (
+                     Spacing '→' Spacing Action ControlFlag*           # inline
+                   / Spacing ':' NL IndentedBody                       # block
+                   )
+
+ElifClause      <- Spacing '?ELIF' Spacing Condition (
+                     Spacing '→' Spacing Action ControlFlag*
+                   / Spacing ':' NL IndentedBody
+                   )
+
+ElseClause      <- Spacing '?ELSE' (
+                     Spacing '→' Spacing Action ControlFlag*
+                   / Spacing ':' NL IndentedBody
+                   )
+
+Action          <- CommandCall
+                 / 'ROUTE' '(' WfRef ')' ControlFlag*
+                 / 'TONE' '(' Value ')'
+
+ControlFlag     <- Spacing ('!BREAK' / '!SKIP' / '!OVERRIDE')
+
+# --- Loops ---
+
+LoopBlock       <- ForLoop / UntilLoop
+
+ForLoop         <- '~FOR' Spacing Variable Spacing 'IN' Spacing Variable ':' NL
+                   IndentedBody
+                   Spacing '~END' NL
+
+# Note: In ~UNTIL, the '|' before MAX:n is a loop modifier separator,
+#       NOT the shorthand OR operator. The grammar disambiguates by context.
+UntilLoop       <- '~UNTIL' Spacing Condition (Spacing '|' Spacing MaxClause)? ':' NL
+                   IndentedBody
+                   Spacing '~END' NL
+
+MaxClause       <- 'MAX:' Digit+
+
+# --- Parallel ---
+
+ParallelBlock   <- '~PARALLEL:' NL
+                   IndentedBody
+                   Spacing '~JOIN' Pipeline? NL
+
+IndentedBody    <- (Spacing StepBody NL)+
+
+# ═══════════════════════════════════════════════
+# 8. EXPRESSIONS & CONDITIONS
+# ═══════════════════════════════════════════════
+
+Condition       <- ConditionOr
+
+ConditionOr     <- ConditionAnd (Spacing ('OR' / '|') Spacing ConditionAnd)*
+
+ConditionAnd    <- ConditionNot (Spacing 'AND' Spacing ConditionNot)*
+
+ConditionNot    <- 'NOT' Spacing ConditionAtom
+                 / ConditionAtom
+
+ConditionAtom   <- Expression Spacing CompOp Spacing Expression
+                 / Expression Spacing 'CONTAINS' Spacing Expression
+                 / Expression Spacing 'IN' Spacing Expression
+                 / Expression Spacing 'NOT' Spacing 'CONTAINS' Spacing Expression
+                 / '(' Condition ')'
+                 / Expression
+
+CompOp          <- '<=' / '>=' / '!=' / '<' / '>' / '='
+
+Expression      <- Variable
+                 / IndexExpr
+                 / Literal
+                 / CommandCall
+                 / WfRef
+                 / MacroRef
+                 / Identifier
+
+IndexExpr       <- Identifier '[' Expression ']' ('.' Identifier)*
+
+# ═══════════════════════════════════════════════
+# 9. VALUES & LITERALS
+# ═══════════════════════════════════════════════
+
+Value           <- StringLiteral
+                 / NumberLiteral
+                 / BoolLiteral
+                 / NullLiteral
+                 / ArrayLiteral
+                 / ObjectLiteral
+                 / Variable
+                 / WfRef
+                 / Identifier
+
+Literal         <- StringLiteral / NumberLiteral / BoolLiteral / NullLiteral
+
+StringLiteral   <- '"' (!'"' .)* '"'
+
+NumberLiteral   <- '-'? Digit+ ('.' Digit+)?
+
+BoolLiteral     <- 'true' / 'false'
+
+NullLiteral     <- 'null'
+
+ArrayLiteral    <- '[' Spacing (Value (',' Spacing Value)*)? Spacing ']'
+
+ObjectLiteral   <- '{' Spacing (ObjField (',' Spacing ObjField)*)? Spacing '}'
+
+ObjField        <- (Identifier / Variable) ':' Spacing Value
+
+# ═══════════════════════════════════════════════
+# 10. REFERENCES
+# ═══════════════════════════════════════════════
+
+Variable        <- '$' Identifier ('.' Identifier)*
+
+WfRef           <- 'wf:' Identifier
+
+MacroRef        <- '@macro:' Identifier
+
+# ═══════════════════════════════════════════════
+# 11. SCHEMA-SPECIFIC SECTIONS
+# ═══════════════════════════════════════════════
+
+SchemaSection   <- MetaBlock
+                 / AbsoluteRule
+                 / Preference
+                 / NamedBlock
+                 / Comment
+
+MetaBlock       <- '§meta' Spacing '{' NL MetaEntry* Spacing '}' NL
+
+MetaEntry       <- Spacing Identifier ':' Spacing Value NL
+
+NamedBlock      <- '§' Identifier Spacing '{' NL NamedBlockBody Spacing '}' NL
+
+NamedBlockBody  <- (NamedBlockEntry / SubBlock / Comment / NL)*
+
+NamedBlockEntry <- Spacing (Variable / Identifier) Spacing
+                   ('::' Spacing (!NL .)+ NL                    # definition
+                   / '=' Spacing Value NL                        # assignment
+                   / '{' NL NamedBlockBody '}' NL                # nested block
+                   )
+
+SubBlock        <- Spacing '@macro:' Identifier Spacing '{' NL
+                   (Spacing StepBody NL)*
+                   Spacing '}' NL
+
+# ═══════════════════════════════════════════════
+# 12. TEST BLOCKS
+# ═══════════════════════════════════════════════
+
+TestBlock       <- '@test:' Identifier Spacing '{' NL
+                   TestField*
+                   Spacing '}' NL
+
+TestField       <- Spacing TestFieldKey ':' Spacing TestFieldValue NL
+
+TestFieldKey    <- 'input' / 'expected' / 'mock' / 'tags'
+
+TestFieldValue  <- ObjectLiteral / ArrayLiteral / Value
+
+# ═══════════════════════════════════════════════
+# 13. HUMAN MODE BLOCK
+# ═══════════════════════════════════════════════
+
+HumanModeBlock  <- Comment &{ text contains "HUMAN MODE" }
+                   Comment*
+
+# ═══════════════════════════════════════════════
+# 14. LEXICAL RULES
+# ═══════════════════════════════════════════════
+
+Identifier      <- [a-zA-Z_] [a-zA-Z0-9_]*
+
+Comment         <- Spacing ';;' (!NL .)* NL
+
+CommentInline   <- Spacing ';;' (!NL .)*
+
+Digit           <- [0-9]
+
+Spacing         <- [ \t]*
+
+NL              <- '\r\n' / '\n' / '\r'
+
+EOF             <- !.

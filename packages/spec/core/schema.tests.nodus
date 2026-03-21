@@ -1,0 +1,75 @@
+§schema:nodus.tests v0.5
+;;  NODUS Core — Test Block Specification Module
+;;  Contains §testing: the @test block syntax contract and NODUS:TEST_RESULT type.
+;;
+;;  Load when: running `nodus test` or authoring @test suites.
+;;  Not required at workflow execution time.
+;;  Requires: schema.nodus core (v0.5+) to be loaded first.
+;;
+;;  Extracted from schema.nodus v0.5. See §meta.changelog.
+
+;; ─────────────────────────────────────────────
+;; TEST BLOCK SPEC  (@test)
+;; ─────────────────────────────────────────────
+
+§testing {
+  ;; @test blocks live INSIDE the .nodus workflow file they test.
+  ;; Run via: `nodus test` or `nodus test <workflow.nodus>`
+  ;; Multiple @test blocks per file are allowed.
+
+  ;; — SYNTAX —
+  ;;
+  ;; @test:test_name {
+  ;;   input:    { key: value, ... }        ← maps to @in declaration
+  ;;   expected: { field: condition, ... }  ← assertions on NODUS:RESULT
+  ;;   mock:     { COMMAND: value, ... }    ← stub external calls
+  ;;   tags:     [tag, ...]                 ← for filtering: nodus test --tag=smoke
+  ;; }
+  ;;
+  ;; — ASSERTION OPERATORS IN expected: —
+  ;;   status = SUCCESS                     ← exact match
+  ;;   out.len < 280                        ← numeric comparison
+  ;;   out CONTAINS "keyword"               ← string contains
+  ;;   errors = []                          ← empty list
+  ;;   flags NOT CONTAINS "RULE_VIOLATION"  ← negated contains
+  ;;   out.tone = warm                      ← field match
+  ;;
+  ;; — MOCK SYNTAX —
+  ;;   FETCH: "./tests/fixtures/post.json"  ← return file contents
+  ;;   FETCH: { status: 200, body: "..." }  ← return inline value
+  ;;   ANALYZE: { sentiment: 0.8, intent: "praise" }
+  ;;   GEN: "This is a mocked reply."
+  ;;   QUERY_KB: [{ content: "...", score: 0.9 }]
+  ;;
+  ;; — EXAMPLE —
+  ;;
+  ;; @test:positive_mention {
+  ;;   input:    { post_url: "https://example.com/1", tone: "warm" }
+  ;;   expected: { status: SUCCESS, out.len < 280, errors = [] }
+  ;;   mock:     { FETCH: "./tests/fixtures/positive_post.json",
+  ;;               ANALYZE: { sentiment: 0.8, intent: "praise" } }
+  ;;   tags:     [smoke, social]
+  ;; }
+  ;;
+  ;; @test:crisis_escalation {
+  ;;   input:    { post_url: "https://example.com/2" }
+  ;;   expected: { status = ABORTED, errors CONTAINS "ROUTE" }
+  ;;   mock:     { FETCH: "./tests/fixtures/negative_post.json",
+  ;;               ANALYZE: { sentiment: -0.9, intent: "complaint" } }
+  ;;   tags:     [crisis, escalation]
+  ;; }
+
+  ;; — TEST RESULT CONTRACT —
+  NODUS:TEST_RESULT {
+    test:       str     ;; test name
+    workflow:   str     ;; wf:name
+    status:     enum    ;; PASS | FAIL | SKIP | ERROR
+    assertions: list    ;; [{ field, expected, actual, passed:bool }]
+    duration_ms: int
+    ts:         ts
+  }
+}
+
+;; ─────────────────────────────────────────────
+;; END §schema:nodus.tests v0.5
+;; ─────────────────────────────────────────────
