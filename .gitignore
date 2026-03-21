@@ -32,14 +32,16 @@ uv.lock
 temp/
 *tmp/
 
+# Agent workflows
+.*/workflows/**
+!.*/workflows/nodus.*.*
+
 # Agent skills
 .*/skills/**
 !.*/skills/nodus/
 !.*/skills/nodus/**
-
-# Agent workflows
-.*/workflows/**
-!.*/workflows/nodus.*.*
+!.claude/workflows/
+!.claude/workflows/nodus.*
 
 # Sandbox
 #sandbox/
