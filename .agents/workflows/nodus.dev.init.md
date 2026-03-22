@@ -29,7 +29,6 @@ If the OS is **Windows**, follow these steps:
 ```powershell
 cmd /c "if exist .claude\workflows del /q .claude\workflows & mklink /D .claude\workflows ..\.agents\workflows"
 cmd /c "if exist .claude\skills rmdir /s /q .claude\skills & mklink /D .claude\skills ..\.agents\skills"
-cmd /c "if exist .claude\rules rmdir /s /q .claude\rules & mklink /D .claude\rules ..\.agents\rules"
 ```
 
 // turbo
@@ -56,14 +55,12 @@ cmd /c "cd .agents\workflows & if exist nodus.run.md del /q nodus.run.md & mklin
 cmd /c "cd .agents\workflows & if exist nodus.test.md del /q nodus.test.md & mklink nodus.test.md ..\..\packages\agents\workflows\nodus.test.md"
 cmd /c "cd .agents\workflows & if exist nodus.validate.md del /q nodus.validate.md & mklink nodus.validate.md ..\..\packages\agents\workflows\nodus.validate.md"
 
-# Assistant Rules
-cmd /c "if exist .agents\rules rmdir /q .agents\rules & mklink /D .agents\rules ..\packages\agents\rules"
 
 # Project-specific commands
 cmd /c "if not exist .claude\commands mkdir .claude\commands & cd .claude\commands & if exist nodus.dev.init.md del /q nodus.dev.init.md & mklink nodus.dev.init.md ..\..\.agents\workflows\nodus.dev.init.md"
 
 # Git Index Maintenance (prevent 'beyond a symbolic link' errors)
-git rm -r --cached .agents/workflows .agents/skills/nodus .claude/workflows .claude/skills .claude/rules .claude/commands demo/.nodus/core sandbox/my-project/.nodus/core
+git rm -r --cached .agents/workflows .agents/skills/nodus .claude/workflows .claude/skills .claude/commands demo/.nodus/core sandbox/my-project/.nodus/core
 ```
 
 ## [LINUX / macOS ONLY] - Using Symbolic Links
@@ -74,10 +71,9 @@ If the OS is **Linux** or **Darwin**, follow these steps:
 1. Cleanup and link `.claude` config files:
 
 ```bash
-rm -f .claude/workflows .claude/skills .claude/rules
+rm -f .claude/workflows .claude/skills
 ln -s ../.agents/workflows .claude/workflows
 ln -s ../.agents/skills .claude/skills
-ln -s ../.agents/rules .claude/rules
 ```
 
 // turbo
@@ -90,7 +86,6 @@ rm -rf demo/.nodus/core sandbox/my-project/.nodus/core .agents/skills/nodus
 ln -s ../../packages/spec/core demo/.nodus/core
 ln -s ../../../packages/spec/core sandbox/my-project/.nodus/core
 ln -s ../../packages/agents/skills/nodus .agents/skills/nodus
-ln -s ../../packages/agents/rules .agents/rules
 
 # Universal Assistant Skills
 for d in .agents/skills/*/; do
@@ -113,7 +108,7 @@ rm -f .claude/commands/nodus.dev.init.md
 ln -s ../../.agents/workflows/nodus.dev.init.md .claude/commands/nodus.dev.init.md
 
 # Git Index Maintenance (prevent 'beyond a symbolic link' errors)
-git rm -r --cached .agents/workflows .agents/skills/nodus .claude/workflows .claude/skills .claude/rules .claude/commands demo/.nodus/core sandbox/my-project/.nodus/core
+git rm -r --cached .agents/workflows .agents/skills/nodus .claude/workflows .claude/skills .claude/commands demo/.nodus/core sandbox/my-project/.nodus/core
 ```
 
 ## Verification
