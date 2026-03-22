@@ -15,7 +15,13 @@ Identify the operating system (Windows vs. Unix/macOS).
 
 ### 2. Execute Initialization Script
 
-Establish all junctions and symlinks using the platform-specific script:
+Establish all junctions and symlinks using the platform-specific script. Key tasks include:
+
+- Linking `.claude/` commands, skills, and rules to `.agents/`.
+- Linking root `CLAUDE.md` to `AGENTS.md` for agent instructions.
+- Linking canonical workflows and skills from `packages/` to `.agents/`.
+- Linking core specs to `demo` and `sandbox` projects.
+- Maintaining the git index by removing linked paths.
 
 **On Windows (PowerShell):**
 

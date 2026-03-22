@@ -47,11 +47,16 @@ cmd /c "mklink /J .claude\commands .agents\workflows"
 cmd /c "mklink /J .claude\skills .agents\skills"
 cmd /c "mklink /J .claude\rules .agents\rules"
 
-# 3.2. .agents junctions
+# 3.2. Global Agent Instructions (CLAUDE.md -> AGENTS.md)
+Write-Host "Linking CLAUDE.md to AGENTS.md..." -ForegroundColor Cyan
+Remove-Existing "CLAUDE.md"
+cmd /c "mklink /H CLAUDE.md AGENTS.md"
+
+# 3.3. .agents junctions
 Remove-Existing ".agents\skills\nodus"
 cmd /c "mklink /J .agents\skills\nodus packages\agents\skills\nodus"
 
-# 3.3. Workflow hardlinks
+# 3.4. Workflow hardlinks
 Write-Host "Creating workflow hardlinks..." -ForegroundColor Cyan
 foreach ($f in $workflows) {
     $name = "nodus.$f.md"
@@ -61,7 +66,7 @@ foreach ($f in $workflows) {
     cmd /c "mklink /H $link $target"
 }
 
-# 3.4. Core spec junctions
+# 3.5. Core spec junctions
 Write-Host "Linking core specs to demo/sandbox..." -ForegroundColor Cyan
 foreach ($s in $specs) {
     $parent = Split-Path $s.Path
@@ -70,9 +75,10 @@ foreach ($s in $specs) {
     cmd /c "mklink /J $($s.Path) $($s.Target)"
 }
 
-# 3.5. Git Index Maintenance
+# 3.6. Git Index Maintenance
 Write-Host "Synchronizing git index..." -ForegroundColor Cyan
 $linksToRemove = @(
+    "CLAUDE.md",
     ".agents\skills\nodus",
     ".claude\commands",
     ".claude\skills",
@@ -85,4 +91,4 @@ foreach ($f in $workflows) { $linksToRemove += ".agents\workflows\nodus.$f.md" }
 git rm -r --cached --ignore-unmatch $linksToRemove
 
 Write-Host "`n>>> Verification:" -ForegroundColor Green
-cmd /c "dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"
+cmd /c "dir CLAUDE.md .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"
