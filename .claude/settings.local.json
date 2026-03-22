@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Projects/nodus rm --cached --ignore-unmatch -f .agents/skills/nodus .claude/workflows .claude/skills .claude/commands demo/.nodus/core sandbox/my-project/.nodus/core)",
+      "Bash(powershell -Command \"dir C:\\\\Projects\\\\nodus\\\\.claude\\\\workflows, C:\\\\Projects\\\\nodus\\\\.claude\\\\skills, C:\\\\Projects\\\\nodus\\\\.claude\\\\commands, C:\\\\Projects\\\\nodus\\\\.agents\\\\skills\\\\nodus, C:\\\\Projects\\\\nodus\\\\demo\\\\.nodus\\\\core, C:\\\\Projects\\\\nodus\\\\sandbox\\\\my-project\\\\.nodus\\\\core | Select-Object Name, LinkType, @{n=''Target'';e={if\\($_.LinkType\\){$_.Target}else{''\\(real dir/file\\)''}}}\")",
+      "Bash(powershell -Command \"cmd /c ''dir C:\\\\Projects\\\\nodus\\\\.claude /AL''\")",
+      "Bash(powershell -Command \"cmd /c ''dir C:\\\\Projects\\\\nodus\\\\.agents\\\\skills /AL''\")",
+      "Bash(powershell -Command \"cmd /c ''dir C:\\\\Projects\\\\nodus\\\\demo\\\\.nodus /AL''\")",
+      "Bash(powershell -Command \"cmd /c ''dir C:\\\\Projects\\\\nodus\\\\sandbox\\\\my-project\\\\.nodus /AL''\")",
+      "Bash(powershell -Command \":*)",
+      "Bash(git -C /c/Projects/nodus rm -r --cached --ignore-unmatch -f .agents/workflows .agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core)",
+      "Bash(git -C /c/Projects/nodus add .agents/workflows/nodus.dev.init.md)",
+      "Bash(git -C /c/Projects/nodus rm --cached --ignore-unmatch -f .claude/workflows/nodus.compile.md .claude/workflows/nodus.create.md .claude/workflows/nodus.dev.init.md .claude/workflows/nodus.explain.md .claude/workflows/nodus.init.md .claude/workflows/nodus.pack.md .claude/workflows/nodus.run.md .claude/workflows/nodus.test.md .claude/workflows/nodus.validate.md)",
+      "Bash(git -C /c/Projects/nodus diff --cached --name-status .agents/workflows/nodus.dev.init.md)",
+      "Bash(git -C /c/Projects/nodus ls-files --format='%\\(objectmode\\) %\\(path\\)' .agents/workflows/nodus.dev.init.md)",
+      "Bash(git -C /c/Projects/nodus show HEAD:.agents/workflows/nodus.dev.init.md)",
+      "Bash(git -C /c/Projects/nodus cat-file -p HEAD:.agents/workflows/nodus.dev.init.md)",
+      "Bash(git -C /c/Projects/nodus ls-tree HEAD .agents/workflows/nodus.dev.init.md)",
+      "Bash(git -C /c/Projects/nodus cat-file blob 2ff4c0d577e3c86d0482d41642b72acf292920bd)",
+      "Bash(fsutil hardlink:*)"
+    ]
+  }
+}

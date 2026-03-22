@@ -1,0 +1,261 @@
+§schema:errors v0.7
+;; NODUS | Error Code Registry
+;; Unified registry with severity, category, and human-readable descriptions.
+;; Mirrors and extends §errors in schema.nodus.
+
+;; ─────────────────────────────────────────────
+;; ERROR REGISTRY
+;; severity:  error (blocks execution) | warn (continues) | info (advisory)
+;; category:  parse | runtime | validation | routing | memory | test
+;; ─────────────────────────────────────────────
+
+§error_registry {
+
+  ;; — PARSE ERRORS — (category: parse)
+
+  NODUS:PARSE_ERROR {
+    severity:   error
+    category:   parse
+    message:    "Workflow file could not be parsed"
+    detail:     "The .nodus file contains syntax errors that prevent AST construction."
+    resolution: "Run 'nodus validate <file>' and fix reported syntax issues."
+  }
+
+  NODUS:NO_SCHEMA {
+    severity:   warn
+    category:   parse
+    message:    "schema.nodus not found — running in base mode"
+    detail:     "Agent will use only built-in NODUS primitives without project extensions."
+    resolution: "Ensure §runtime.core points to a valid schema.nodus file."
+  }
+
+  NODUS:SCHEMA_MISMATCH {
+    severity:   warn
+    category:   parse
+    message:    "Schema version does not match workflow version"
+    detail:     "Unresolved symbols may occur. Agent will attempt execution with available definitions."
+    resolution: "Update workflow or schema to matching versions."
+  }
+
+  ;; — RUNTIME ERRORS — (category: runtime)
+
+  NODUS:NO_TRIGGER {
+    severity:   error
+    category:   runtime
+    message:    "No @ON condition matched input"
+    detail:     "The incoming event did not satisfy any declared trigger condition."
+    resolution: "Add an @ON trigger for the incoming event type or check input payload."
+  }
+
+  NODUS:RULE_VIOLATION {
+    severity:   error
+    category:   runtime
+    message:    "A step attempted to violate a !! rule"
+    detail:     "An absolute constraint was about to be broken. Step was aborted."
+    resolution: "Rewrite the step to comply with the violated !! rule."
+  }
+
+  NODUS:RULE_CONFLICT {
+    severity:   error
+    category:   runtime
+    message:    "Two !! rules contradict each other"
+    detail:     "Execution cannot continue when absolute rules are in conflict."
+    resolution: "Review !! rules and resolve the contradiction."
+  }
+
+  NODUS:UNDEFINED_VAR {
+    severity:   error
+    category:   runtime
+    message:    "Referenced $variable has no value"
+    detail:     "A step references a variable that was never assigned or declared in @in."
+    resolution: "Assign the variable in a prior step or add it to @in declaration."
+  }
+
+  NODUS:UNDEFINED_CMD {
+    severity:   error
+    category:   runtime
+    message:    "Unknown command encountered"
+    detail:     "The command is not registered in §commands or §commands_system."
+    resolution: "Check command name spelling or add it to schema extensions."
+  }
+
+  NODUS:UNDEFINED_MACRO {
+    severity:   error
+    category:   runtime
+    message:    "RUN(@macro:name) target not found in schema"
+    detail:     "The referenced macro is not defined in §macros."
+    resolution: "Define the macro in schema or check the macro name."
+  }
+
+  NODUS:MAX_REACHED {
+    severity:   warn
+    category:   runtime
+    message:    "Loop hit MAX iteration limit"
+    detail:     "~UNTIL or ~FOR reached MAX:n without satisfying exit condition."
+    resolution: "Increase MAX:n or review loop logic. Partial results returned."
+  }
+
+  NODUS:UNHANDLED_ERROR {
+    severity:   error
+    category:   runtime
+    message:    "Error with no @err handler"
+    detail:     "An error occurred but the workflow has no @err declaration."
+    resolution: "Add @err: ESCALATE(human) or a custom error handler."
+  }
+
+  NODUS:CONFIDENCE_LOW {
+    severity:   warn
+    category:   runtime
+    message:    "$confidence below threshold"
+    detail:     "Model confidence in output is below the ^confidence validator threshold."
+    resolution: "Review output quality or lower the confidence threshold."
+  }
+
+  ;; — VALIDATION ERRORS — (category: validation)
+
+  NODUS:VALIDATION_FAILED {
+    severity:   error
+    category:   validation
+    message:    "VALIDATE() returned false"
+    detail:     "One or more ^rules did not pass. $error contains the failing rule."
+    resolution: "Fix the content to pass all ^rules or adjust validation criteria."
+  }
+
+  ;; — ROUTING ERRORS — (category: routing)
+
+  NODUS:ROUTE_NOT_FOUND {
+    severity:   error
+    category:   routing
+    message:    "ROUTE() target workflow does not exist"
+    detail:     "The workflow referenced in ROUTE(wf:name) is not in the trigger registry."
+    resolution: "Create the target workflow or correct the workflow name."
+  }
+
+  NODUS:ESCALATION_FAILED {
+    severity:   error
+    category:   routing
+    message:    "ESCALATE() target unreachable"
+    detail:     "The escalation target (human, supervisor, channel) could not be reached."
+    resolution: "Check escalation configuration and target availability."
+  }
+
+  ;; — MEMORY ERRORS — (category: memory)
+
+  NODUS:KB_UNAVAILABLE {
+    severity:   warn
+    category:   memory
+    message:    "QUERY_KB() index not reachable or not configured"
+    detail:     "Knowledge base query failed. Workflow continues without KB context."
+    resolution: "Check KB index configuration in nodus.config.json."
+  }
+
+  NODUS:MEMORY_FAILED {
+    severity:   warn
+    category:   memory
+    message:    "REMEMBER() or RECALL() storage operation failed"
+    detail:     "Long-term memory read/write failed. Workflow continues without memory."
+    resolution: "Check memory storage backend configuration."
+  }
+
+  ;; — TEST ERRORS — (category: test)
+
+  NODUS:TEST_FAILED {
+    severity:   error
+    category:   test
+    message:    "One or more @test assertions did not pass"
+    detail:     "Test execution completed but assertions were not satisfied."
+    resolution: "Review test expectations and workflow logic."
+  }
+
+  ;; — CONTROL FLOW — (category: control)
+
+  NODUS:PAUSED {
+    severity:   info
+    category:   control
+    message:    "Workflow paused — awaiting human re-trigger."
+    detail:     "A !PAUSE instruction suspended the workflow. It will not auto-resume."
+    resolution: "Re-trigger the workflow explicitly to continue from the paused point."
+  }
+
+  ;; — RUNTIME (continued) —
+
+  NODUS:COUNTER_OVERFLOW {
+    severity:   error
+    category:   runtime
+    message:    "Counter '$key' exceeded MAX:$max."
+    detail:     "COUNTER() was called with a max limit that has now been reached."
+    resolution: "Reset the counter with COUNTER(key) +increment=-$max, or increase the max."
+  }
+
+  NODUS:GIT_UNAVAILABLE {
+    severity:   error
+    category:   runtime
+    message:    "GIT() command failed — git is not available in this environment."
+    detail:     "The GIT() command requires git to be installed and on PATH."
+    resolution: "Install git, add it to PATH, or remove the GIT() call if git is optional."
+  }
+
+  ;; — DIALOG ERRORS — (category: dialog)
+
+  NODUS:DIALOG_TIMEOUT {
+    severity:   error
+    category:   dialog
+    message:    "ASK() or CONFIRM() did not receive a response within +timeout seconds."
+    detail:     "Human did not answer within the configured timeout. Workflow cannot continue."
+    resolution: "Increase +timeout, set +timeout=0 to disable, or add ?IF handler for this error."
+  }
+
+  NODUS:DIALOG_REJECTED {
+    severity:   error
+    category:   dialog
+    message:    "CONFIRM() returned reject — human explicitly declined."
+    detail:     "Human selected the reject action on a CONFIRM() call with +strict=true."
+    resolution: "Handle this case with ?IF $decision = false: ... before using +strict=true."
+  }
+
+  ;; — CONTROL FLOW (continued) —
+
+  NODUS:SWITCH_NO_MATCH {
+    severity:   warn
+    category:   control
+    message:    "?SWITCH value did not match any arm and no * wildcard declared."
+    detail:     "The ?SWITCH block was skipped entirely. If this is unintentional, add a * arm."
+    resolution: "Add a * → ESCALATE(human) or * → ... fallback arm to ?SWITCH."
+  }
+
+}
+
+;; ─────────────────────────────────────────────
+;; SHORTHAND ERROR CODES (legacy compatibility)
+;; ─────────────────────────────────────────────
+
+§error_codes_short {
+  $ERR.C001 = "NODUS:PARSE_ERROR"
+  $ERR.C002 = "NODUS:RULE_VIOLATION"
+  $ERR.C003 = "NODUS:RULE_CONFLICT"
+  $ERR.C004 = "NODUS:UNDEFINED_VAR"
+  $ERR.C005 = "NODUS:UNDEFINED_CMD"
+  $ERR.C006 = "NODUS:ROUTE_NOT_FOUND"
+  $ERR.C007 = "NODUS:MAX_REACHED"
+  $ERR.C008 = "NODUS:VALIDATION_FAILED"
+  $ERR.C009 = "NODUS:UNHANDLED_ERROR"
+  $ERR.C010 = "NODUS:NO_TRIGGER"
+  $ERR.C011 = "NODUS:NO_SCHEMA"
+  $ERR.C012 = "NODUS:SCHEMA_MISMATCH"
+  $ERR.C013 = "NODUS:ESCALATION_FAILED"
+  $ERR.C014 = "NODUS:KB_UNAVAILABLE"
+  $ERR.C015 = "NODUS:MEMORY_FAILED"
+  $ERR.C016 = "NODUS:TEST_FAILED"
+  $ERR.C017 = "NODUS:CONFIDENCE_LOW"
+  $ERR.C018 = "NODUS:UNDEFINED_MACRO"
+  $ERR.C019 = "NODUS:PAUSED"
+  $ERR.C020 = "NODUS:COUNTER_OVERFLOW"
+  $ERR.C021 = "NODUS:GIT_UNAVAILABLE"
+  $ERR.C022 = "NODUS:DIALOG_TIMEOUT"
+  $ERR.C023 = "NODUS:DIALOG_REJECTED"
+  $ERR.C024 = "NODUS:SWITCH_NO_MATCH"
+}
+
+;; ─────────────────────────────────────────────
+;; END §schema:errors v0.7
+;; ─────────────────────────────────────────────
