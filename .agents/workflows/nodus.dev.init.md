@@ -9,6 +9,7 @@ see a single source of truth: canonical workflows and skills live in `packages/a
 points there.
 
 ```
+AGENTS.md                       ←─ hard link ── CLAUDE.md
 packages/agents/skills/nodus/   ←─ junction ── .agents/skills/nodus/
 packages/agents/workflows/      ←─ hard link (Win) / symlink (Linux) ── .agents/workflows/nodus.*.md
 packages/spec/core/             ←─ junction ── demo/.nodus/core
@@ -40,6 +41,16 @@ If the OS is **Windows**, follow these steps:
 > Junctions (`mklink /J`) do not require administrator privileges.
 > Hard links (`mklink /H`) do not require administrator privileges and are used for `.md` files
 > because Windows file symlinks (`mklink`) require Developer Mode or admin rights.
+
+// turbo
+
+1. Create `CLAUDE.md` hard link (single source of truth for all AI agents):
+
+```powershell
+# CLAUDE.md (Claude Code) ←─ hard link ─── AGENTS.md (Cursor / other agents)
+# NOTE: CLAUDE.md stays tracked in git so fresh clones work without re-running this script.
+cmd /c "del /q CLAUDE.md & mklink /H CLAUDE.md AGENTS.md"
+```
 
 // turbo
 
@@ -79,6 +90,16 @@ git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .clau
 ## [LINUX / macOS ONLY] - Using Symbolic Links
 
 If the OS is **Linux** or **Darwin**, follow these steps:
+
+// turbo
+
+1. Create `CLAUDE.md` hard link (single source of truth for all AI agents):
+
+```bash
+# CLAUDE.md (Claude Code) ←─ hard link ─── AGENTS.md (Cursor / other agents)
+# NOTE: CLAUDE.md stays tracked in git so fresh clones work without re-running this script.
+rm -f CLAUDE.md && ln AGENTS.md CLAUDE.md
+```
 
 // turbo
 
