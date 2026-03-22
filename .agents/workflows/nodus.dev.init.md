@@ -16,7 +16,6 @@ packages/spec/core/             ←─ junction ── demo/.nodus/core
 
 .agents/skills/   ←─ junction ── .claude/skills/
 .agents/workflows/ ←─ junction ── .claude/commands/
-.agents/rules/    ←─ junction ── .claude/rules/
 ```
 
 > [!NOTE]
@@ -26,7 +25,6 @@ packages/spec/core/             ←─ junction ── demo/.nodus/core
 
 ## 1. Operating System Detection
 
-// turbo
 1. Check the operating system:
 
 ```bash
@@ -47,9 +45,8 @@ If the OS is **Windows**, follow these steps:
 1. Create `.claude` junctions (agent interface):
 
 ```powershell
-cmd /c "if exist .claude\commands rmdir /s /q .claude\commands & mklink /J .claude\commands ..\.agents\workflows"
-cmd /c "if exist .claude\skills rmdir /s /q .claude\skills & mklink /J .claude\skills ..\.agents\skills"
-cmd /c "if exist .claude\rules rmdir /s /q .claude\rules & mklink /J .claude\rules ..\.agents\rules"
+cmd /c "if exist .claude\commands rmdir /s /q .claude\commands & mklink /J .claude\commands .agents\workflows"
+cmd /c "if exist .claude\skills rmdir /s /q .claude\skills & mklink /J .claude\skills .agents\skills"
 ```
 
 // turbo
@@ -57,7 +54,7 @@ cmd /c "if exist .claude\rules rmdir /s /q .claude\rules & mklink /J .claude\rul
 
 ```powershell
 # Nodus skill junction (.agents/skills/nodus → packages/agents/skills/nodus)
-cmd /c "if exist .agents\skills\nodus rmdir /s /q .agents\skills\nodus & mklink /J .agents\skills\nodus ..\..\packages\agents\skills\nodus"
+cmd /c "if exist .agents\skills\nodus rmdir /s /q .agents\skills\nodus & mklink /J .agents\skills\nodus packages\agents\skills\nodus"
 
 # Workflow hard links (.agents/workflows/nodus.*.md → packages/agents/workflows/nodus.*.md)
 cmd /c "cd .agents\workflows & if exist nodus.compile.md del /q nodus.compile.md & mklink /H nodus.compile.md ..\..\packages\agents\workflows\nodus.compile.md"
@@ -70,11 +67,11 @@ cmd /c "cd .agents\workflows & if exist nodus.test.md del /q nodus.test.md & mkl
 cmd /c "cd .agents\workflows & if exist nodus.validate.md del /q nodus.validate.md & mklink /H nodus.validate.md ..\..\packages\agents\workflows\nodus.validate.md"
 
 # Core spec junctions (demo and sandbox projects)
-cmd /c "if not exist demo\.nodus mkdir demo\.nodus & if exist demo\.nodus\core rmdir /s /q demo\.nodus\core & mklink /J demo\.nodus\core ..\..\packages\spec\core"
-cmd /c "if not exist sandbox\my-project\.nodus mkdir sandbox\my-project\.nodus & if exist sandbox\my-project\.nodus\core rmdir /s /q sandbox\my-project\.nodus\core & mklink /J sandbox\my-project\.nodus\core ..\..\..\packages\spec\core"
+cmd /c "if not exist demo\.nodus mkdir demo\.nodus & if exist demo\.nodus\core rmdir /s /q demo\.nodus\core & mklink /J demo\.nodus\core packages\spec\core"
+cmd /c "if not exist sandbox\my-project\.nodus mkdir sandbox\my-project\.nodus & if exist sandbox\my-project\.nodus\core rmdir /s /q sandbox\my-project\.nodus\core & mklink /J sandbox\my-project\.nodus\core packages\spec\core"
 
 # Git index maintenance (prevent 'beyond a symbolic link' errors)
-git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core
+git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills demo/.nodus/core sandbox/my-project/.nodus/core
 ```
 
 ## [LINUX / macOS ONLY] - Using Symbolic Links
@@ -86,10 +83,9 @@ If the OS is **Linux** or **Darwin**, follow these steps:
 1. Create `.claude` symlinks (agent interface):
 
 ```bash
-rm -rf .claude/commands .claude/skills .claude/rules
+rm -rf .claude/commands .claude/skills
 ln -s ../.agents/workflows .claude/commands
 ln -s ../.agents/skills .claude/skills
-ln -s ../.agents/rules .claude/rules
 ```
 
 // turbo
@@ -113,7 +109,7 @@ ln -s ../../packages/spec/core demo/.nodus/core
 ln -s ../../../packages/spec/core sandbox/my-project/.nodus/core
 
 # Git index maintenance (prevent 'beyond a symbolic link' errors)
-git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core
+git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills demo/.nodus/core sandbox/my-project/.nodus/core
 ```
 
 ## Verification
@@ -123,17 +119,18 @@ git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .clau
 1. Check that all links are active:
 
 **Windows:**
+
 ```powershell
-dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core /AL
+dir .claude\commands .claude\skills .agents\skills\nodus demo\.nodus\core /AL
 ```
 
 **Linux / macOS:**
+
 ```bash
-ls -ld .claude/commands .claude/skills .claude/rules .agents/skills/nodus demo/.nodus/core
+ls -ld .claude/commands .claude/skills .agents/skills/nodus demo/.nodus/core
 ```
 
 ---
 
-> [!TIP]
-> After running this, Claude and other AI agents will see all workflows, skills, and rules
+> After running this, Claude and other AI agents will see all workflows and skills
 > from a single source in `packages/` and `.agents/`.

@@ -31,18 +31,20 @@ temp/
 
 # Claude
 .claude/settings.json
-# We track the symlinks themselves in .claude and .agents
-!.claude/workflows
-!.claude/skills
-!.claude/rules
-!.claude/commands
-!.agents/workflows
-!.agents/skills/nodus
-!demo/.nodus/core
-!sandbox/my-project/.nodus/core
-!sandbox/my-project/.agents/skills/nodus
-!sandbox/my-project/.agents/workflows
-!sandbox/my-project/.agents/rules
+.claude/commands/
+.claude/skills/
+.claude/workflows/
+
+# Agent Junctions (Canonical sources are in packages/agents/)
+.agents/skills/nodus/
+#.agents/workflows/  <-- we still track real files in workflows, but symlinks/hardlinks should be untracked if possible.
+# Actually, let's just ignore the specific linked files.
+.agents/workflows/nodus.*.md
+!.agents/workflows/nodus.dev.init.md
+
+# Project Core Specs
+demo/.nodus/core/
+sandbox/my-project/.nodus/core/
 
 # Sandbox
 #sandbox/
