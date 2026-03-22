@@ -21,9 +21,8 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   │   ├── workflows/             ← slash-commands
 │   │   │   ├── nodus.*.md
 │   │   │   └── ...
-│   │   ├── skills/                ← syntax, patterns, lint rules
-│   │   │   └── nodus/
-│   │   └── ...
+│   │   └── skills/                ← syntax, patterns, lint rules
+│   │       └── nodus/
 │   │
 │   └── extensions/                ← IDE support
 │
@@ -34,6 +33,7 @@ nodus/                             ← github.com/nodus-lang/nodus
 ├── examples/                      ← workflow snippets
 │
 ├── .agents/                       ← AI agent skills and workflows (orchestration)
+│   ├── rules/                     ← agent rules and constraints
 │   ├── skills/
 │   │   ├── nodus/                 ← junction → packages/agents/skills/nodus/
 │   │   └── ...                    ← generic skills (brainstorming, etc.)
@@ -42,8 +42,9 @@ nodus/                             ← github.com/nodus-lang/nodus
 │       └── nodus.dev.init.md      ← file: setup symlinks (Windows/Linux)
 │
 ├── .claude/                       ← Claude Desktop specific config
+│   ├── commands/                  ← junction → .agents/workflows/
 │   ├── skills/                    ← junction → .agents/skills/
-│   └── commands/                  ← junction → .agents/workflows/
+│   └── rules/                     ← junction → .agents/rules/
 │
 ├── pyproject.toml                 ← build config and dependencies
 ├── README.md                      ← quick start

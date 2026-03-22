@@ -17,7 +17,12 @@
       "Bash(git -C /c/Projects/nodus cat-file -p HEAD:.agents/workflows/nodus.dev.init.md)",
       "Bash(git -C /c/Projects/nodus ls-tree HEAD .agents/workflows/nodus.dev.init.md)",
       "Bash(git -C /c/Projects/nodus cat-file blob 2ff4c0d577e3c86d0482d41642b72acf292920bd)",
-      "Bash(fsutil hardlink:*)"
+      "Bash(fsutil hardlink:*)",
+      "Bash(git -C /c/Projects/nodus status --short)",
+      "Bash(git -C /c/Projects/nodus checkout HEAD -- .agents/skills/)",
+      "Bash(git -C /c/Projects/nodus rm -r --cached --ignore-unmatch -f .agents/skills/nodus .agents/workflows/nodus.compile.md .agents/workflows/nodus.create.md .agents/workflows/nodus.explain.md .agents/workflows/nodus.init.md .agents/workflows/nodus.pack.md .agents/workflows/nodus.run.md .agents/workflows/nodus.test.md .agents/workflows/nodus.validate.md .claude/commands .claude/skills demo/.nodus/core sandbox/my-project/.nodus/core)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)"
     ]
   }
 }

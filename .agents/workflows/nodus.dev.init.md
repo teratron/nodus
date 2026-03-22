@@ -14,7 +14,8 @@ packages/agents/workflows/      ←─ hard link (Win) / symlink (Linux) ── 
 packages/spec/core/             ←─ junction ── demo/.nodus/core
                                                sandbox/my-project/.nodus/core
 
-.agents/skills/   ←─ junction ── .claude/skills/
+.agents/rules/     ←─ junction ── .claude/rules/
+.agents/skills/    ←─ junction ── .claude/skills/
 .agents/workflows/ ←─ junction ── .claude/commands/
 ```
 
@@ -47,6 +48,7 @@ If the OS is **Windows**, follow these steps:
 ```powershell
 cmd /c "if exist .claude\commands rmdir /s /q .claude\commands & mklink /J .claude\commands .agents\workflows"
 cmd /c "if exist .claude\skills rmdir /s /q .claude\skills & mklink /J .claude\skills .agents\skills"
+cmd /c "if exist .claude\rules rmdir /s /q .claude\rules & mklink /J .claude\rules .agents\rules"
 ```
 
 // turbo
@@ -71,7 +73,7 @@ cmd /c "if not exist demo\.nodus mkdir demo\.nodus & if exist demo\.nodus\core r
 cmd /c "if not exist sandbox\my-project\.nodus mkdir sandbox\my-project\.nodus & if exist sandbox\my-project\.nodus\core rmdir /s /q sandbox\my-project\.nodus\core & mklink /J sandbox\my-project\.nodus\core packages\spec\core"
 
 # Git index maintenance (prevent 'beyond a symbolic link' errors)
-git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills demo/.nodus/core sandbox/my-project/.nodus/core
+git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core
 ```
 
 ## [LINUX / macOS ONLY] - Using Symbolic Links
@@ -83,9 +85,10 @@ If the OS is **Linux** or **Darwin**, follow these steps:
 1. Create `.claude` symlinks (agent interface):
 
 ```bash
-rm -rf .claude/commands .claude/skills
+rm -rf .claude/commands .claude/skills .claude/rules
 ln -s ../.agents/workflows .claude/commands
 ln -s ../.agents/skills .claude/skills
+ln -s ../.agents/rules .claude/rules
 ```
 
 // turbo
@@ -109,7 +112,7 @@ ln -s ../../packages/spec/core demo/.nodus/core
 ln -s ../../../packages/spec/core sandbox/my-project/.nodus/core
 
 # Git index maintenance (prevent 'beyond a symbolic link' errors)
-git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills demo/.nodus/core sandbox/my-project/.nodus/core
+git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core
 ```
 
 ## Verification
@@ -121,13 +124,13 @@ git rm -r --cached --ignore-unmatch .agents/workflows .agents/skills/nodus .clau
 **Windows:**
 
 ```powershell
-dir .claude\commands .claude\skills .agents\skills\nodus demo\.nodus\core /AL
+dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core /AL
 ```
 
 **Linux / macOS:**
 
 ```bash
-ls -ld .claude/commands .claude/skills .agents/skills/nodus demo/.nodus/core
+ls -ld .claude/commands .claude/skills .claude/rules .agents/skills/nodus demo/.nodus/core
 ```
 
 ---

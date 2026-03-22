@@ -96,9 +96,39 @@ Use consistent Unicode-based separators to improve code readablity:
     # ───────────────────────────────────────────────────────────────────────────
     ```
 
-* Avoid standard standard PEP8 horizontal lines or excessive whitespace. Use Unicode box characters to create a clean, modern look.
+* Avoid standard PEP8 horizontal lines or excessive whitespace. Use Unicode box characters to create a clean, modern look.
 
-## 6. File Interaction Protocol
+## 6. Windows Junction Safety
+
+When managing Windows junctions (`mklink /J`) and git index, follow this strict order to prevent data loss:
+
+### 6.1 The Problem
+
+`git rm -r --cached <path>` on Windows **follows junctions** and physically deletes files in the
+junction target, even with `--cached`. Example: `git rm -r --cached demo/.nodus/core` where
+`demo/.nodus/core` is a junction to `packages/spec/core/` will **delete all files in `packages/spec/core/`
+from disk**.
+
+### 6.2 Safe Procedure
+
+Always run `git rm --cached` **before** creating junctions, while the paths are empty or nonexistent:
+
+```
+1. git rm --cached   ← first, while no junctions exist yet
+2. mklink /J ...     ← then create junctions
+```
+
+When removing from git index, list **specific file paths** rather than directories:
+
+```bash
+# Safe — specific files only
+git rm --cached --ignore-unmatch .agents/workflows/nodus.compile.md ...
+
+# Dangerous — git will traverse the junction into packages/
+git rm -r --cached .agents/skills/nodus
+```
+
+## 7. File Interaction Protocol
 
 To prevent accidental data loss or corruption in large documents, the agent MUST follow this protocol:
 
