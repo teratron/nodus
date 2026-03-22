@@ -38,8 +38,8 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   │   ├── nodus/                 ← junction → packages/agents/skills/nodus/
 │   │   └── ...                    ← generic skills (brainstorming, etc.)
 │   └── workflows/
-│       ├── nodus.*.md             ← symlinks → packages/agents/workflows/nodus.*.md
-│       └── nodus.dev.init.md      ← file: setup symlinks (Windows/Linux)
+│       ├── nodus.*.md             ← hardlinks → packages/agents/workflows/nodus.*.md
+│       └── nodus.dev.init.md      ← file: setup links (Windows/Linux)
 │
 ├── .claude/                       ← Claude Desktop specific config
 │   ├── commands/                  ← junction → .agents/workflows/
@@ -48,10 +48,15 @@ nodus/                             ← github.com/nodus-lang/nodus
 │
 ├── pyproject.toml                 ← build config and dependencies
 ├── AGENTS.md                      ← agent rules and constraints (canonical source)
-├── CLAUDE.md                      ← Claude Desktop specific config (symlink to AGENTS.md)
+├── CLAUDE.md                      ← hardlink to AGENTS.md (Claude Code)
+├── QWEN.md                        ← hardlink to AGENTS.md (Qwen)
+├── STRUCTURE.md                   ← detailed file structure reference
 ├── README.md                      ← quick start
 ├── CONTRIBUTING.md                ← this file
-└── CHANGELOG.md                   ← version history
+├── CHANGELOG.md                   ← version history
+├── LICENSE
+├── sandbox/                       ← experimental playground
+└── tests/                         ← Python runtime tests
 ```
 
 ## User Project Structure
@@ -449,6 +454,7 @@ The repository provides slash commands in `.agents/workflows/` that guide an AI 
 
 A project-specific command in `.agents/workflows/` makes sense only when the AI needs to orchestrate something beyond what `nodus run` alone can do: asking the user questions, verifying external state, or combining multiple steps into a single guided flow.
 
+- **`/nodus.dev.init`** — Environment setup: creates junctions/hardlinks/symlinks linking `.claude/` and `.agents/` to canonical sources in `packages/`.
 - **`/nodus.compile`** — Full cycle: validation → if clean, transpile to HUMAN mode → result summary.
 - **`/nodus.create`** — Interactive wizard: asks for domain, purpose, I/O, and rules → scaffolds the file.
 - **`/nodus.explain`** — Analysis: reads workflow → explains trigger, constraints, and steps in plain language.

@@ -132,14 +132,14 @@ git rm -r --cached .agents/skills/nodus
 
 To prevent accidental data loss or corruption in large documents, the agent MUST follow this protocol:
 
-### 6.1 Pre-read Requirement
+### 7.1 Pre-read Requirement
 
-* **Mandatory**: Always call `view_file` on the target file BEFORE making any edits.
-* **Scope**: Read the entire file if it's within tool limits (800 lines) to ensure full context.
+* **Mandatory**: Always read the target file BEFORE making any edits.
+* **Scope**: Read the entire file if it's within tool limits to ensure full context.
 * **Anti-Pattern**: DO NOT rely on cached or partial information from previous steps.
 
-### 6.2 Post-verify Requirement
+### 7.2 Post-verify Requirement
 
-* **Verification**: Immediately after an edit, use `view_file` or `run_command` (grep/dir) to verify the result.
+* **Verification**: Immediately after an edit, read the file or search its contents to verify the result.
 * **Integrity**: Check that surrounding code or documentation blocks (like diagrams) were NOT affected by the edit.
 * **Recovery**: If data was lost, restore it immediately before proceeding.
