@@ -11,6 +11,7 @@
 # ───────────────────────────────────────────────────────────────────────────────
 
 $workflows = @("compile", "create", "explain", "init", "pack", "run", "test", "validate")
+$agentFiles = @("CLAUDE.md", "QWEN.md")
 $specs = @(
     @{ Path = "demo\.nodus\core"; Target = "packages\spec\core" },
     @{ Path = "sandbox\my-project\.nodus\core"; Target = "packages\spec\core" }
@@ -40,6 +41,7 @@ function Remove-Existing($path) {
 Write-Host ">>> Initializing Windows Agent Environment..." -ForegroundColor Cyan
 
 # 3.1. .claude junctions
+if (-not (Test-Path ".claude")) { New-Item -ItemType Directory -Path ".claude" -Force }
 Remove-Existing ".claude\commands"
 Remove-Existing ".claude\skills"
 Remove-Existing ".claude\rules"
@@ -47,12 +49,17 @@ cmd /c "mklink /J .claude\commands .agents\workflows"
 cmd /c "mklink /J .claude\skills .agents\skills"
 cmd /c "mklink /J .claude\rules .agents\rules"
 
-# 3.2. Global Agent Instructions (CLAUDE.md -> AGENTS.md)
-Write-Host "Linking CLAUDE.md to AGENTS.md..." -ForegroundColor Cyan
-Remove-Existing "CLAUDE.md"
-cmd /c "mklink /H CLAUDE.md AGENTS.md"
+# 3.2. Global Agent Instructions (Linking to AGENTS.md)
+Write-Host "Linking agent instruction files..." -ForegroundColor Cyan
+foreach ($f in $agentFiles) { 
+    Remove-Existing $f
+    cmd /c "mklink /H $f AGENTS.md"
+}
 
 # 3.3. .agents junctions
+if (-not (Test-Path ".agents\skills")) { New-Item -ItemType Directory -Path ".agents\skills" -Force }
+if (-not (Test-Path ".agents\workflows")) { New-Item -ItemType Directory -Path ".agents\workflows" -Force }
+if (-not (Test-Path ".agents\rules")) { New-Item -ItemType Directory -Path ".agents\rules" -Force }
 Remove-Existing ".agents\skills\nodus"
 cmd /c "mklink /J .agents\skills\nodus packages\agents\skills\nodus"
 
@@ -67,7 +74,7 @@ foreach ($f in $workflows) {
 }
 
 # 3.5. Core spec junctions
-Write-Host "Linking core specs to demo/sandbox..." -ForegroundColor Cyan
+Write-Host "Linking core specs to demo..." -ForegroundColor Cyan
 foreach ($s in $specs) {
     $parent = Split-Path $s.Path
     if (-not (Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force }
@@ -78,7 +85,6 @@ foreach ($s in $specs) {
 # 3.6. Git Index Maintenance
 Write-Host "Synchronizing git index..." -ForegroundColor Cyan
 $linksToRemove = @(
-    "CLAUDE.md",
     ".agents\skills\nodus",
     ".claude\commands",
     ".claude\skills",
@@ -87,8 +93,10 @@ $linksToRemove = @(
     "sandbox\my-project\.nodus\core"
 )
 foreach ($f in $workflows) { $linksToRemove += ".agents\workflows\nodus.$f.md" }
+foreach ($f in $agentFiles) { $linksToRemove += "$f" }
 
 git rm -r --cached --ignore-unmatch $linksToRemove
 
 Write-Host "`n>>> Verification:" -ForegroundColor Green
-cmd /c "dir CLAUDE.md .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"
+$verifyList = $linksToRemove.Where({$_ -notmatch "node_modules"})
+cmd /c "dir $verifyList /AL"

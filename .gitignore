@@ -37,6 +37,9 @@ CLAUDE.md
 .claude/skills/
 .claude/rules/
 
+# Qwen
+QWEN.md
+
 # Agent Junctions (Canonical sources are in packages/agents/)
 .agents/skills/nodus/
 #.agents/workflows/  <-- we still track real files in workflows, but symlinks/hardlinks should be untracked if possible.
