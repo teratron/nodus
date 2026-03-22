@@ -47,6 +47,8 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   └── rules/                     ← junction → .agents/rules/
 │
 ├── pyproject.toml                 ← build config and dependencies
+├── AGENTS.md                      ← agent rules and constraints (canonical source)
+├── CLAUDE.md                      ← Claude Desktop specific config (symlink to AGENTS.md)
 ├── README.md                      ← quick start
 ├── CONTRIBUTING.md                ← this file
 └── CHANGELOG.md                   ← version history
