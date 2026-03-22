@@ -31,9 +31,10 @@ temp/
 
 # Claude
 .claude/settings.json
+.claude/settings.*.json
 .claude/commands/
 .claude/skills/
-.claude/workflows/
+.claude/rules/
 
 # Agent Junctions (Canonical sources are in packages/agents/)
 .agents/skills/nodus/
