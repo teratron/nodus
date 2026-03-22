@@ -30,6 +30,7 @@ temp/
 *tmp/
 
 # Claude
+CLAUDE.md
 .claude/settings.json
 .claude/settings.*.json
 .claude/commands/

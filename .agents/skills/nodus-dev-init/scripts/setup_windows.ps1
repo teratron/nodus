@@ -42,8 +42,10 @@ Write-Host ">>> Initializing Windows Agent Environment..." -ForegroundColor Cyan
 # 3.1. .claude junctions
 Remove-Existing ".claude\commands"
 Remove-Existing ".claude\skills"
+Remove-Existing ".claude\rules"
 cmd /c "mklink /J .claude\commands .agents\workflows"
 cmd /c "mklink /J .claude\skills .agents\skills"
+cmd /c "mklink /J .claude\rules .agents\rules"
 
 # 3.2. .agents junctions
 Remove-Existing ".agents\skills\nodus"
@@ -74,6 +76,7 @@ $linksToRemove = @(
     ".agents\skills\nodus",
     ".claude\commands",
     ".claude\skills",
+    ".claude\rules",
     "demo\.nodus\core",
     "sandbox\my-project\.nodus\core"
 )
@@ -82,4 +85,4 @@ foreach ($f in $workflows) { $linksToRemove += ".agents\workflows\nodus.$f.md" }
 git rm -r --cached --ignore-unmatch $linksToRemove
 
 Write-Host "`n>>> Verification:" -ForegroundColor Green
-cmd /c "dir .claude\commands .claude\skills .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"
+cmd /c "dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"

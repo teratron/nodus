@@ -9,9 +9,10 @@ set -e
 echo ">>> Initializing Unix/macOS Agent Environment..."
 
 # 1. Create .claude symlinks
-rm -rf .claude/commands .claude/skills
+rm -rf .claude/commands .claude/skills .claude/rules
 ln -s ../.agents/workflows .claude/commands
 ln -s ../.agents/skills .claude/skills
+ln -s ../.agents/rules .claude/rules
 
 # 2. Setup .agents symlinks (nodus skill)
 rm -rf .agents/skills/nodus
@@ -33,11 +34,11 @@ ln -s ../../../packages/spec/core sandbox/my-project/.nodus/core
 
 # 5. Git Maintenance
 echo "Synchronizing git index..."
-links=".agents/skills/nodus .claude/commands .claude/skills demo/.nodus/core sandbox/my-project/.nodus/core"
+links=".agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core"
 for f in compile create explain init pack run test validate; do
   links="$links .agents/workflows/nodus.$f.md"
 done
 git rm -r --cached --ignore-unmatch $links
 
 echo -e "\n>>> Verification:"
-ls -ld .claude/commands .claude/skills .agents/skills/nodus demo/.nodus/core sandbox/my-project/.nodus/core
+ls -ld .claude/commands .claude/skills .claude/rules .agents/skills/nodus demo/.nodus/core sandbox/my-project/.nodus/core
