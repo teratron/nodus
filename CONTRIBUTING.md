@@ -38,8 +38,7 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   │   ├── nodus/                 ← junction → packages/agents/skills/nodus/
 │   │   └── ...                    ← generic skills (brainstorming, etc.)
 │   └── workflows/
-│       ├── nodus.*.md             ← hardlinks → packages/agents/workflows/nodus.*.md
-│       └── nodus.dev.init.md      ← file: setup links (Windows/Linux)
+│       └── nodus.*.md             ← hardlinks → packages/agents/workflows/nodus.*.md
 │
 ├── .claude/                       ← Claude Desktop specific config
 │   ├── commands/                  ← junction → .agents/workflows/
@@ -454,7 +453,6 @@ The repository provides slash commands in `.agents/workflows/` that guide an AI 
 
 A project-specific command in `.agents/workflows/` makes sense only when the AI needs to orchestrate something beyond what `nodus run` alone can do: asking the user questions, verifying external state, or combining multiple steps into a single guided flow.
 
-- **`/nodus.dev.init`** — Environment setup: creates junctions/hardlinks/symlinks linking `.claude/` and `.agents/` to canonical sources in `packages/`.
 - **`/nodus.compile`** — Full cycle: validation → if clean, transpile to HUMAN mode → result summary.
 - **`/nodus.create`** — Interactive wizard: asks for domain, purpose, I/O, and rules → scaffolds the file.
 - **`/nodus.explain`** — Analysis: reads workflow → explains trigger, constraints, and steps in plain language.

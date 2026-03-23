@@ -72,7 +72,7 @@ Follow this checklist before declaring a task finished:
   * Update `README.md` if public API or features were changed.
   * Update relevant `docs/` or specs (e.g. `docs/cli.md`) to reflect task completion.
 * [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date after `pyproject.toml` changes.
-  * **Hardlinks**: Verify integrity with `fsutil hardlink list AGENTS.md` (should show 3 files). If broken, run `nodus.dev.init` to restore.
+  * **Hardlinks**: Verify integrity with `fsutil hardlink list AGENTS.md` (should show 3 files). If broken, run `nodus-dev-init` to restore.
 * [ ] **Preserved**: Verify that structural documents (like diagrams or `STRUCTURE.md`) haven't lost data during edits.
 
 ## 5. Python Coding Style
