@@ -28,28 +28,25 @@ uv.lock
 *.tgz
 temp/
 *tmp/
+#sandbox/
 
-# Claude
+# Agents
 CLAUDE.md
-.claude/settings.json
-.claude/settings.*.json
-.claude/commands/
-.claude/skills/
-.claude/rules/
-
-# Qwen
 QWEN.md
-
-# Agent Junctions (Canonical sources are in packages/agents/)
+.*/workflows/
+.*/commands/
+.*/prompts/
+.*/skills/
+.*/rules/
+!.agents/skills/
+!.agents/rules/
 .agents/skills/nodus/
-#.agents/workflows/  <-- we still track real files in workflows, but symlinks/hardlinks should be untracked if possible.
-# Actually, let's just ignore the specific linked files.
-.agents/workflows/nodus.*.md
-!.agents/workflows/nodus.dev.init.md
+!.agents/workflows/nodus.dev.*.md
 
 # Project Core Specs
 demo/.nodus/core/
 sandbox/my-project/.nodus/core/
 
-# Sandbox
-#sandbox/
+# Local settings (never commit)
+*/settings.json
+*/settings.*.json
