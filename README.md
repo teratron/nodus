@@ -146,14 +146,14 @@ class MyProvider(ModelProvider):
         return {}
 
 
-executor = Executor(provider=ClaudeProvider())
+executor = Executor(provider=MyProvider(model="your-model-id", client=your_client))
 result = executor.execute(ast, input_data={})
 ```
 
-Set `ANTHROPIC_API_KEY` in your environment before running:
+Set your LLM provider's API key in the environment before running:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export LLM_API_KEY=your-api-key
 nodus run workflows/my_workflow.nodus
 ```
 
