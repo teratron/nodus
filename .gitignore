@@ -41,7 +41,6 @@ QWEN.md
 !.agents/skills/
 !.agents/rules/
 .agents/skills/nodus/
-!.agents/workflows/nodus.dev.*.md
 
 # Project Core Specs
 demo/.nodus/core/
