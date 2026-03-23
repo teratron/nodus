@@ -4,7 +4,7 @@ Maps feature areas to specific document sections so the skill knows where to
 look when a feature ships or changes.
 
 | Feature Area | README Section | SPEC Section | PRODUCT Section |
-|-------------|---------------|-------------|----------------|
+| --- | --- | --- | --- |
 | Plugins / Extensions | Features table, Roadmap | Extensions, Agent Model | Core Concepts |
 | Adapters (new runtimes) | "Works with" table, FAQ | Agent Model, Agent Configuration | Employees & Agents, Agent Execution |
 | Governance / Approvals | Features table, "Why special" | Board Governance, Board Approval Gates | Principles |
