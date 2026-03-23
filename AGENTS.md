@@ -57,14 +57,23 @@ uv run pytest
 
 Follow this checklist before declaring a task finished:
 
-* [ ] **Validated**: All quality checks pass with zero warnings.
-* [ ] **Versioned**: Increment the patch version (e.g., `0.3.1` → `0.3.2`) in:
+* [ ] **Validated**: All quality checks pass with zero warnings:
+  * `uv run ruff check --fix` & `uv run ruff format`
+  * `uv run pyrefly check`
+  * `uv run pytest`
+* [ ] **Versioned**: Increment the patch version (e.g., `0.4.2` → `0.4.3`) in:
   * `pyproject.toml`
-  * `runtime/constants.py`
+  * `packages/runtime/constants.py`
+  * `packages/spec/VERSION`
   * `CHANGELOG.md`
-* [ ] **Documented**: Update `README.md`, `CHANGELOG.md`, and internal docs to reflect all changes.
-* [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date.
-* [ ] **Preserved**: Verify that structural documents (like diagrams) haven't lost data.
+  * **Engine**: If content in `packages/spec/core/` or `packages/agents/workflows/` was modified, follow **Rule 2.3 (C14)** to update engine meta and version.
+* [ ] **Documented**:
+  * Update `CHANGELOG.md` with a summary of changes.
+  * Update `README.md` if public API or features were changed.
+  * Update relevant `docs/` or specs (e.g. `docs/cli.md`) to reflect task completion.
+* [ ] **Synchronized**: Run `uv sync` to ensure `uv.lock` is up to date after `pyproject.toml` changes.
+  * **Hardlinks**: Verify integrity with `fsutil hardlink list AGENTS.md` (should show 3 files). If broken, run `nodus.dev.init` to restore.
+* [ ] **Preserved**: Verify that structural documents (like diagrams or `STRUCTURE.md`) haven't lost data during edits.
 
 ## 5. Python Coding Style
 

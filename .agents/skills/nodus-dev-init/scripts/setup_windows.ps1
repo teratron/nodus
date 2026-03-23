@@ -98,3 +98,6 @@ foreach ($s in $specs) {
 
 Write-Host "`n>>> Verification:" -ForegroundColor Green
 cmd /c "dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"
+
+Write-Host "`n>>> Hardlink Integrity Check (AGENTS.md):" -ForegroundColor Cyan
+cmd /c "fsutil hardlink list AGENTS.md"
