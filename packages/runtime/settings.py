@@ -15,7 +15,7 @@ DEFAULT_CONFIG_DATA = {
     "schema": {"core": ".nodus/core/schema.nodus", "extends": []},
     "agents": {
         "executor": {
-            "model": "claude-sonnet-4",
+            "model": "auto",
             "context_files": [".nodus/core/AGENTS.md"],
         }
     },

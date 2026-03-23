@@ -24,7 +24,13 @@ from runtime.interpreter.ast_nodes import (
     UntilLoop,
     WorkflowFile,
 )
-from runtime.interpreter.executor import ExecutionContext, Executor, NodusResult
+from runtime.interpreter.executor import (
+    AnthropicProvider,
+    ExecutionContext,
+    Executor,
+    NodusResult,
+    StubProvider,
+)
 
 
 def make_wf(
@@ -75,6 +81,37 @@ def test_result_to_dict_keys() -> None:
     assert "log" in d
     assert "errors" in d
     assert "flags" in d
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# ModelProvider.model_id
+# ───────────────────────────────────────────────────────────────────────────
+
+
+def test_stub_provider_model_id() -> None:
+    """Verify that StubProvider reports its model_id."""
+    assert StubProvider().model_id == "nodus-stub"
+
+
+def test_anthropic_provider_model_id() -> None:
+    """Verify that AnthropicProvider reports its model_id."""
+    assert AnthropicProvider().model_id == "anthropic-stub"
+
+
+def test_result_agent_id_from_provider() -> None:
+    """Verify that execute() propagates provider.model_id to result.agent_id."""
+    wf = make_wf(steps=[])
+    executor = Executor(provider=StubProvider())
+    result = executor.execute(wf)
+    assert result.agent_id == "nodus-stub"
+
+
+def test_result_agent_id_custom_provider() -> None:
+    """Verify agent_id with a different provider."""
+    wf = make_wf(steps=[])
+    executor = Executor(provider=AnthropicProvider())
+    result = executor.execute(wf)
+    assert result.agent_id == "anthropic-stub"
 
 
 # ───────────────────────────────────────────────────────────────────────────

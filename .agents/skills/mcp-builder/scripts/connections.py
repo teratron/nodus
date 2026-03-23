@@ -73,7 +73,12 @@ class MCPConnection(ABC):
 class MCPConnectionStdio(MCPConnection):
     """MCP connection using standard input/output."""
 
-    def __init__(self, command: str, args: list[str] = None, env: dict[str, str] = None):
+    def __init__(
+        self,
+        command: str,
+        args: list[str] | None = None,
+        env: dict[str, str] | None = None,
+    ):
         super().__init__()
         self.command = command
         self.args = args or []
@@ -88,7 +93,7 @@ class MCPConnectionStdio(MCPConnection):
 class MCPConnectionSSE(MCPConnection):
     """MCP connection using Server-Sent Events."""
 
-    def __init__(self, url: str, headers: dict[str, str] = None):
+    def __init__(self, url: str, headers: dict[str, str] | None = None):
         super().__init__()
         self.url = url
         self.headers = headers or {}
@@ -100,7 +105,7 @@ class MCPConnectionSSE(MCPConnection):
 class MCPConnectionHTTP(MCPConnection):
     """MCP connection using Streamable HTTP."""
 
-    def __init__(self, url: str, headers: dict[str, str] = None):
+    def __init__(self, url: str, headers: dict[str, str] | None = None):
         super().__init__()
         self.url = url
         self.headers = headers or {}
@@ -111,11 +116,11 @@ class MCPConnectionHTTP(MCPConnection):
 
 def create_connection(
     transport: str,
-    command: str = None,
-    args: list[str] = None,
-    env: dict[str, str] = None,
-    url: str = None,
-    headers: dict[str, str] = None,
+    command: str | None = None,
+    args: list[str] | None = None,
+    env: dict[str, str] | None = None,
+    url: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> MCPConnection:
     """Factory function to create the appropriate MCP connection.
 
@@ -148,4 +153,6 @@ def create_connection(
         return MCPConnectionHTTP(url=url, headers=headers)
 
     else:
-        raise ValueError(f"Unsupported transport type: {transport}. Use 'stdio', 'sse', or 'http'")
+        raise ValueError(
+            f"Unsupported transport type: {transport}. Use 'stdio', 'sse', or 'http'"
+        )

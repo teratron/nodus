@@ -119,28 +119,27 @@ nodus test
 By default the Python runtime uses `StubProvider`, which returns mock responses
 without making any API calls. This is enough for validation and structural testing.
 
-To run workflows against a real model, pass an `AnthropicProvider` (or any custom
-`ModelProvider` subclass) to `Executor`:
+To run workflows against a real model, implement a custom `ModelProvider` subclass
+and pass it to `Executor`:
 
 ```python
-import anthropic
 from runtime.interpreter import Executor
-from runtime.interpreter.executor import AnthropicProvider, ModelProvider
+from runtime.interpreter.executor import ModelProvider
 from typing import Any
 
 
-class ClaudeProvider(AnthropicProvider):
-    def __init__(self, model: str = "claude-sonnet-4-5") -> None:
-        self._client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+class MyProvider(ModelProvider):
+    def __init__(self, model: str, client: Any) -> None:
+        self._client = client
         self._model = model
 
+    @property
+    def model_id(self) -> str:
+        return self._model
+
     def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
-        msg = self._client.messages.create(
-            model=self._model,
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return msg.content[0].text
+        # call your LLM API here
+        return self._client.generate(model=self._model, prompt=prompt)
 
     def analyze(self, text: str, flags: list[str]) -> dict[str, Any]:
         # implement as needed or delegate to generate()

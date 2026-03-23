@@ -171,7 +171,7 @@ checking an external service, or orchestrating multiple steps.
   },
   "agents": {
     "executor": {
-      "model": "claude-sonnet-4",
+      "model": "auto",
       "context_files": [".nodus/core/AGENTS.md"]
     }
   },

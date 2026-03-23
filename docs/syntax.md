@@ -21,7 +21,6 @@ Always the **second** block in a workflow file. Resolved before rules and steps.
 §runtime: {
   core:    .nodus/core/schema.nodus
   extends: [.nodus/schema/brand_voice.nodus]
-  agents:  { executor: claude-sonnet-4 }
   mode:    production
 }
 ```
@@ -315,7 +314,6 @@ Declared in the `§runtime:` block. Resolved once when the agent boots.
   core:    .nodus/core/schema.nodus
   extends: [.nodus/schema/sdd.schema.nodus]
   @needs:  [§commands_sdd, §macros_sdd, §types_sdd]
-  agents:  { executor: claude-sonnet-4, orchestrator: claude-opus-4 }
   mode:    production
 }
 ```

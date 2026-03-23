@@ -10,7 +10,7 @@
 ;; Resolved FIRST — before rules, before steps.
 ;; core:    base schema (required)
 ;; extends: project-level extensions (in load order)
-;; agents:  which model plays which role
+;; agents:  (optional — auto-detected at runtime)
 ;; mode:    production | debug | test
 ;; ─────────────────────────────────────────────
 
@@ -21,10 +21,6 @@
   ;; List only the sections from extends: that this workflow actually uses.
   ;; Omit to load the full extension schema (safe default).
   ;; §meta and !!rules of any extension are always loaded regardless of @needs:.
-  agents: {
-    executor:     claude-sonnet-4
-    orchestrator: claude-opus-4
-  }
   mode: production
 }
 

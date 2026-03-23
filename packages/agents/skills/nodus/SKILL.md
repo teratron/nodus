@@ -187,12 +187,12 @@ By default the runtime uses `StubProvider` (mock responses). To connect a real m
 
 **Via CLI / config.json:**
 
-1. Set `ANTHROPIC_API_KEY` in environment
-2. In `.nodus/config.json` set `"provider": "anthropic"` and `"model": "claude-sonnet-4-6"`
+1. Set your LLM API key in environment (e.g., `LLM_API_KEY`)
+2. In `.nodus/config.json` set `"provider"` and `"model"` for your chosen LLM
 3. Run workflow: `nodus run workflows/my_workflow.nodus`
 
 **Via Python SDK** (for custom integrations):
 
-1. Set `ANTHROPIC_API_KEY` in environment
-2. Pass `AnthropicProvider` to `Executor` in your Python code
+1. Set your LLM API key in environment
+2. Implement a `ModelProvider` subclass and pass it to `Executor`
 3. Run workflow programmatically

@@ -1,6 +1,6 @@
+import shutil
 import subprocess
 import sys
-import shutil
 
 
 def check_cargo_semver():

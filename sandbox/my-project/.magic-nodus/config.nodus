@@ -14,10 +14,6 @@
 §runtime: {
   core:    .nodus/core/schema.nodus
   extends: [.nodus/schema/sdd.schema.nodus]
-  agents: {
-    executor:     claude-sonnet-4
-    orchestrator: claude-opus-4
-  }
   mode: production
 }
 

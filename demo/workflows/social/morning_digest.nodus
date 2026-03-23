@@ -9,9 +9,6 @@
 §runtime: {
   core:    .nodus/core/schema.nodus
   extends: [.nodus/schema/brand_voice.nodus, .nodus/schema/channels.nodus]
-  agents: {
-    executor: claude-sonnet-4
-  }
   mode: production
 }
 

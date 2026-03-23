@@ -50,6 +50,16 @@ CommandHandler = Callable[["ExecutionContext", CommandCall], Any]
 class ModelProvider(abc.ABC):
     """Abstract base class for LLM providers."""
 
+    @property
+    @abc.abstractmethod
+    def model_id(self) -> str:
+        """Return the identifier of the underlying model.
+
+        Returns:
+            A string identifying the model (e.g., "nodus-stub", "gpt-4o").
+        """
+        ...
+
     @abc.abstractmethod
     def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
         """Generate text.
@@ -80,6 +90,11 @@ class ModelProvider(abc.ABC):
 class StubProvider(ModelProvider):
     """Default provider that returns predefined stubs for testing."""
 
+    @property
+    def model_id(self) -> str:
+        """Return stub model identifier."""
+        return "nodus-stub"
+
     def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
         """Generate a stub response based on settings templates."""
         tone = modifiers.get("+tone", "brand")
@@ -99,6 +114,11 @@ class StubProvider(ModelProvider):
 
 class AnthropicProvider(ModelProvider):
     """Example provider for Anthropic Claude (Stubbed)."""
+
+    @property
+    def model_id(self) -> str:
+        """Return example Anthropic model identifier."""
+        return "anthropic-stub"
 
     def generate(self, prompt: str, modifiers: dict[str, Any]) -> str:
         """Simulate real call to Anthropic API."""
@@ -334,6 +354,7 @@ class Executor:
             A populated NodusResult object.
         """
         result = NodusResult()
+        result.agent_id = self.provider.model_id
 
         if not isinstance(ast, WorkflowFile):
             result.status = "failed"

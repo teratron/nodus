@@ -20,7 +20,7 @@ Set up a NODUS project from scratch with guided configuration.
 4. **Configure `config.json`.** Ask the user:
 
    - Project name (default: current directory name)
-   - Preferred model for executor agent (default: `claude-sonnet-4`)
+   - Preferred model for executor agent (default: `auto`)
    - Enable logging? (default: yes)
 
 5. **Update `.nodus/config.json`** with the user's answers.

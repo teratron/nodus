@@ -18,7 +18,7 @@
   },
   "agents": {
     "orchestrator": {
-      "model": "claude-opus-4",
+      "model": "auto",
       "role": "orchestrator",
       "description": "Generates NODUS workflows from human intent",
       "context_files": [
@@ -28,7 +28,7 @@
       "max_tokens": 4096
     },
     "executor": {
-      "model": "claude-sonnet-4",
+      "model": "auto",
       "role": "executor",
       "description": "Interprets and executes NODUS workflows step by step",
       "context_files": [
@@ -40,7 +40,7 @@
       "max_tokens": 2048
     },
     "reviewer": {
-      "model": "claude-haiku-4",
+      "model": "auto",
       "role": "reviewer",
       "description": "Fast validation pass before any publish step",
       "context_files": [
@@ -154,7 +154,7 @@
   },
   "env": {
     "required": [
-      "ANTHROPIC_API_KEY",
+      "LLM_API_KEY",
       "SLACK_WEBHOOK_URL"
     ],
     "optional": [
