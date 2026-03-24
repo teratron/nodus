@@ -13,8 +13,7 @@
 $workflows = @("compile", "create", "explain", "init", "pack", "run", "test", "validate")
 $agentFiles = @("CLAUDE.md", "QWEN.md")
 $specs = @(
-    @{ Path = "demo\.nodus\core"; Target = "packages\spec\core" },
-    @{ Path = "sandbox\my-project\.nodus\core"; Target = "packages\spec\core" }
+    @{ Path = "demo\.nodus\core"; Target = "packages\spec\core" }
 )
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -47,8 +46,7 @@ $linksToRemove = @(
     ".claude\commands",
     ".claude\skills",
     ".claude\rules",
-    "demo\.nodus\core",
-    "sandbox\my-project\.nodus\core"
+    "demo\.nodus\core"
 )
 foreach ($f in $workflows) { $linksToRemove += ".agents\workflows\nodus.$f.md" }
 foreach ($f in $agentFiles) { $linksToRemove += "$f" }
@@ -97,7 +95,7 @@ foreach ($s in $specs) {
 }
 
 Write-Host "`n>>> Verification:" -ForegroundColor Green
-cmd /c "dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core sandbox\my-project\.nodus\core /AL"
+cmd /c "dir .claude\commands .claude\skills .claude\rules .agents\skills\nodus demo\.nodus\core /AL"
 
 Write-Host "`n>>> Hardlink Integrity Check (AGENTS.md):" -ForegroundColor Cyan
 cmd /c "fsutil hardlink list AGENTS.md"

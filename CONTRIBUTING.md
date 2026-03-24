@@ -45,17 +45,18 @@ nodus/                             ← github.com/nodus-lang/nodus
 │   ├── skills/                    ← junction → .agents/skills/
 │   └── rules/                     ← junction → .agents/rules/
 │
+├── tests/                         ← Python runtime tests
+│
 ├── pyproject.toml                 ← build config and dependencies
 ├── AGENTS.md                      ← agent rules and constraints (canonical source)
 ├── CLAUDE.md                      ← hardlink to AGENTS.md (Claude Code)
+├── GEMINI.md                      ← hardlink to AGENTS.md (Gemini)
 ├── QWEN.md                        ← hardlink to AGENTS.md (Qwen)
 ├── STRUCTURE.md                   ← detailed file structure reference
 ├── README.md                      ← quick start
 ├── CONTRIBUTING.md                ← this file
 ├── CHANGELOG.md                   ← version history
-├── LICENSE
-├── sandbox/                       ← experimental playground
-└── tests/                         ← Python runtime tests
+└── LICENSE
 ```
 
 ## User Project Structure

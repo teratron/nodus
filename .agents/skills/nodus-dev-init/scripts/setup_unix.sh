@@ -11,7 +11,7 @@ echo ">>> Initializing Unix/macOS Agent Environment..."
 # 1. Git Index Maintenance (MUST run BEFORE creating symlinks — see AGENTS.md §6)
 echo "Synchronizing git index (pre-link)..."
 agentFiles="CLAUDE.md QWEN.md"
-links=".agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core sandbox/my-project/.nodus/core"
+links=".agents/skills/nodus .claude/commands .claude/skills .claude/rules demo/.nodus/core"
 for f in compile create explain init pack run test validate; do
   links="$links .agents/workflows/nodus.$f.md"
 done
@@ -47,14 +47,13 @@ for f in compile create explain init pack run test validate; do
 done
 
 # 6. Project Core Specs
-echo "Linking core specs to project environments (demo, sandbox)..."
-mkdir -p demo/.nodus sandbox/my-project/.nodus
-rm -rf demo/.nodus/core sandbox/my-project/.nodus/core
+echo "Linking core specs to project environments (demo)..."
+mkdir -p demo/.nodus
+rm -rf demo/.nodus/core
 ln -s ../../packages/spec/core demo/.nodus/core
-ln -s ../../../packages/spec/core sandbox/my-project/.nodus/core
 
 echo -e "\n>>> Verification:"
-verifyLinks=".claude/commands .claude/skills .claude/rules .agents/skills/nodus demo/.nodus/core sandbox/my-project/.nodus/core"
+verifyLinks=".claude/commands .claude/skills .claude/rules .agents/skills/nodus demo/.nodus/core"
 for f in $agentFiles; do
   verifyLinks="$verifyLinks $f"
 done
