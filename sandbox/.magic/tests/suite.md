@@ -1788,10 +1788,10 @@ If any test fails, document the failure reason and propose a fix.
     - [ ] Mode D triggered: focus directive = "engine"
     - [ ] Agent searches for project areas matching keyword "engine"
 - **Test C — Workspace + focus:**
-  - **Action:** `/magic.analyze installers "проверь тесты"`
+  - **Action:** `/magic.analyze installers "check tests"`
   - **Expected:**
     - [ ] First token `installers` matches workspace → workspace resolved
-    - [ ] Remaining `"проверь тесты"` → focus directive
+    - [ ] Remaining `"check tests"` → focus directive
     - [ ] Mode D scoped to `installers` workspace
 - **Guards tested:** Argument Routing disambiguation, quote-wrapping override
 
@@ -1803,7 +1803,7 @@ If any test fails, document the failure reason and propose a fix.
   - `INDEX.md` has 3 specs: `api.md` (covers `src/api/`), `auth.md` (covers `src/auth/`), `ui.md` (covers `src/components/`)
   - `src/api/` has 5 files, `src/auth/` has 3 files, `src/components/` has 20 files
   - `src/utils/` exists (no spec, 8 files)
-- **Action:** `/magic.analyze app "проверь покрытие API"`
+- **Action:** `/magic.analyze app "check API coverage"`
 - **Expected:**
   - [ ] Focus directive parsed: intent = API coverage check
   - [ ] Targeted scan: only `src/api/` and related API areas examined (not full project)
@@ -1819,11 +1819,11 @@ If any test fails, document the failure reason and propose a fix.
 - **Synthetic State:**
   - `workspace.json`: `engine` workspace
   - Project has `src/core/`, `src/scripts/`, `docs/`
-- **Action:** `/magic.analyze "blockchain интеграция"`
+- **Action:** `/magic.analyze "blockchain integration"`
 - **Expected:**
   - [ ] Focus directive parsed: intent = blockchain integration
   - [ ] Targeted scan: no folders, spec titles, or modules match "blockchain"
-  - [ ] **HALT**: "Could not map focus 'blockchain интеграция' to any project area. Try narrowing with a workspace: `/magic.analyze {workspace} \"blockchain интеграция\"`, or rephrase the focus."
+  - [ ] **HALT**: "Could not map focus 'blockchain integration' to any project area. Try narrowing with a workspace: `/magic.analyze {workspace} \"blockchain integration\"`, or rephrase the focus."
   - [ ] No scan started, no report generated
 - **Guards tested:** Mode D HALT on empty match, improved HALT message
 
@@ -1885,12 +1885,12 @@ If any test fails, document the failure reason and propose a fix.
   - Large project: 800 source files
   - No workspace specified
 - **Test A — Narrow focus:**
-  - **Action:** `/magic.analyze "авторизация"`
+  - **Action:** `/magic.analyze "authorization"`
   - **Expected:**
     - [ ] Focus matches `src/auth/` (12 files) → Depth Control exempt
     - [ ] Targeted scan proceeds without prompting
 - **Test B — Wide focus resolving to >500 files:**
-  - **Action:** `/magic.analyze "все компоненты"`
+  - **Action:** `/magic.analyze "all components"`
   - **Expected:**
     - [ ] Focus matches `src/` (600+ files)
     - [ ] Depth Control fallback triggers: agent recommends Focused/Quick, HALTs for choice
@@ -2365,12 +2365,12 @@ If any test fails, document the failure reason and propose a fix.
   - `workspace.json`: `{"default": "engine", "workspaces": {"engine": {}, "installers": {}}}`
   - `engine/INDEX.md`: 3 Stable specs (2 API-related, 1 unrelated).
   - No `MAGIC_WORKSPACE` env var set.
-- **Action:** User runs `/magic.task "только API спеки"`
+- **Action:** User runs `/magic.task "only API specs"`
 - **Expected:**
   - [ ] Argument parsed: text does not match any workspace → **Guided Planning** (Mode C)
   - [ ] **Workspace Fallback**: No workspace in arg, no env var → `workspace.json` default = `engine` used
   - [ ] Workspace resolved silently via Core Invariant #1 (Zero-Prompt)
-  - [ ] Planning directive "только API спеки" applied as filter within `engine` workspace
+  - [ ] Planning directive "only API specs" applied as filter within `engine` workspace
   - [ ] User is NOT prompted to select a workspace
 - **Guards tested:** Argument Routing (Mode C), Workspace Fallback, Zero-Prompt Resolution
 

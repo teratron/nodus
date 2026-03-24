@@ -12,7 +12,7 @@ Parse the `[arg]` to determine the execution mode:
 | `engine` | Matches a workspace name in `workspace.json` | **Scoped Execution**: Execute tasks only from that workspace's `TASKS.md` |
 | `"T-1A01"` | Quoted text or non-workspace token matching `T-XXXX` pattern | **Targeted Task**: Execute a specific task by ID |
 | `"phase-2"` | Quoted text or non-workspace token matching `phase-N` pattern | **Targeted Phase**: Execute all `Todo` tasks in the specified phase |
-| `"только тесты"` | Quoted text or non-workspace token (general directive) | **Directed Execution**: Interpret text as execution filter or focus |
+| `"only tests"` | Quoted text or non-workspace token (general directive) | **Directed Execution**: Interpret text as execution filter or focus |
 | `engine "phase-1"` | First token is workspace + remaining is quoted text | **Scoped + Directed**: Execution directive applied within workspace scope |
 
 > **Workspace Fallback (Modes A, C)**: When no workspace is specified in the argument, resolve workspace via Core Invariant #1 (Zero-Prompt chain) before applying the execution directive. The directive text filters or targets execution but does not replace workspace resolution.

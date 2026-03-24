@@ -31,14 +31,14 @@ The project strictly adheres to **uv-first** philosophy.
 Always initialize and activate the environment before execution:
 
 ```bash
-# Initialization
-uv sync
-
 # Activation (Windows)
 .venv\Scripts\activate
 
 # Activation (Linux)
 source .venv/bin/activate
+
+# Initialization
+uv sync
 ```
 
 ```bash

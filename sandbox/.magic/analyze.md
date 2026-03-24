@@ -7,7 +7,7 @@ description: Workflow for analyzing existing projects and generating initial spe
 Audits project health, syncs registries, and reverse-engineers code into `.design/` spec proposals.
 
 **Triggers**: `/magic.analyze [arg]`, "Ventilate", "Analyze project", "Scan project", "Re-analyze"
-**Examples**: `/magic.analyze`, `/magic.analyze engine`, `/magic.analyze "проверь покрытие API"`, `/magic.analyze installers "фокус на тестах"`
+**Examples**: `/magic.analyze`, `/magic.analyze engine`, `/magic.analyze "check API coverage"`, `/magic.analyze installers "focus on tests"`
 
 ## Core Invariants (Mandatory)
 
@@ -30,8 +30,8 @@ Parse the `[arg]` to determine the analysis mode:
 | :--- | :--- | :--- |
 | *(empty)* | No argument | **Full Analysis**: Resolve workspace via §Workspace Resolution, then Mode C → A/B |
 | `engine` | Matches a workspace name in `workspace.json` | **Workspace Analysis**: Mode C (with Structural Integrity) → A/B scoped to that workspace |
-| `"проверь API"` | Quoted text or text that does NOT match any workspace name | **Focused Analysis**: Mode D — interpret text as focus directive |
-| `engine "фокус на тестах"` | First token is workspace + remaining is quoted text | **Workspace + Focus**: Mode D scoped to workspace |
+| `"check API"` | Quoted text or text that does NOT match any workspace name | **Focused Analysis**: Mode D — interpret text as focus directive |
+| `engine "focus on tests"` | First token is workspace + remaining is quoted text | **Workspace + Focus**: Mode D scoped to workspace |
 
 > **Disambiguation**: If the argument is a single unquoted word that matches both a workspace name and could be a focus keyword, workspace takes priority. To force focus interpretation, wrap in quotes: `/magic.analyze "engine"`.
 
@@ -136,7 +136,7 @@ Group code by domain. Extract implicit rules from configs (`.eslintrc`, `tsconfi
 ### [Mode D] Focused Analysis
 
 *Trigger: Text argument provided (quoted string or non-workspace token).*
-*Examples*: `/magic.analyze "проверь покрытие API"`, `/magic.analyze engine "фокус на тестах"`
+*Examples*: `/magic.analyze "check API coverage"`, `/magic.analyze engine "focus on tests"`
 
 > **Scope**: If a workspace is also specified, focus is applied within that workspace's scope. Otherwise, focus applies **project-wide** (C15 scope not enforced — the focus directive itself acts as the scan boundary).
 > **Depth Control**: Exempt — targeted scan is narrow by definition. If focus resolves to >500 matched files, fall back to Invariant 6 thresholds.

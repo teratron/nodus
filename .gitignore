@@ -39,6 +39,9 @@ QWEN.md
 .*/prompts/
 .*/skills/
 .*/rules/
+.agents/workflows/*
+!.agents/workflows/
+!.agents/workflows/nodus.dev.*.md
 !.agents/skills/
 !.agents/rules/
 .agents/skills/nodus/

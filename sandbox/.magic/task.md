@@ -10,8 +10,8 @@ Parse the `[arg]` to determine the planning mode:
 | :--- | :--- | :--- |
 | *(empty)* | No argument | **Full Planning**: Resolve workspace via §Workspace Resolution, then plan all specs |
 | `engine` | Matches a workspace name in `workspace.json` | **Scoped Planning**: Plan only specs registered in that workspace's `INDEX.md` |
-| `"декомпозируй phase-2"` | Quoted text or text that does NOT match any workspace name | **Guided Planning**: Interpret text as planning directive (focus, instruction, filter) |
-| `engine "только новые спеки"` | First token is workspace + remaining is quoted text | **Scoped + Guided**: Planning directive applied within workspace scope |
+| `"decompose phase-2"` | Quoted text or text that does NOT match any workspace name | **Guided Planning**: Interpret text as planning directive (focus, instruction, filter) |
+| `engine "only new specs"` | First token is workspace + remaining is quoted text | **Scoped + Guided**: Planning directive applied within workspace scope |
 
 > **Workspace Fallback (Modes A, C)**: When no workspace is specified in the argument, resolve workspace via Core Invariant #1 (Zero-Prompt chain) before applying the planning directive. The directive text filters or guides planning but does not replace workspace resolution.
 > **Disambiguation**: If the argument is a single unquoted word that matches both a workspace name and could be a directive keyword, workspace takes priority. To force directive interpretation, wrap in quotes: `/magic.task "engine"`.
