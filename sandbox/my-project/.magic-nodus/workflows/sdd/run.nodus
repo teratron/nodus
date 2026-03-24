@@ -1,0 +1,378 @@
+§wf:sdd.run v1.0
+;; Workflow:  SDD Run
+;; Purpose:   Execute TASKS.md atomic tasks. Supports Sequential and Parallel modes.
+;;            Six argument routing modes for flexible task targeting.
+;;            Phase completion triggers Retro L1 + Changelog.
+;;            Plan completion triggers Retro L2 + Version Bump + CONTEXT.md.
+;; Pack:      sdd
+;; Author:    sdd-pack
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    ../../core/schema.nodus
+  extends: [../schema/sdd.schema.nodus]
+  @needs:  [§commands_sdd, §macros_sdd, §types_sdd, §validators_sdd, §errors_sdd]
+  mode: production
+}
+
+;; ─────────────────────────────────────────────
+;; ARGUMENT ROUTING
+;; ─────────────────────────────────────────────
+
+;; Detection (parsed in @steps:0):
+;;   (empty)                     → mode="full"     — execute next available Todo task(s)
+;;   workspace name (unquoted)   → mode="scoped"   — execute tasks from that workspace only
+;;   "T-1A01" (T-XXXX pattern)   → mode="targeted_task"
+;;   "phase-2" (phase-N pattern) → mode="targeted_phase"
+;;   "run tests only" (general)  → mode="directed" — text as execution filter
+;;   workspace + "directive"     → mode="scoped_directed"
+;;
+;; NOTE: Single unquoted word matching workspace name → workspace takes priority.
+;;       To force directive interpretation: quote it.
+
+@ON: $cmd.mode = "full"            → RUN(wf:sdd.run.execute)
+@ON: $cmd.mode = "scoped"          → RUN(wf:sdd.run.execute)
+@ON: $cmd.mode = "targeted_task"   → RUN(wf:sdd.run.execute)
+@ON: $cmd.mode = "targeted_phase"  → RUN(wf:sdd.run.execute)
+@ON: $cmd.mode = "directed"        → RUN(wf:sdd.run.execute)
+@ON: $cmd.mode = "scoped_directed" → RUN(wf:sdd.run.execute)
+
+;; ─────────────────────────────────────────────
+;; RULES
+;; ─────────────────────────────────────────────
+
+!!NEVER:  execute without first reading RULES.md and adhering to project conventions
+!!NEVER:  start a task if its parent dependencies are not Done
+!!NEVER:  run without pre-flight passing (check-prerequisites + spec stability spot-check)
+!!ALWAYS: verify target spec is still Stable in INDEX.md before AND after each task
+!!ALWAYS: serialize tasks that modify the same file (no race conditions in Parallel mode)
+!!ALWAYS: halt if any active task's spec is missing from INDEX.md or disk (Phantom Spec)
+!!ALWAYS: run Retro L1 after each phase; Retro L2 after plan completion
+
+!PREF: sequential OVER parallel     IF execution_mode not set in RULES.md
+!PREF: halt-report OVER guess-continue
+
+;; ─────────────────────────────────────────────
+;; DECLARATIONS
+;; ─────────────────────────────────────────────
+
+@in: {
+  raw_arg?:    str = null    ;; routing argument (see above)
+  workspace?:  str = null
+  flags?:      list = []
+}
+
+@out: $run_result
+@err: ESCALATE(human) +msg="Run workflow failed unexpectedly"
+
+;; ─────────────────────────────────────────────
+;; STEPS — PRE-FLIGHT + PARSE
+;; ─────────────────────────────────────────────
+
+@steps:
+
+  ;; — STEP 0: Pre-flight —
+  0. RUN(@macro:ENGINE_PREFLIGHT) +flags=["--require-tasks"]
+     RUN(@macro:RESOLVE_WORKSPACE) +workspace=$in.workspace → $workspace
+
+  ;; — STEP 1: Parse routing argument —
+  1. ANALYZE($in.raw_arg) ~intent → $cmd
+     ;; Routing detection (note: MATCHES operator needed — see GAPS.md G005):
+     ;; cmd.mode based on detection rules above
+
+  ;; — STEP 2: Read RULES.md — adhere to conventions before any code edit —
+  2. READ_FILE(".design/$workspace/RULES.md") → $rules
+     ANALYZE($rules) ~entities → $rules_meta
+
+  ;; — STEP 3: Load TASKS.md —
+  3. PARSE_INDEX(".design/$workspace/INDEX.md") → $index
+     READ_FILE(".design/$workspace/TASKS.md") → $tasks_raw
+     ANALYZE($tasks_raw) ~entities → $tasks_meta
+     ;; tasks_meta: { version, rules_version, execution_mode, phases, tasks }
+
+  ;; — Logic Guards —
+
+  ;; Rules Parity (C): RULES.md version check
+  4. ?IF $tasks_meta.rules_version != $rules_meta.version:
+       NOTIFY(human) +msg="Warning: RULES.md has drifted since TASKS.md was generated. Run 'sdd task update' to sync."
+
+  ;; Mode Guard (§7): execution mode must be defined
+     ?IF $tasks_meta.execution_mode = null AND $rules_meta.execution_mode = null:
+       ESCALATE(human) +msg="Execution mode (Sequential/Parallel) missing from RULES.md §7. Define it before running."
+       !BREAK
+
+  ;; Spec Stability Spot-Check (pre-flight): all active-phase specs must be Stable
+  5. QUERY_SPECS($index) +status="Stable" → $stable_specs
+     ~FOR $task IN $tasks_meta.tasks:
+       ?IF $task.status = "Todo" AND NOT ($task.spec IN $stable_specs):
+         ESCALATE(human) +msg="Spec Stability failure: '$task.spec' is not Stable. Run 'sdd task update' to re-evaluate."
+         !BREAK
+     ~END
+
+  ;; File-Header Parity (pre-flight): file header Status/Version matches INDEX.md
+  6. RUN(@macro:HEADER_PARITY_CHECK) +specs=$tasks_meta.active_specs +index=$index
+
+  ;; Phantom Spec check
+  7. ~FOR $task IN $tasks_meta.tasks:
+       ?IF $task.status = "Todo" OR $task.status = "In Progress":
+         FILE_EXISTS(".design/$workspace/specifications/$task.spec") → $spec_exists
+         ?IF $spec_exists = false:
+           ESCALATE(human) +msg="Phantom Spec '$task.spec' detected. Run 'sdd spec audit' or 'sdd analyze'."
+           !BREAK
+     ~END
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.run.execute
+;; Core execution loop (Sequential + Parallel)
+;; ─────────────────────────────────────────────
+
+§wf:sdd.run.execute v1.0
+
+@steps:
+
+  ;; — Select next Todo task according to mode —
+  1. ?IF $cmd.mode = "targeted_task":
+       FILTER($tasks_meta.tasks) +where="id = $cmd.target AND status = Todo" → $eligible
+     ?ELIF $cmd.mode = "targeted_phase":
+       FILTER($tasks_meta.tasks) +where="phase = $cmd.target AND status = Todo" → $eligible
+     ?ELIF $cmd.mode = "directed" OR $cmd.mode = "scoped_directed":
+       FILTER($tasks_meta.tasks) +where="$cmd.directive AND status = Todo" → $eligible
+     ?ELSE:
+       FILTER($tasks_meta.tasks) +where="status = Todo" → $eligible
+
+     ?IF $eligible = [] AND $tasks_meta.blocked_count > 0:
+       ESCALATE(human) +msg="All remaining tasks are Blocked. Resolve blockers before continuing."
+       !BREAK
+
+     ?IF $eligible = []:
+       NOTIFY(human) +msg="No Todo tasks found. Plan may be complete."
+       !BREAK
+
+  ;; — Execute based on mode (Sequential vs Parallel) —
+  2. ?IF $tasks_meta.execution_mode = "Sequential":
+       ;; Mono-agent: pick next Todo → execute → Done → repeat
+       $next_task = $eligible[0]
+       RUN(wf:sdd.run.execute_task) +task=$next_task
+
+     ?ELIF $tasks_meta.execution_mode = "Parallel":
+       ;; Manager: detect shared-file conflicts → assign tracks → sync PLAN.md
+       ;; Serialize tasks modifying the same file
+       ANALYZE($eligible) ~entities → $conflict_map
+       ;; conflict_map: { tracks:list, serialized:list }
+       ~PARALLEL:
+         ;; Each track executed by a Developer sub-agent
+         ~FOR $track IN $conflict_map.tracks:
+           RUN(wf:sdd.run.execute_task) +task=$track.next_task → $track_result
+           ;; Mid-run: re-verify spec stability + header parity before marking Done
+         ~END
+       ~JOIN → $parallel_results
+
+  ;; — STEP 3: Update TASKS.md and PLAN.md —
+  3. ;; Set In Progress → Done (or Blocked [!] with reason)
+     ;; Write 1-line summary to task Changes field
+     ;; Sync PLAN.md phase [x] markers
+
+  ;; — STEP 4: Check phase completion —
+  4. ANALYZE($tasks_meta) ~entities → $phase_status
+     ?IF $phase_status.current_phase_complete = true:
+       NOTIFY(human) +msg="[Auto-Run] Phase $phase_status.current_phase complete. $phase_status.done_count tasks archived."
+
+       ;; Retro L1 (snapshot — auto-run, HALT on failure)
+       RUN(wf:sdd.retro) +level="L1" +phase="phase-$phase_status.current_phase" → $retro_l1
+       ?IF $retro_l1.status != "SUCCESS":
+         ESCALATE(human) +msg="Retro L1 failed. Investigate before continuing."
+         !BREAK
+
+       ;; Changelog L1
+       GEN(report) +ctx=$tasks_meta.done_changes +format=markdown → $changelog_entry
+       APPEND($changelog_entry → ".design/$workspace/CHANGELOG.md")
+       ;; Format: ## Phase N — {date} + bullet list from Done task Changes fields
+
+       ;; Check plan completion
+       ?IF $phase_status.plan_complete = true:
+         RUN(wf:sdd.run.succession)
+
+  $run_result = { mode: $cmd.mode, tasks_done: $phase_status.done_count }
+  LOG($run_result)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.run.execute_task
+;; Single task execution with mid-run stability check
+;; ─────────────────────────────────────────────
+
+§wf:sdd.run.execute_task v1.0
+
+@in: { task: task_entry }
+
+@steps:
+
+  ;; Dependency check: all parent tasks must be Done
+  1. ~FOR $dep IN $in.task.deps:
+       FILTER($tasks_meta.tasks) +where="id = $dep AND status = Done" → $dep_done
+       ?IF $dep_done = []:
+         NOTIFY(human) +msg="Task $in.task.id blocked: dependency $dep not Done."
+         !BREAK
+     ~END
+
+  ;; Load spec section for this task
+  2. READ_FILE(".design/$workspace/specifications/$in.task.spec") → $spec_content
+     EXTRACT($spec_content) ~test_blocks → $relevant_section
+
+  ;; Execute implementation per spec section (no scope creep)
+  3. GEN(report) +ctx=$relevant_section +format=markdown → $implementation
+     ;; Agent implements the task per spec. Strict adherence — no scope creep.
+
+  ;; Mid-run spec stability check (before marking Done)
+  4. PARSE_MD_HEADER(".design/$workspace/specifications/$in.task.spec") → $hdr
+     QUERY_SPECS($index) +status="Stable" → $stable_specs
+     ?IF NOT ($in.task.spec IN $stable_specs):
+       ESCALATE(human) +msg="Spec '$in.task.spec' demoted to '$hdr.status' during execution of $in.task.id. Task output suspended — run 'sdd task update'."
+       !BREAK
+
+  ;; Handoff: if spec is ambiguous → HALT, trigger sdd.spec update
+  5. ?IF $implementation.ambiguous = true:
+       ESCALATE(human) +msg="Spec '$in.task.spec' is ambiguous. Trigger 'sdd spec amend $in.task.spec', then 'sdd task update'."
+       !BREAK
+
+  @out: { task_id: $in.task.id, status: "Done", changes: $implementation.changes }
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.run.succession
+;; Plan Completion Loop
+;; ─────────────────────────────────────────────
+
+§wf:sdd.run.succession v1.0
+
+@steps:
+
+  ;; Retro L2 (full audit — auto-run)
+  1. RUN(wf:sdd.retro) +level="L2" → $retro_l2
+
+  ;; Changelog L2 — compiled release entry; ONLY manual step: Yes/No approval
+  2. GEN(report) +ctx=$retro_l2 +format=markdown → $release_entry
+     NOTIFY(human) +msg=$release_entry
+     NOTIFY(human) +msg="Approve this changelog entry? (Yes/No)"
+     !BREAK   ;; Wait for user approval — only manual gate in full succession
+
+  ;; On approval:
+  3. APPEND($release_entry → ".design/$workspace/CHANGELOG.md")
+
+  ;; Version Bump: Major/Minor/Patch based on changelog content
+  4. ANALYZE($release_entry) ~intent → $bump_type
+     VERSION_BUMP($bump_type) +manifests=["package.json", "pyproject.toml"]
+
+  ;; Regenerate CONTEXT.md
+  5. GEN_CONTEXT() +workspace=$workspace
+     NOTIFY(human) +msg="Plan complete. Version bumped. CONTEXT.md regenerated."
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; ─────────────────────────────────────────────
+
+;; WORKFLOW: sdd.run
+;; TRIGGER:  sdd run [arg]
+;;
+;; SIX ROUTING MODES:
+;;   (empty)          → full: next available Todo task(s)
+;;   workspace        → scoped: tasks from that workspace only
+;;   "T-1A01"         → targeted_task: specific task by ID
+;;   "phase-2"        → targeted_phase: all Todo tasks in phase
+;;   "directive text" → directed: text as execution filter
+;;   workspace+text   → scoped_directed
+;;
+;; EXECUTION MODES:
+;;   Sequential — Mono-Agent: pick → execute → Done → repeat
+;;   Parallel   — Manager assigns tracks; Developers execute in order
+;;   Parallel constraint: tasks sharing a file are serialized
+;;
+;; KEY LOGIC GUARDS:
+;;   - Dependency: never start if parents not Done
+;;   - Mode Guard: execution mode must be in RULES.md §7 — else HALT
+;;   - Rules Parity: warn if RULES.md version > TASKS.md base
+;;   - Spec Stability Spot-Check: all active specs must be Stable before run
+;;   - File-Header Parity: header ≠ INDEX.md → HALT (STATUS_DRIFT / VERSION_DRIFT)
+;;   - Phantom Spec: spec in TASKS.md but missing → HALT
+;;   - C12 Quarantine: active task's L1 parent not Stable → HALT that track
+;;   - Mid-run Stability Check: re-verify spec Stable before marking Done
+;;   - Zero-Prompt Automation: no confirmations during execution
+;;
+;; PHASE COMPLETION:
+;;   1. Retro L1 (auto, HALT on failure)
+;;   2. Changelog L1 (auto: ## Phase N + bullet list from Changes fields)
+;;
+;; PLAN COMPLETION (Succession Loop):
+;;   1. Retro L2 (auto)
+;;   2. Changelog L2 (MANUAL approval — only human gate)
+;;   3. Version Bump (Major/Minor/Patch per changelog)
+;;   4. Regenerate CONTEXT.md
+;;
+;; OUTPUT: { mode, tasks_done }
+;; ON ERROR: escalate to human
+
+;; ─────────────────────────────────────────────
+;; TESTS
+;; ─────────────────────────────────────────────
+
+@test:full_run_next_todo {
+  input:    { raw_arg: null, workspace: null }
+  expected: { status = SUCCESS, out.tasks_done > 0 }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: [
+      { mode: "full" },
+      { rules_version: "1.5.0", execution_mode: "Sequential" },
+      { current_phase_complete: false }
+    ],
+    PARSE_INDEX: { specs: [{ name: "core", file: "core.md", status: "Stable", version: "1.0.0" }] },
+    FILTER: [{ id: "T-1A01", spec: "core.md", status: "Todo", deps: [] }],
+    VALIDATE: true,
+    FILE_EXISTS: true
+  }
+  tags: [smoke, run, sequential]
+}
+
+@test:spec_not_stable_halts_run {
+  input:    { raw_arg: null, workspace: null }
+  expected: { status = ABORTED, errors CONTAINS "SDD:SPEC_NOT_STABLE" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { mode: "full", execution_mode: "Sequential" },
+    PARSE_INDEX: { specs: [{ file: "core.md", status: "RFC" }] },
+    QUERY_SPECS: []   ;; no Stable specs
+  }
+  tags: [guard, run, spec_stability]
+}
+
+@test:targeted_task_execution {
+  input:    { raw_arg: "\"T-1A01\"", workspace: null }
+  expected: { status = SUCCESS, out.mode = "targeted_task" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { mode: "targeted_task", target: "T-1A01" },
+    FILTER: [{ id: "T-1A01", spec: "core.md", status: "Todo", deps: [] }],
+    QUERY_SPECS: [{ file: "core.md", status: "Stable" }],
+    VALIDATE: true
+  }
+  tags: [smoke, run, targeted]
+}
+
+@test:phantom_spec_halts {
+  input:    { raw_arg: null, workspace: null }
+  expected: { status = ABORTED, errors CONTAINS "SDD:PHANTOM_SPEC" }
+  mock: {
+    ENGINE_PREFLIGHT: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { mode: "full", execution_mode: "Sequential" },
+    FILTER: [{ id: "T-1A01", spec: "ghost.md", status: "Todo" }],
+    QUERY_SPECS: [{ file: "ghost.md", status: "Stable" }],
+    FILE_EXISTS: false   ;; spec file missing
+  }
+  tags: [guard, run, phantom]
+}
+
+;; ─────────────────────────────────────────────
+;; END §wf:sdd.run v1.0
+;; ─────────────────────────────────────────────

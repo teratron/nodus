@@ -1,0 +1,307 @@
+§wf:sdd.simulate v1.0
+;; Workflow:  SDD Simulate
+;; Purpose:   Debug engine logic via synthetic "war games".
+;;            Find logic gaps, friction, and AOP through cognitive walkthroughs.
+;;            Three modes: test (suite.md), direct (target workflow), improv (crisis synthesis).
+;; Pack:      sdd
+;; Author:    sdd-pack
+;; Updated:   2026-03-19
+
+§runtime: {
+  core:    ../../core/schema.nodus
+  extends: [../schema/sdd.schema.nodus]
+  @needs:  [§commands_sdd, §macros_sdd, §types_sdd]
+  mode: production
+}
+
+;; ─────────────────────────────────────────────
+;; TRIGGERS
+;; ─────────────────────────────────────────────
+
+@ON: $cmd.mode = "test"   → RUN(wf:sdd.simulate.test_suite)
+@ON: $cmd.mode = "direct" → RUN(wf:sdd.simulate.direct)
+@ON: $cmd.mode = "improv" → RUN(wf:sdd.simulate.improv)
+
+;; ─────────────────────────────────────────────
+;; RULES
+;; ─────────────────────────────────────────────
+
+!!NEVER:  write or run physical simulation scripts — cognitive execution ONLY
+!!NEVER:  run any mode without passing engine pre-flight (ENGINE_INTEGRITY halts all)
+!!ALWAYS: propose fixes as exact patches — show to user for Yes/No before applying
+!!ALWAYS: run C14 Enforcement Gate after all patches — blocking step before final report
+!!ALWAYS: append Context Bleed Warning to every final report
+
+!PREF: cognitive OVER scripted   IF $cmd.mode = "improv"
+
+;; ─────────────────────────────────────────────
+;; DECLARATIONS
+;; ─────────────────────────────────────────────
+
+@in: {
+  raw_arg?:    str = null    ;; "test" | workflow name | empty
+  workspace?:  str = null
+}
+
+@out: $sim_result
+@err: ESCALATE(human) +msg="Simulation failed during pre-flight or execution"
+
+;; ─────────────────────────────────────────────
+;; STEPS — PRE-FLIGHT + MODE SELECTION
+;; ─────────────────────────────────────────────
+
+@steps:
+
+  ;; — STEP 0: Mandatory pre-flight (ALL modes) —
+  0. CHECK_PREREQS() +json=true → $prereqs
+     ?IF $prereqs.warnings CONTAINS "checksums_mismatch" OR
+         $prereqs.warnings CONTAINS "ENGINE_INTEGRITY":
+       ESCALATE(human) +msg="Engine integrity failure — resolve before simulating. Hint: run 'sdd update-engine-meta --workflow {mismatched_workflow}' or restore from origin."
+       !BREAK
+
+     ?IF $prereqs.reason = "missing_system_files":
+       RUN(wf:sdd.init) → $init_ok
+
+     RUN(@macro:RESOLVE_WORKSPACE) +workspace=$in.workspace → $workspace
+
+  ;; — STEP 1: Parse mode from raw_arg —
+  1. ANALYZE($in.raw_arg) ~intent → $cmd
+     ;; cmd.mode: "test" | "direct" | "improv"
+     ;; cmd.target: workflow name or file path (for direct mode)
+
+  ;; Route to sub-workflow via @ON triggers
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.simulate.test_suite
+;; nodus simulate test
+;; Runs all @test blocks from suite.md (if present)
+;; ─────────────────────────────────────────────
+
+§wf:sdd.simulate.test_suite v1.0
+
+@steps:
+
+  ;; Suite Integrity check — before executing scenarios
+  1. FILE_EXISTS(".nodus/tests/suite.md") → $has_suite
+     ?IF $has_suite = false:
+       NOTIFY(human) +msg="suite.md not found — falling back to Improv Mode. Restore suite.md from origin for full test coverage."
+       ROUTE(wf:sdd.simulate.improv) !BREAK
+
+     READ_FILE(".nodus/tests/suite.md") → $suite_raw
+     VALIDATE($suite_raw) ^format:markdown → $suite_valid
+     ;; Validates: T{N} — {Title} H3, required fields, no duplicate IDs
+
+  ;; Run all scenarios
+  2. EXTRACT($suite_raw) ~test_blocks → $tests
+     ~FOR $test IN $tests:
+       EXECUTE_TEST($test) +mock=$test.mock → $test_result
+       APPEND($test_result → $results)
+     ~END
+
+  ;; Cognitive Coverage Report
+  3. ANALYZE($results) → $coverage
+     ;; coverage: { density:int, guard_resilience:str, invariant_compliance:int }
+     ;; density = 10 - (vague_count + dup_count)
+     ;; guard_resilience: "Mechanical: X/Y, Instructional: A/B (C partial)"
+
+  4. GEN(report) +ctx=$coverage +format=markdown → $cov_report
+     NOTIFY(human) +msg=$cov_report
+
+  ;; Propose fixes for FAIL/ROUGH EDGE outcomes
+  5. ~FOR $r IN $results:
+       ?IF $r.status = FAIL OR $r.status = "ROUGH_EDGE":
+         GEN(report) +ctx=$r +format=markdown → $fix_proposal
+         NOTIFY(human) +msg=$fix_proposal
+         ;; Wait for Yes/No approval before applying
+     ~END
+
+  ;; C14 Enforcement Gate (blocking)
+  6. CHECK_PREREQS() +json=true → $post_check
+     ?IF $post_check.warnings CONTAINS "checksums_mismatch":
+       UPDATE_ENGINE_META() +workflow="simulate"
+
+  ;; Succession: re-run test suite post-fix (max 2 rounds)
+  ;; NOTE: Run independently in new session to avoid context bleed
+  7. NOTIFY(human) +msg="Succession: run 'sdd simulate test' in a fresh session for unbiased results."
+     ;; "⚠ Succession ran in-context. For unbiased verification, run sdd simulate test in a fresh session."
+
+  $sim_result = { mode: "test", coverage: $coverage, results: $results }
+  LOG($sim_result)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.simulate.direct
+;; nodus simulate {workflow} [{sub-mode}]
+;; Cognitive walkthrough of a specific workflow
+;; ─────────────────────────────────────────────
+
+§wf:sdd.simulate.direct v1.0
+
+@steps:
+
+  1. ?IF $cmd.target = null:
+       NOTIFY(human) +msg="Specify workflow: sdd simulate {workflow_name}"
+       !BREAK
+
+     READ_FILE(".nodus/workflows/sdd/$cmd.target.nodus") → $wf_content
+     ?IF $wf_content = null:
+       ESCALATE(human) +msg="Workflow '$cmd.target' not found."
+       !BREAK
+
+  ;; Logic Audit (skip Suite Integrity in direct mode)
+  2. ANALYZE($wf_content) ~clarity ~relevance ~topics → $audit
+     ;; Dimensions: instruction density, ambiguity, context economy, broken loops
+
+  3. GEN(report) +ctx=$audit +format=markdown → $audit_report
+     NOTIFY(human) +msg=$audit_report
+
+  ;; Propose fixes
+  4. ~FOR $finding IN $audit.rough_edges:
+       GEN(report) +ctx=$finding +format=markdown → $fix
+       NOTIFY(human) +msg=$fix
+     ~END
+
+  ;; C14 Enforcement Gate
+  5. UPDATE_ENGINE_META() +workflow="simulate"
+
+  $sim_result = { mode: "direct", target: $cmd.target, audit: $audit }
+  LOG($sim_result)
+
+;; ─────────────────────────────────────────────
+;; SUB-WORKFLOW: sdd.simulate.improv
+;; No args — synthesize a crisis scenario
+;; Crisis Template: CR-1 through CR-6 requirements
+;; ─────────────────────────────────────────────
+
+§wf:sdd.simulate.improv v1.0
+
+@steps:
+
+  ;; Synthesize crisis scenario satisfying all CR-N requirements
+  1. GEN(report) +format=markdown → $crisis
+     ;; Must satisfy:
+     ;;   CR-1: ≥2 distinct workflows affected (from init/analyze/spec/task/run/rule)
+     ;;   CR-2: Full chain walkthrough: Spec → Task → Run (no skipped links)
+     ;;   CR-3: If >1 workspace: crisis spans ≥2 workspaces (else document why skipped)
+     ;;   CR-4: Attempts to bypass ≥3 distinct guards (C1–C22 equivalents)
+     ;;   CR-5: ≥1 out-of-band mutation (manual file edit, external tool, missing file)
+     ;;   CR-6: Short named scenario (e.g., "The Phantom Cascade")
+     ;;
+     ;; Output format before walkthrough:
+     ;;   Crisis: "{name}" (CR-6)
+     ;;   Affected workflows: {list} (CR-1)
+     ;;   Chain: Spec → Task → Run (CR-2)
+     ;;   Workspaces: {list | "single-workspace — CR-3 skipped"} (CR-3)
+     ;;   Guards targeted: {list of SDD error/guard IDs} (CR-4)
+     ;;   Drift vector: {description} (CR-5)
+
+     NOTIFY(human) +msg=$crisis
+
+  ;; Cognitive walkthrough of full SDD chain in synthesized state
+  2. ANALYZE($crisis) ~clarity ~topics ~urgency → $walkthrough
+     ;; Walk: Spec → Task → Run. Identify leaks at each step.
+
+  3. GEN(report) +ctx=$walkthrough +format=markdown → $walkthrough_report
+     NOTIFY(human) +msg=$walkthrough_report
+
+  ;; Logic Audit across all affected workflows
+  4. ~FOR $wf_name IN $walkthrough.affected_workflows:
+       READ_FILE(".nodus/workflows/sdd/$wf_name.nodus") → $wf_content
+       ANALYZE($wf_content) ~clarity → $wf_audit
+       APPEND($wf_audit → $all_audits)
+     ~END
+
+  5. GEN(report) +ctx=$all_audits +format=markdown → $coverage_report
+     NOTIFY(human) +msg=$coverage_report
+
+  ;; Propose fixes + append regression tests to suite.md
+  6. ~FOR $finding IN $all_audits.rough_edges:
+       GEN(report) +ctx=$finding → $fix_proposal
+       NOTIFY(human) +msg=$fix_proposal
+       ;; Yes/No gate
+
+       ;; After approval: append new @test block to suite.md
+       ;; Suite Integrity: validate own output after appending
+     ~END
+
+  ;; C14 Enforcement Gate (blocking — must run before report)
+  7. CHECK_PREREQS() +json=true → $post_check
+     ?IF $post_check.warnings CONTAINS "checksums_mismatch":
+       UPDATE_ENGINE_META() +workflow="simulate"
+
+  ;; Succession: post-fix re-run (max 2 rounds)
+  8. NOTIFY(human) +msg="Succession: run 'sdd simulate test' in a fresh session."
+     NOTIFY(human) +msg="⚠ Succession ran in-context. For unbiased verification, run sdd simulate test in a fresh session."
+
+  $sim_result = { mode: "improv", crisis: $crisis, coverage: $coverage_report }
+  LOG($sim_result)
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; ─────────────────────────────────────────────
+
+;; WORKFLOW: sdd.simulate
+;; TRIGGER:  sdd simulate [test | workflow_name | (empty)]
+;;
+;; THREE MODES:
+;;   test   — run all @test blocks from .nodus/tests/suite.md
+;;   direct — cognitive walkthrough of a specific workflow file
+;;   improv — synthesize a crisis scenario, walk Spec→Task→Run chain
+;;
+;; RULES:
+;;   - Cognitive execution ONLY — never run physical scripts
+;;   - Pre-flight is mandatory and blocks all modes on ENGINE_INTEGRITY
+;;   - C14 Enforcement Gate is a BLOCKING step before the final report
+;;   - Succession max 2 rounds; always append Context Bleed Warning
+;;
+;; CRISIS TEMPLATE (Improv):
+;;   CR-1: ≥2 workflows   CR-2: Full chain   CR-3: ≥2 workspaces (if applicable)
+;;   CR-4: ≥3 guards      CR-5: 1 out-of-band drift   CR-6: Named scenario
+;;
+;; COGNITIVE COVERAGE METRICS:
+;;   Instruction Density (1-10): 10 - (vague_count + dup_count)
+;;   Guard Resilience (1-10):    Guards_Triggered / Guards_Expected × 10
+;;   Invariant Compliance (1-10): Rules_Followed / Rules_Applicable × 10
+;;
+;; OUTPUT: { mode, [coverage | audit | crisis] }
+;; ON ERROR: escalate to human
+
+;; ─────────────────────────────────────────────
+;; TESTS
+;; ─────────────────────────────────────────────
+
+@test:preflight_integrity_halts_all_modes {
+  input:    { raw_arg: "test", workspace: null }
+  expected: { status = ABORTED, errors CONTAINS "SDD:ENGINE_INTEGRITY" }
+  mock: {
+    CHECK_PREREQS: { ok: false, warnings: ["ENGINE_INTEGRITY"] }
+  }
+  tags: [guard, preflight, integrity]
+}
+
+@test:test_mode_suite_missing_falls_back {
+  input:    { raw_arg: "test", workspace: null }
+  expected: { status = SUCCESS, out.mode = "improv" }
+  mock: {
+    CHECK_PREREQS: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { mode: "test" },
+    FILE_EXISTS: false
+  }
+  tags: [smoke, test_suite, fallback]
+}
+
+@test:improv_mode_crisis_synthesized {
+  input:    { raw_arg: null, workspace: null }
+  expected: { status = SUCCESS, out.mode = "improv", out.crisis CONTAINS "Crisis:" }
+  mock: {
+    CHECK_PREREQS: { ok: true },
+    RESOLVE_WORKSPACE: "main",
+    ANALYZE: { mode: "improv", affected_workflows: ["sdd.spec", "sdd.run"] },
+    GEN: "Crisis: \"The Phantom Cascade\"\nAffected workflows: spec, run..."
+  }
+  tags: [smoke, improv, crisis]
+}
+
+;; ─────────────────────────────────────────────
+;; END §wf:sdd.simulate v1.0
+;; ─────────────────────────────────────────────

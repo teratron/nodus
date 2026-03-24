@@ -1,0 +1,124 @@
+§config:sdd-pack v1.0
+;; Project Config — Business Logic Layer
+;; Purpose:  Global rules, triggers, and constants for the SDD pack engine.
+;;           Loaded by the executor agent at startup before any workflow runs.
+;;           Defines WHAT the project does — not WHERE it runs.
+;;           For infrastructure (models, API keys) → .nodus/config.json
+;; Author:   sdd-pack
+;; Updated:  2026-03-19
+
+;; ─────────────────────────────────────────────
+;; RUNTIME ENVIRONMENT
+;; ─────────────────────────────────────────────
+
+§runtime: {
+  core:    .nodus/core/schema.nodus
+  extends: [.nodus/schema/sdd.schema.nodus]
+  mode: production
+}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL ABSOLUTE RULES
+;; Applied to ALL SDD workflows. Cannot be overridden at workflow level.
+;; ─────────────────────────────────────────────
+
+!!NEVER:  modify .design/ without user approval
+!!NEVER:  skip engine pre-flight (CHECK_PREREQS) before any workflow
+!!NEVER:  skip LOG($out)
+!!ALWAYS: return NODUS:RESULT on completion or failure
+!!ALWAYS: ESCALATE(human) IF $error.level = critical
+!!ALWAYS: append Advisory Report to analysis and spec outputs
+
+;; ─────────────────────────────────────────────
+;; GLOBAL PREFERENCES
+;; ─────────────────────────────────────────────
+
+!PREF: focused OVER full    IF file_count > 500
+!PREF: cognitive OVER scripted
+
+;; ─────────────────────────────────────────────
+;; GLOBAL TRIGGER REGISTRY
+;; Maps sdd commands to workflow files.
+;; ─────────────────────────────────────────────
+
+@ON: $cmd.name = "analyze"  → RUN(wf:sdd.analyze)
+@ON: $cmd.name = "init"     → RUN(wf:sdd.init)
+@ON: $cmd.name = "spec"     → RUN(wf:sdd.spec)
+@ON: $cmd.name = "task"     → RUN(wf:sdd.task)
+@ON: $cmd.name = "run"      → RUN(wf:sdd.run)
+@ON: $cmd.name = "rule"     → RUN(wf:sdd.rule)
+@ON: $cmd.name = "retro"    → RUN(wf:sdd.retro)
+@ON: $cmd.name = "simulate" → RUN(wf:sdd.simulate)
+
+;; ─────────────────────────────────────────────
+;; GLOBAL CONSTANTS
+;; ─────────────────────────────────────────────
+
+§constants {
+  ;; Depth control thresholds (used by sdd.analyze)
+  $CFG.DEPTH_AUTO_MAX    = 50    ;; below → full scan, no prompt
+  $CFG.DEPTH_PROMPT_MAX  = 500   ;; above → recommend Focused scan
+
+  ;; Spec lifecycle
+  $CFG.STATUSES          = ["Draft", "RFC", "Stable", "Deprecated"]
+  $CFG.STABLE_REQUIRED   = "Stable"   ;; L2 parent must be this status
+
+  ;; Registry
+  $CFG.INDEX_FILE        = ".design/{workspace}/INDEX.md"
+  $CFG.RULES_FILE        = ".design/{workspace}/RULES.md"
+  $CFG.PLAN_FILE         = ".design/{workspace}/PLAN.md"
+  $CFG.TASKS_FILE        = ".design/{workspace}/TASKS.md"
+
+  ;; Simulation
+  $CFG.SUITE_PATH        = ".nodus/tests/suite.md"
+  $CFG.SIM_MAX_ROUNDS    = 2    ;; max succession rounds in simulate
+}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL CONTEXT DECLARATIONS
+;; Context files available to all SDD workflows via @ctx[key].
+;; ─────────────────────────────────────────────
+
+§context {
+  ;; Populated per-workspace at runtime via {workspace} substitution
+  rules: .design/{workspace}/RULES.md
+  index: .design/{workspace}/INDEX.md
+  plan:  .design/{workspace}/PLAN.md
+  tasks: .design/{workspace}/TASKS.md
+}
+
+;; ─────────────────────────────────────────────
+;; GLOBAL ERROR ROUTING
+;; ─────────────────────────────────────────────
+
+§error_routing {
+  NODUS:RULE_VIOLATION    → ESCALATE(human) +priority=high
+  NODUS:RULE_CONFLICT     → ESCALATE(human) +priority=critical
+  NODUS:UNDEFINED_VAR     → LOG($error) NOTIFY(human)
+  NODUS:VALIDATION_FAILED → NOTIFY(human)
+  NODUS:UNHANDLED_ERROR   → ESCALATE(human) +priority=high
+}
+
+;; ─────────────────────────────────────────────
+;; HUMAN MODE
+;; ─────────────────────────────────────────────
+
+;; CONFIG: sdd-pack
+;; PURPOSE: Business logic layer for the SDD engine.
+;;
+;; WHAT this file defines:
+;;   - Global invariants for all SDD workflows
+;;   - Command-to-workflow routing table
+;;   - Shared constants (thresholds, file paths, limits)
+;;   - Context file registry
+;;
+;; WHERE the project runs → .nodus/config.json
+;;
+;; LOAD ORDER (executor boot sequence):
+;;   1. .nodus/config.json → resolve environment and models
+;;   2. config.nodus       → load SDD rules and constants
+;;   3. workflows/sdd/*.nodus → execute specific SDD workflow
+
+;; ─────────────────────────────────────────────
+;; END §config:sdd-pack v1.0
+;; ─────────────────────────────────────────────
