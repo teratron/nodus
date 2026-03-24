@@ -83,7 +83,7 @@ my-project/                        ← any existing project
 │   └── .cache/                    ← generated at runtime (gitignore)
 │       └── nodus.lock
 │
-├── workflows/                     ← user workflows (name and location is flexible)
+├── workflows.nodus/               ← user workflows (name and location is flexible)
 │   ├── _shared/                   ← reusable sub-workflows
 │   ├── social/
 │   └── support/
