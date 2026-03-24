@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-03-24
+
+### Added
+
+- **Directory support in CLI**: Added ability to pass directories to `nodus validate` and `nodus test`. The CLI will traverse and discover all `.nodus` files, explicitly ignoring infrastructural `.nodus` or `.cache` directories, while natively supporting user directories suffixed with `.nodus` (e.g., `workflows.nodus`). All discovered files are validated/tested in a single execution.
+
+---
+
 ## [0.4.3] - 2026-03-23
 
 ### Changed

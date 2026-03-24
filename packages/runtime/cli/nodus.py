@@ -83,53 +83,88 @@ def _read_file(path: str) -> str:
     return p.read_text(encoding="utf-8")
 
 
+def _gather_files(target: str) -> list[str]:
+    """Gather .nodus files, skipping internal directories like .nodus or .cache."""
+    p = Path(target)
+    if not p.exists():
+        print(_red(f"Error: path not found — {target}"), file=sys.stderr)
+        sys.exit(1)
+
+    if p.is_file():
+        return [str(p)]
+
+    result = []
+    for file_path in p.rglob("*.nodus"):
+        if ".nodus" in file_path.parts or ".cache" in file_path.parts:
+            # Skip infrastructure dirs but allow e.g. 'workflows.nodus'
+            continue
+        result.append(str(file_path))
+
+    return sorted(result)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # CLI COMMANDS
 # ═══════════════════════════════════════════════════════════════════════════
 
 
 def cmd_validate(args: list[str]) -> int:
-    """Validate / lint a .nodus file."""
+    """Validate / lint a .nodus file or directory."""
     if not args:
-        print(_red("Usage: nodus validate <file.nodus>"), file=sys.stderr)
+        print(_red("Usage: nodus validate <file_or_dir>"), file=sys.stderr)
         return 1
 
-    source = _read_file(args[0])
-    parser = Parser()
-    ast = parser.parse(source, filename=args[0])
-    if ast is None:
-        print(_red("Error: failed to parse file"), file=sys.stderr)
-        return 1
-
-    validator = Validator()
-    diagnostics = validator.validate(ast, filename=args[0])
-
-    if not diagnostics:
-        print(_green("OK") + f"  {args[0]}  — no issues found")
+    files = _gather_files(args[0])
+    if not files:
+        print(_yellow(f"No .nodus files found in '{args[0]}'"))
         return 0
 
-    errors = [d for d in diagnostics if d.severity == Severity.ERROR]
-    warnings = [d for d in diagnostics if d.severity == Severity.WARNING]
+    parser = Parser()
+    validator = Validator()
 
-    for d in diagnostics:
-        if d.severity == Severity.ERROR:
-            prefix = _red("ERROR")
-        elif d.severity == Severity.WARNING:
-            prefix = _yellow("WARN ")
-        else:
-            prefix = _cyan("INFO ")
+    total_errors = 0
+    total_warnings = 0
 
-        loc = f":{d.line}" if d.line else ""
-        print(f"  {prefix}  [{d.code}] {d.message}  ({args[0]}{loc})")
+    for file_path in files:
+        source = _read_file(file_path)
+        ast = parser.parse(source, filename=file_path)
+        if ast is None:
+            print(_red(f"Error: failed to parse file {file_path}"), file=sys.stderr)
+            total_errors += 1
+            continue
+
+        diagnostics = validator.validate(ast, filename=file_path)
+        if not diagnostics:
+            print(_green("OK") + f"  {file_path}  — no issues found")
+            continue
+
+        errors = [d for d in diagnostics if d.severity == Severity.ERROR]
+        warnings = [d for d in diagnostics if d.severity == Severity.WARNING]
+
+        for d in diagnostics:
+            if d.severity == Severity.ERROR:
+                prefix = _red("ERROR")
+            elif d.severity == Severity.WARNING:
+                prefix = _yellow("WARN ")
+            else:
+                prefix = _cyan("INFO ")
+
+            loc = f":{d.line}" if d.line else ""
+            print(f"  {prefix}  [{d.code}] {d.message}  ({file_path}{loc})")
+
+        total_errors += len(errors)
+        total_warnings += len(warnings)
 
     summary_parts = []
-    if errors:
-        summary_parts.append(_red(f"{len(errors)} error(s)"))
-    if warnings:
-        summary_parts.append(_yellow(f"{len(warnings)} warning(s)"))
-    print(f"\n  {', '.join(summary_parts)}")
+    if total_errors:
+        summary_parts.append(_red(f"{total_errors} error(s)"))
+    if total_warnings:
+        summary_parts.append(_yellow(f"{total_warnings} warning(s)"))
 
-    return 1 if errors else 0
+    if summary_parts:
+        print(f"\n  {', '.join(summary_parts)}")
+
+    return 1 if total_errors else 0
 
 
 def run_workflow(
@@ -270,19 +305,29 @@ def cmd_transpile(args: list[str]) -> int:
 
 
 def cmd_test(args: list[str]) -> int:
-    """Run simulation tests in a .nodus file."""
+    """Run simulation tests in a .nodus file or directory."""
     if not args:
-        print(_red("Usage: nodus test <file.nodus>"), file=sys.stderr)
+        print(_red("Usage: nodus test <file_or_dir> [--tag=name]"), file=sys.stderr)
         return 1
 
-    file_path = args[0]
-    source = _read_file(file_path)
+    target_path: str | None = None
+    tag_filter: str | None = None
+    for arg in args:
+        if arg.startswith("--tag="):
+            tag_filter = arg.split("=", 1)[1]
+        elif not arg.startswith("--"):
+            if target_path is None:
+                target_path = arg
+
+    if not target_path:
+        target_path = "."
+
+    files = _gather_files(target_path)
+    if not files:
+        print(_yellow(f"No .nodus files found in '{target_path}'"))
+        return 0
 
     parser = Parser()
-    ast = parser.parse(source, filename=file_path)
-    if not isinstance(ast, _WorkflowFile) or not ast.tests:
-        print(_yellow(f"No tests found in {file_path}"))
-        return 0
 
     # Load Global Config
     global_rules = []
@@ -299,24 +344,33 @@ def cmd_test(args: list[str]) -> int:
     passed = 0
     failed = 0
 
-    for test in ast.tests:
-        print(f"  {_bold(test.name)} ... ", end="")
-        try:
-            result = executor.execute(
-                ast,
-                input_data=test.input_data,
-                global_rules=global_rules,
-                global_preferences=global_prefs,
-            )
-            if result.status in ("ok", "partial"):
-                print(_green("PASS"))
-                passed += 1
-            else:
-                print(_red("FAIL"))
+    for file_path in files:
+        source = _read_file(file_path)
+        ast = parser.parse(source, filename=file_path)
+        if not isinstance(ast, _WorkflowFile) or not ast.tests:
+            continue
+
+        for test in ast.tests:
+            if tag_filter and tag_filter not in getattr(test, "tags", []):
+                continue
+
+            print(f"  {_bold(test.name)} ... ", end="")
+            try:
+                result = executor.execute(
+                    ast,
+                    input_data=test.input_data,
+                    global_rules=global_rules,
+                    global_preferences=global_prefs,
+                )
+                if result.status in ("ok", "partial"):
+                    print(_green("PASS"))
+                    passed += 1
+                else:
+                    print(_red("FAIL"))
+                    failed += 1
+            except Exception as exc:
+                print(_red(f"ERROR: {exc}"))
                 failed += 1
-        except Exception as exc:
-            print(_red(f"ERROR: {exc}"))
-            failed += 1
 
     print(f"\nSummary: {passed} passed, {failed} failed")
     return 1 if failed else 0
