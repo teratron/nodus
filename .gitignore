@@ -28,7 +28,6 @@ uv.lock
 *.tgz
 temp/
 *tmp/
-#*sandbox/
 
 # Agents
 CLAUDE.md
